@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  CHECKPOINT NOTE (src/index.css):
+  - Base font per direction is set on <html> itself via [dir="rtl"]/[dir="ltr"]
+    selectors, so EVERY component automatically gets the right typeface
+    without importing fonts per-component.
+  - We rely on CSS logical properties (margin-inline, inset-inline, etc.)
+    throughout components instead of left/right, so flipping [dir] on
+    <html> is enough to mirror the whole layout — no separate RTL stylesheet.
+  - Brand palette is black / white / gold + shades, per direction. `error`
+    (a red) is kept separate and semantic-only — used for delete buttons
+    and validation messages, never decoratively.
+*/
+
+html {
+  background-color: #0A0A0A;
+}
+
+body {
+  @apply bg-enzo-black text-enzo-white antialiased;
+  min-height: 100vh;
+}
+
+html[dir="rtl"] body {
+  font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif;
+}
+
+html[dir="ltr"] body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Display headings always use the display face per language */
+html[dir="rtl"] .font-display {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-weight: 700;
+}
+
+html[dir="ltr"] .font-display {
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* Recurring brand signature: a subtle gold ring glow used on hover/focus
+   instead of a decorative gradient background slapped everywhere. */
+.enzo-ring {
+  position: relative;
+}
+.enzo-ring::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  padding: 3px;
+  background: linear-gradient(135deg, #C9A227, #F5C518);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.enzo-ring:hover::before,
+.enzo-ring:focus-visible::before {
+  opacity: 1;
+}
+
+/* Visible keyboard focus everywhere, direction-agnostic */
+:focus-visible {
+  outline: 2px solid #F5C518;
+  outline-offset: 2px;
+}
+
+/* =====================================================================
+   SMOOTH LANGUAGE / DIRECTION SWITCH
+   LanguageContext.jsx wraps the ar<->en switch in document.startViewTransition().
+   These pseudo-elements control HOW that transition looks: a quick,
+   gentle cross-fade with a touch of scale, instead of the browser's
+   default (which is a slightly abrupt cross-fade) or an instant snap.
+   Chromium-based browsers only; other browsers fall back to an instant
+   switch automatically (handled in LanguageContext.jsx), which is still
+   perfectly usable, just not animated.
+   ===================================================================== */
+::view-transition-old(root) {
+  animation: enzo-fade-out 0.28s ease forwards;
+}
+::view-transition-new(root) {
+  animation: enzo-fade-in 0.32s ease forwards;
+}
+
+@keyframes enzo-fade-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.99); }
+}
+@keyframes enzo-fade-in {
+  from { opacity: 0; transform: scale(1.01); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+.hairline {
+  border-color: #333333;
+}
+
+/* Shared form input style used across Checkout + Admin forms */
+.input {
+  @apply w-full rounded-md border border-enzo-line bg-enzo-panel px-3 py-2 text-enzo-white outline-none transition-colors;
+  @apply focus:border-enzo-goldBright;
+}
+
+.enzo-gradient-text {
+  background: linear-gradient(135deg, #C9A227, #F5C518);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

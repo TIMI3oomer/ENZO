@@ -1,0 +1,28 @@
+<!doctype html>
+<!--
+  CHECKPOINT NOTE (index.html):
+  lang/dir here are just the initial defaults for first paint (SSR-less flash
+  prevention). The real source of truth is LanguageContext, which updates
+  document.documentElement's lang/dir on every language change and on load
+  from localStorage. See src/context/LanguageContext.jsx.
+-->
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ENZO</title>
+    <link rel="icon" type="image/jpeg" href="/logo.jpg" />
+
+    <!-- Fonts loaded from Google Fonts (external, per project note) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

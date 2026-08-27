@@ -1,0 +1,83 @@
+{
+  "brand": "ENZO",
+  "nav": {
+    "home": "Home",
+    "shop": "Shop",
+    "cart": "Cart",
+    "search": "Search",
+    "menCategory": "T-Shirts",
+    "sweats": "Sweatshirts",
+    "newBalance": "Shoes",
+    "contact": "Contact us"
+  },
+  "hero": {
+    "title": "Street wear, our identity",
+    "subtitle": "Limited pieces, real quality, authentic design",
+    "cta": "Shop now"
+  },
+  "product": {
+    "material": "Material",
+    "fit": "Fit",
+    "care": "Care instructions",
+    "addToCart": "Add to cart",
+    "outOfStock": "Out of stock",
+    "size": "Size",
+    "quantity": "Quantity",
+    "relatedProducts": "You might also like"
+  },
+  "cart": {
+    "title": "Shopping cart",
+    "empty": "Your cart is empty",
+    "continueShopping": "Continue shopping",
+    "subtotal": "Subtotal",
+    "checkout": "Checkout",
+    "remove": "Remove"
+  },
+  "footer": {
+    "rights": "All rights reserved",
+    "contact": "Contact us",
+    "location": "Location",
+    "whatsapp": "Chat with us on WhatsApp"
+  },
+  "language": {
+    "ar": "العربية",
+    "en": "English"
+  },
+  "errors": {
+    "generic": "Something went wrong, please try again",
+    "notFound": "Page not found",
+    "network": "Could not connect to the server"
+  },
+  "success": {
+    "addedToCart": "Added to cart"
+  },
+  "auth": {
+    "login": "Sign in",
+    "register": "Create account",
+    "logout": "Log out",
+    "myAccount": "My account",
+    "fullName": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "createOne": "Create one",
+    "signIn": "Sign in",
+    "orContinueAsGuest": "or continue as guest",
+    "continueAsGuest": "Continue as guest",
+    "myOrders": "My orders",
+    "noOrders": "No orders yet",
+    "passwordMismatch": "Passwords don't match",
+    "welcomeBack": "Welcome back"
+  },
+  "filters": {
+    "sortBy": "Sort by",
+    "newest": "Newest",
+    "priceLowHigh": "Price: low to high",
+    "priceHighLow": "Price: high to low",
+    "size": "Size",
+    "allSizes": "All sizes",
+    "clear": "Clear filters"
+  }
+}

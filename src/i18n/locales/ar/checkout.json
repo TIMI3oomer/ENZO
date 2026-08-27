@@ -1,0 +1,31 @@
+{
+  "title": "معلومات الطلب",
+  "fullName": "الاسم الكامل",
+  "email": "البريد الإلكتروني (اختياري)",
+  "emailPlaceholder": "لإرسال تحديثات طلبك",
+  "phone": "رقم الهاتف",
+  "city": "المدينة",
+  "address": "العنوان",
+  "notes": "ملاحظات (اختياري)",
+  "paymentMethod": "طريقة الدفع",
+  "cod": "الدفع عند الاستلام",
+  "visa": "Visa",
+  "reflect": "Reflect",
+  "placeOrder": "تأكيد الطلب",
+  "orderSummary": "ملخص الطلب",
+  "shipping": "الشحن",
+  "total": "الإجمالي",
+  "confirmation": {
+    "success": "تم استلام طلبك بنجاح!",
+    "orderNumber": "رقم الطلب",
+    "status": "حالة الطلب",
+    "pending": "قيد المراجعة",
+    "backHome": "العودة للرئيسية",
+    "detailsSentSeparately": "سيتم التواصل معك قريباً بتفاصيل الطلب."
+  },
+  "validation": {
+    "required": "هذا الحقل مطلوب",
+    "invalidPhone": "رقم الهاتف غير صالح",
+    "invalidEmail": "بريد إلكتروني غير صالح"
+  }
+}

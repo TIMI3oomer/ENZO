@@ -1,0 +1,83 @@
+{
+  "brand": "ENZO",
+  "nav": {
+    "home": "الرئيسية",
+    "shop": "المتجر",
+    "cart": "السلة",
+    "search": "بحث",
+    "menCategory": "تيشيرتات",
+    "sweats": "سويت شيرت",
+    "newBalance": "أحذية",
+    "contact": "تواصل معنا"
+  },
+  "hero": {
+    "title": "لبس الشارع، بهويتنا",
+    "subtitle": "قطع محدودة، جودة عالية، تصميم عربي أصيل",
+    "cta": "تسوق الآن"
+  },
+  "product": {
+    "material": "الخامة",
+    "fit": "المقاس",
+    "care": "تعليمات العناية",
+    "addToCart": "أضف إلى السلة",
+    "outOfStock": "غير متوفر حالياً",
+    "size": "المقاس",
+    "quantity": "الكمية",
+    "relatedProducts": "قد يعجبك أيضاً"
+  },
+  "cart": {
+    "title": "سلة التسوق",
+    "empty": "سلتك فارغة",
+    "continueShopping": "متابعة التسوق",
+    "subtotal": "المجموع الفرعي",
+    "checkout": "إتمام الطلب",
+    "remove": "إزالة"
+  },
+  "footer": {
+    "rights": "جميع الحقوق محفوظة",
+    "contact": "تواصل معنا",
+    "location": "الموقع",
+    "whatsapp": "تواصل معنا عبر واتساب"
+  },
+  "language": {
+    "ar": "العربية",
+    "en": "English"
+  },
+  "errors": {
+    "generic": "حدث خطأ ما، حاول مرة أخرى",
+    "notFound": "الصفحة غير موجودة",
+    "network": "تعذر الاتصال بالخادم"
+  },
+  "success": {
+    "addedToCart": "تمت الإضافة إلى السلة"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "logout": "تسجيل الخروج",
+    "myAccount": "حسابي",
+    "fullName": "الاسم الكامل",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "noAccount": "ليس لديك حساب؟",
+    "haveAccount": "لديك حساب بالفعل؟",
+    "createOne": "أنشئ حساباً",
+    "signIn": "سجّل الدخول",
+    "orContinueAsGuest": "أو تابع كضيف",
+    "continueAsGuest": "المتابعة كضيف",
+    "myOrders": "طلباتي",
+    "noOrders": "لا توجد طلبات بعد",
+    "passwordMismatch": "كلمتا المرور غير متطابقتين",
+    "welcomeBack": "مرحباً بعودتك"
+  },
+  "filters": {
+    "sortBy": "ترتيب حسب",
+    "newest": "الأحدث",
+    "priceLowHigh": "السعر: من الأقل للأعلى",
+    "priceHighLow": "السعر: من الأعلى للأقل",
+    "size": "المقاس",
+    "allSizes": "كل المقاسات",
+    "clear": "مسح الفلاتر"
+  }
+}

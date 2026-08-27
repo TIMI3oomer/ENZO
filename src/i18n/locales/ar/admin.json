@@ -1,0 +1,54 @@
+{
+  "nav": {
+    "dashboard": "الرئيسية",
+    "products": "المنتجات",
+    "orders": "الطلبات",
+    "customers": "العملاء",
+    "analytics": "التحليلات",
+    "categories": "التصنيفات",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج"
+  },
+  "login": {
+    "title": "دخول لوحة التحكم",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "submit": "دخول"
+  },
+  "products": {
+    "title": "المنتجات",
+    "add": "إضافة منتج",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "nameAr": "الاسم (عربي)",
+    "nameEn": "الاسم (إنجليزي)",
+    "descAr": "الوصف (عربي)",
+    "descEn": "الوصف (إنجليزي)",
+    "price": "السعر",
+    "stock": "الكمية المتوفرة",
+    "category": "التصنيف",
+    "save": "حفظ"
+  },
+  "orders": {
+    "title": "الطلبات",
+    "orderNumber": "رقم الطلب",
+    "customer": "العميل",
+    "status": "الحالة",
+    "date": "التاريخ",
+    "statusPending": "قيد المراجعة",
+    "statusConfirmed": "مؤكد",
+    "statusShipped": "تم الشحن",
+    "statusDelivered": "تم التسليم",
+    "statusCancelled": "ملغي",
+    "note": "ملاحظة للعميل (اختياري)",
+    "sendUpdate": "تحديث وإرسال",
+    "items": "المنتجات"
+  },
+  "analytics": {
+    "salesLast14Days": "المبيعات آخر ١٤ يوم",
+    "ordersByStatus": "الطلبات حسب الحالة",
+    "topProducts": "الأكثر مبيعاً",
+    "revenue": "الإيرادات",
+    "orders": "الطلبات"
+  }
+}

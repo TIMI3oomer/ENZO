@@ -1,0 +1,31 @@
+{
+  "title": "Order Information",
+  "fullName": "Full Name",
+  "phone": "Phone Number",
+  "city": "City",
+  "address": "Address",
+  "notes": "Notes (optional)",
+  "paymentMethod": "Payment Method",
+  "cod": "Cash on Delivery",
+  "visa": "Visa",
+  "reflect": "Reflect",
+  "placeOrder": "PLACE ORDER",
+  "orderSummary": "Order Summary",
+  "shipping": "Shipping",
+  "total": "Total",
+  "confirmation": {
+    "success": "Your order has been received!",
+    "orderNumber": "Order number",
+    "status": "Order status",
+    "pending": "Pending",
+    "backHome": "Back to home",
+    "detailsSentSeparately": "We'll follow up with your order details shortly."
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidPhone": "Invalid phone number",
+    "invalidEmail": "Invalid email"
+  },
+  "email": "Email (optional)",
+  "emailPlaceholder": "To send you order updates"
+}

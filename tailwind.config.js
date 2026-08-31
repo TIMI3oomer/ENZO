@@ -16,7 +16,7 @@ export default {
           white: "#FAFAF7",   // primary text on black — brighter
           muted: "#A8A89F",   // secondary text
           gold: "#C9A227",    // primary accent (deep gold)
-          goldBright: "#F5C518", // vivid gold — CTA highlights, active glow
+          goldBright: "#FFD23F", // vivid, brighter gold — CTAs/glows/focus
           goldLight: "#E9C46A", // gradient midtone
           goldDark: "#8A6D1F",  // pressed states / borders on gold
           error: "#E5484D",    // destructive actions, validation only
@@ -31,7 +31,17 @@ export default {
         arabic: ["'IBM Plex Sans Arabic'", "sans-serif"],
       },
       backgroundImage: {
-        "enzo-gradient": "linear-gradient(135deg, #C9A227 0%, #F5C518 100%)",
+        "enzo-gradient": "linear-gradient(135deg, #C9A227 0%, #FFD23F 100%)",
+      },
+      keyframes: {
+        "enzo-marquee": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
+        "enzo-spin-y": {
+          "0%": { transform: "rotateY(0deg)" },
+          "100%": { transform: "rotateY(360deg)" },
+        },
       },
     },
   },

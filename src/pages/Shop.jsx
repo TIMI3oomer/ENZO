@@ -128,7 +128,14 @@ export default function Shop() {
       </div>
 
       {loading ? (
-        <p className="text-enzo-muted">…</p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="aspect-[3/4] rounded-lg bg-enzo-panel" />
+              <div className="mt-3 h-3 w-3/4 rounded bg-enzo-panel" />
+            </div>
+          ))}
+        </div>
       ) : products.length === 0 ? (
         <p className="text-enzo-muted">{t("product.outOfStock")}</p>
       ) : (

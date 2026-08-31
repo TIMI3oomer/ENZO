@@ -18,6 +18,7 @@ import AdminProductForm from "./pages/admin/ProductForm.jsx";
 import AdminOrders from "./pages/admin/Orders.jsx";
 import AdminCustomers from "./pages/admin/Customers.jsx";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute.jsx";
+import PageTransition from "./components/PageTransition.jsx";
 
 // CHECKPOINT NOTE (App.jsx):
 // Route structure. Storefront routes share Navbar+Footer; admin routes use
@@ -36,18 +37,20 @@ export default function App() {
           <div className="flex min-h-screen flex-col">
             <Navbar />
             <main className="flex-1">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/shop/:categorySlug" element={<Shop />} />
-                <Route path="/product/:slug" element={<ProductDetail />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/account" element={<Account />} />
-                <Route path="/order-confirmation/:orderNumber" element={<OrderConfirmation />} />
-              </Routes>
+              <PageTransition>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/shop/:categorySlug" element={<Shop />} />
+                  <Route path="/product/:slug" element={<ProductDetail />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/account" element={<Account />} />
+                  <Route path="/order-confirmation/:orderNumber" element={<OrderConfirmation />} />
+                </Routes>
+              </PageTransition>
             </main>
             <Footer />
             <WhatsAppButton />

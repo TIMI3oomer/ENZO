@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
-import CoinFlipHero from "../components/CoinFlipHero.jsx";
+import AnimatedHero from "../components/AnimatedHero.jsx";
 import ScrollShowcase from "../components/ScrollShowcase.jsx";
 
 // CHECKPOINT NOTE (Home.jsx):
-// CoinFlipHero.jsx is the entry moment (logo pinned + flipping like a
-// coin as you scroll), ScrollShowcase.jsx is the follow-up moment
-// (4-8 products rising/rotating into place, each linking to /shop).
-// Products come from the Node backend; a failed fetch is caught so a
-// backend hiccup never leaves the page stuck on a blank/broken state —
-// ScrollShowcase falls back to placeholder cards in that case.
+// AnimatedHero.jsx is the entry sequence (logo flips from background to
+// front, then garments scatter and spin around it as you keep scrolling
+// -- see that file for the full breakdown). ScrollShowcase.jsx below is a
+// second, separate moment further down the page (a flat grid, cards
+// rising/rotating in). Products come from the Node backend; a failed
+// fetch is caught so a backend hiccup never leaves the page stuck on a
+// blank/broken state -- both hero sections fall back to placeholder
+// content in that case.
 export default function Home() {
   const { t } = useTranslation("common");
   const [products, setProducts] = useState([]);
@@ -25,7 +27,7 @@ export default function Home() {
 
   return (
     <div>
-      <CoinFlipHero />
+      <AnimatedHero products={products} />
 
       <div>
         <h2 className="mx-auto max-w-7xl px-4 pt-4 text-start font-display text-2xl sm:px-6">

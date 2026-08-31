@@ -7,7 +7,7 @@ import {
 import { api } from "../../lib/api.js";
 import AdminLayout from "../../components/AdminLayout.jsx";
 
-const STATUS_COLORS = { pending: "#C9A227", confirmed: "#F5C518", shipped: "#8A6D1F", delivered: "#FAFAF7", cancelled: "#E5484D" };
+const STATUS_COLORS = { pending: "#C9A227", confirmed: "#FFD23F", shipped: "#8A6D1F", delivered: "#FAFAF7", cancelled: "#E5484D" };
 
 // CHECKPOINT NOTE (admin/Dashboard.jsx):
 // Charts use recharts (added to package.json — run npm install to pick it

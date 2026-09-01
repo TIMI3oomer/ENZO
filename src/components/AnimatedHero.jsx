@@ -41,6 +41,24 @@ export default function AnimatedHero({ products }) {
   const wrapperRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const [focused, setFocused] = useState(null); // null | "logo" | orbit item index
+  const blurTimer = useRef(null);
+
+  // CHECKPOINT NOTE — debounced hover: without this, moving the mouse
+  // between two nearby orbit icons (crossing a small gap of unfocused
+  // space in between) flickered the blur overlay off and back on rapidly
+  // — this was the main thing making the spotlight feel bad. `focusItem`
+  // clears any pending "blur" immediately; `blurItem` waits a beat before
+  // actually clearing focus, giving enough time to land on the next icon
+  // without the overlay ever fully dropping in between.
+  function focusItem(key) {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setFocused(key);
+  }
+  function blurItem(key) {
+    blurTimer.current = setTimeout(() => {
+      setFocused((f) => (f === key ? null : f));
+    }, 120);
+  }
 
   const { scrollYProgress } = useScroll({ target: wrapperRef, offset: ["start start", "end start"] });
 
@@ -73,16 +91,16 @@ export default function AnimatedHero({ products }) {
               src="/logo.jpg"
               alt="ENZO"
               tabIndex={0}
-              onMouseEnter={() => setFocused("logo")}
-              onMouseLeave={() => setFocused((f) => (f === "logo" ? null : f))}
-              onFocus={() => setFocused("logo")}
-              onBlur={() => setFocused((f) => (f === "logo" ? null : f))}
+              onMouseEnter={() => focusItem("logo")}
+              onMouseLeave={() => blurItem("logo")}
+              onFocus={() => focusItem("logo")}
+              onBlur={() => blurItem("logo")}
               style={{ rotateY, scale: logoScale, opacity: logoOpacity, filter: logoFilter, transformStyle: "preserve-3d" }}
-              className={`relative h-32 w-32 rounded-full shadow-2xl outline-none sm:h-44 sm:w-44 ${
-                focused === "logo" ? "z-[50]" : "z-10"
+              className={`relative h-32 w-32 rounded-full shadow-2xl outline-none transition-shadow duration-200 sm:h-44 sm:w-44 ${
+                focused === "logo" ? "z-[50] shadow-[0_0_40px_rgba(255,210,63,0.55)]" : "z-10"
               }`}
             />
-            <OrbitingGarments products={products} progress={scrollYProgress} focused={focused} setFocused={setFocused} />
+            <OrbitingGarments products={products} progress={scrollYProgress} focused={focused} focusItem={focusItem} blurItem={blurItem} />
           </div>
 
           <motion.div style={{ opacity: textOpacity, y: textY }} className="relative z-10 mt-10">

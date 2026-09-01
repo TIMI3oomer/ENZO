@@ -414,3 +414,29 @@ renders sharp above the blur while everything else — navbar included —
 softens behind it. State (`focused`) is lifted into `AnimatedHero.jsx`
 and shared between the logo and `OrbitingGarments.jsx`. Works with
 keyboard navigation (Tab) too, not just mouse hover, for accessibility.
+
+## 13. Fixes — duplicated icons, invisible marquee, laggy blur spotlight
+
+**Bug fix — duplicated orbit icons**
+`GarmentIcons.jsx` only has 4 unique icons, but the fallback in
+`OrbitingGarments.jsx` was requesting 6 items and cycling through with
+modulo — so 2 of the 6 repeated an already-used shape. Now capped at
+exactly `GARMENT_ICONS.length` so every fallback icon is unique. (Add
+more icons to that file if you want more than 4 before you have 4+ real
+products with photos.)
+
+**Bug fix — marquee was effectively invisible**
+The previous version was 10% opacity plus a fairly strong blur on dark
+gray cards against a near-black page — barely distinguishable from the
+background at all. `ClothesMarquee.jsx` is now ~22% opacity with a
+lighter blur and a gold tint, enough to actually read as a moving strip
+behind the text while still staying clearly secondary to the headline.
+
+**Fix — hover-spotlight flicker + weak effect**
+`AnimatedHero.jsx` now debounces the hover handlers (`focusItem`/
+`blurItem`): moving your mouse across the small gap between two orbit
+icons no longer flickers the blur off and back on. `SpotlightOverlay.jsx`'s
+dim was also strengthened (30% → 55% black) so the effect reads clearly
+against the site's already-dark theme, and the focused logo/icon now gets
+a gold glow (`shadow`/`ring`) so it's obvious which element is "in focus,"
+not just sharp-vs-blurred.

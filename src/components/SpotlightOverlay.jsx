@@ -13,8 +13,8 @@ export default function SpotlightOverlay({ active }) {
   return (
     <div
       aria-hidden="true"
-      className={`fixed inset-0 z-[45] pointer-events-none transition-all duration-300 ${
-        active ? "backdrop-blur-md bg-black/30 opacity-100" : "opacity-0"
+      className={`fixed inset-0 z-[45] pointer-events-none transition-all duration-200 ${
+        active ? "backdrop-blur-md bg-black/55 opacity-100" : "opacity-0"
       }`}
     />
   );

@@ -7,8 +7,12 @@ import { GARMENT_ICONS } from "./GarmentIcons.jsx";
 // filmstrip anymore. Uses your real product photos once you have 6+
 // (rendered as small rounded cards, blurred), otherwise generic
 // silhouette icons (GarmentIcons.jsx) as a fallback on a fresh store.
-// Deliberately subtle: opacity 0.10 + a blur filter, specifically so it
-// reads as background texture, not a distraction.
+// Deliberately subtle: opacity ~0.22 with a light blur, using a gold
+// tint so it has enough presence to actually be visible against the
+// site's near-black background — an earlier version at 10% opacity plus
+// a heavier blur was reported as "gone" (essentially invisible on black),
+// so this is intentionally a bit stronger while still reading as
+// background texture, not a distraction.
 export default function ClothesMarquee({ products = [] }) {
   const items = useMemo(() => {
     const images = products.filter((p) => p.images?.[0]).map((p) => p.images[0]);
@@ -21,15 +25,15 @@ export default function ClothesMarquee({ products = [] }) {
   return (
     <div
       aria-hidden="true"
-      className="absolute inset-x-0 top-1/2 -z-10 h-20 -translate-y-1/2 overflow-hidden opacity-[0.10] blur-sm sm:h-24"
+      className="absolute inset-x-0 top-1/2 -z-10 h-20 -translate-y-1/2 overflow-hidden opacity-[0.22] blur-[2px] sm:h-24"
     >
       <div className="flex h-full w-max animate-[enzo-marquee_32s_linear_infinite] items-center gap-4">
         {row.map((item, i) => (
-          <div key={i} className="flex h-16 w-14 flex-none items-center justify-center rounded-lg bg-enzo-panel sm:h-20 sm:w-16">
+          <div key={i} className="flex h-16 w-14 flex-none items-center justify-center rounded-lg bg-enzo-gold/20 sm:h-20 sm:w-16">
             {item.type === "image" ? (
               <img src={item.src} alt="" className="h-full w-full rounded-lg object-cover" />
             ) : (
-              <item.Icon className="h-8 w-8 text-enzo-white" />
+              <item.Icon className="h-9 w-9 text-enzo-goldBright" />
             )}
           </div>
         ))}

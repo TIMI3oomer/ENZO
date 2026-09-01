@@ -6,6 +6,7 @@ import AdminLayout from "../../components/AdminLayout.jsx";
 // CHECKPOINT NOTE (admin/Customers.jsx):
 // Data comes from GET /api/admin/customers, which merges Supabase Auth's
 // user list (email/signup date) with the `profiles` table (phone/address,
+// added in migration_v4.sql) and an order count per customer.
 export default function AdminCustomers() {
   const { t } = useTranslation("admin");
   const [customers, setCustomers] = useState([]);

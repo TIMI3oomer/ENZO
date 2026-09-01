@@ -39,7 +39,7 @@ function useScatterLayout(count) {
   }, [count]);
 }
 
-function OrbitItem({ item, layout, progress, index, focused, setFocused }) {
+function OrbitItem({ item, layout, progress, index, focused, focusItem, blurItem }) {
   const ref = useRef(null);
   const reduceMotion = useReducedMotion();
   const isFocused = focused === index;
@@ -64,14 +64,16 @@ function OrbitItem({ item, layout, progress, index, focused, setFocused }) {
       <Link
         to="/shop"
         tabIndex={0}
-        onMouseEnter={() => setFocused(index)}
-        onMouseLeave={() => setFocused((f) => (f === index ? null : f))}
-        onFocus={() => setFocused(index)}
-        onBlur={() => setFocused((f) => (f === index ? null : f))}
+        onMouseEnter={() => focusItem(index)}
+        onMouseLeave={() => blurItem(index)}
+        onFocus={() => focusItem(index)}
+        onBlur={() => blurItem(index)}
         className="enzo-ring block h-full w-full rounded-full outline-none"
       >
         <div
-          className="h-full w-full rounded-full bg-enzo-panel shadow-lg"
+          className={`h-full w-full rounded-full bg-enzo-panel shadow-lg transition-shadow duration-200 ${
+            isFocused ? "ring-2 ring-enzo-goldBright shadow-[0_0_28px_rgba(255,210,63,0.55)]" : ""
+          }`}
           style={{
             animation: reduceMotion ? "none" : `enzo-spin-y ${layout.spinDuration}s linear infinite ${layout.spinDirection}`,
             transformStyle: "preserve-3d",
@@ -90,11 +92,15 @@ function OrbitItem({ item, layout, progress, index, focused, setFocused }) {
   );
 }
 
-export default function OrbitingGarments({ products, progress, focused, setFocused }) {
+export default function OrbitingGarments({ products, progress, focused, focusItem, blurItem }) {
   const items = useMemo(() => {
     const images = (products || []).filter((p) => p.images?.[0]).slice(0, 6);
     if (images.length >= 4) return images.map((p) => ({ type: "image", src: p.images[0] }));
-    return Array.from({ length: 6 }, (_, i) => ({ type: "icon", Icon: GARMENT_ICONS[i % GARMENT_ICONS.length] }));
+    // Capped at GARMENT_ICONS.length on purpose — cycling past that with
+    // modulo would repeat the same shape (that was the "duplicated icons"
+    // bug). Add more icons to GarmentIcons.jsx if you want more than 4
+    // fallback items before you have 4+ real products.
+    return GARMENT_ICONS.map((Icon) => ({ type: "icon", Icon }));
   }, [products]);
 
   const layouts = useScatterLayout(items.length);
@@ -103,7 +109,16 @@ export default function OrbitingGarments({ products, progress, focused, setFocus
     <div className="pointer-events-none absolute inset-0">
       <div className="pointer-events-auto relative h-full w-full">
         {items.map((item, i) => (
-          <OrbitItem key={i} item={item} layout={layouts[i]} progress={progress} index={i} focused={focused} setFocused={setFocused} />
+          <OrbitItem
+            key={i}
+            item={item}
+            layout={layouts[i]}
+            progress={progress}
+            index={i}
+            focused={focused}
+            focusItem={focusItem}
+            blurItem={blurItem}
+          />
         ))}
       </div>
     </div>

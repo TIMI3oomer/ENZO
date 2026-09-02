@@ -14,6 +14,7 @@ export const localizedText = z.object({
 export const orderItemSchema = z.object({
   product_id: z.string().uuid(),
   size: z.string().max(20).nullable().optional(),
+  color: z.string().max(30).nullable().optional(),
   quantity: z.number().int().positive().max(50),
 });
 
@@ -45,6 +46,7 @@ export const productSchema = z.object({
   stock: z.number().int().nonnegative(),
   category_id: z.string().uuid().nullable().optional(),
   sizes: z.array(z.string().max(10)).default([]),
+  colors: z.array(z.string().max(30)).default([]),
   images: z.array(z.string().url()).default([]),
   is_active: z.boolean().optional(),
 });

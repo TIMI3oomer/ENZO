@@ -29,6 +29,7 @@ router.post("/", attachUser, async (req, res, next) => {
       p_items: body.items.map((i) => ({
         product_id: i.product_id,
         size: i.size ?? null,
+        color: i.color ?? null,
         quantity: i.quantity,
       })),
     });

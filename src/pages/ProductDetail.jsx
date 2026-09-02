@@ -5,12 +5,20 @@ import { api } from "../lib/api.js";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 
+// Maps preset color NAMES (stored on the product, see admin/ProductForm.jsx)
+// to a swatch hex for display here. Keep this in sync with PRESET_COLORS
+// in ProductForm.jsx if you add more options there.
+const COLOR_SWATCHES = {
+  Black: "#0A0A0A", White: "#FAFAF7", Gold: "#C9A227", Gray: "#6B6B6B",
+  Navy: "#1F2A44", Beige: "#D8C3A5", Red: "#B3312C", Green: "#3C6B4A",
+};
+
 // CHECKPOINT NOTE (ProductDetail.jsx):
-// Fetches from GET /api/products/:slug (backend) instead of Supabase
-// directly. The product stays the SAME object across a language switch
-// (slugs are language-neutral), only its displayed text changes via
-// useLocalizedField — this satisfies "preserve the current product when
-// switching languages" without any extra logic.
+// Fetches from GET /api/products/:slug (backend). The product stays the
+// SAME object across a language switch (slugs are language-neutral).
+// Color picker added alongside size, mirroring the same pattern — both
+// are optional per-product (a product with no colors set just won't show
+// that picker at all).
 export default function ProductDetail() {
   const { slug } = useParams();
   const { t } = useTranslation("common");
@@ -20,6 +28,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [size, setSize] = useState(null);
+  const [color, setColor] = useState(null);
   const [activeImage, setActiveImage] = useState(0);
   const [added, setAdded] = useState(false);
 
@@ -29,6 +38,7 @@ export default function ProductDetail() {
       .then((data) => {
         setProduct(data);
         setSize(data?.sizes?.[0] ?? null);
+        setColor(data?.colors?.[0] ?? null);
       })
       .catch(() => setNotFound(true));
   }, [slug]);
@@ -37,7 +47,7 @@ export default function ProductDetail() {
   if (!product) return <div className="p-10 text-center text-enzo-muted">…</div>;
 
   const handleAdd = () => {
-    addItem(product, size, 1);
+    addItem(product, size, color, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
@@ -74,10 +84,27 @@ export default function ProductDetail() {
         <p className="mt-2 text-xl text-enzo-muted">{product.price}</p>
         <p className="mt-6 leading-relaxed text-enzo-muted">{localize(product.description)}</p>
 
+        {product.colors?.length > 0 && (
+          <div className="mt-6">
+            <p className="mb-2 text-sm font-medium">{t("product.color")}</p>
+            <div className="flex gap-2">
+              {product.colors.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  title={c}
+                  className={`h-9 w-9 rounded-full border-2 ${color === c ? "border-enzo-goldBright" : "border-enzo-line"}`}
+                  style={{ backgroundColor: COLOR_SWATCHES[c] || "#333" }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {product.sizes?.length > 0 && (
           <div className="mt-6">
             <p className="mb-2 text-sm font-medium">{t("product.size")}</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {product.sizes.map((s) => (
                 <button
                   key={s}

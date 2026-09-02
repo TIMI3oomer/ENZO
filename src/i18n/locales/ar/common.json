@@ -23,7 +23,8 @@
     "outOfStock": "غير متوفر حالياً",
     "size": "المقاس",
     "quantity": "الكمية",
-    "relatedProducts": "قد يعجبك أيضاً"
+    "relatedProducts": "قد يعجبك أيضاً",
+    "color": "اللون"
   },
   "cart": {
     "title": "سلة التسوق",

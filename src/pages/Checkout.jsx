@@ -78,6 +78,7 @@ export default function Checkout() {
         items: items.map((item) => ({
           product_id: item.productId,
           size: item.size ?? null,
+          color: item.color ?? null,
           quantity: item.quantity,
         })),
       });
@@ -89,6 +90,7 @@ export default function Checkout() {
       const confirmedItems = items.map((item) => ({
         name: item.name,
         size: item.size,
+        color: item.color,
         quantity: item.quantity,
         price: item.price,
       }));
@@ -179,7 +181,7 @@ export default function Checkout() {
             <li key={item.key} className="flex justify-between text-sm">
               <span>
                 {localize(item.name)} × {item.quantity}
-                {item.size ? ` (${item.size})` : ""}
+                {[item.color, item.size].filter(Boolean).map((v) => ` (${v})`).join("")}
               </span>
               <span>{item.price * item.quantity}</span>
             </li>

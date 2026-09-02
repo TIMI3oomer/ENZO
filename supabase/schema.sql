@@ -39,6 +39,7 @@ create table if not exists products (
   care_instructions jsonb not null default '{}'::jsonb,
   price numeric(10,2) not null check (price >= 0),
   sizes text[] not null default '{}',
+  colors text[] not null default '{}',
   images text[] not null default '{}',
   stock int not null default 0 check (stock >= 0),
   is_active boolean not null default true,
@@ -78,6 +79,7 @@ create table if not exists order_items (
   product_id uuid references products(id) on delete set null,
   product_name jsonb not null,
   size text,
+  color text,
   quantity int not null check (quantity > 0),
   unit_price numeric(10,2) not null
 );
@@ -239,8 +241,8 @@ begin
     select * into v_product from products where id = (v_item->>'product_id')::uuid;
     v_qty := (v_item->>'quantity')::int;
 
-    insert into order_items (order_id, product_id, product_name, size, quantity, unit_price)
-    values (v_order_id, v_product.id, v_product.name, v_item->>'size', v_qty, v_product.price);
+    insert into order_items (order_id, product_id, product_name, size, color, quantity, unit_price)
+    values (v_order_id, v_product.id, v_product.name, v_item->>'size', v_item->>'color', v_qty, v_product.price);
 
     update products set stock = stock - v_qty where id = v_product.id;
   end loop;
@@ -248,6 +250,35 @@ begin
   return query select v_order_id, v_order_number, v_subtotal;
 end;
 $$;
+
+-- =====================================================================
+-- STORAGE: product image uploads (admin panel "upload from gallery")
+--
+-- file_size_limit + allowed_mime_types are the REAL security boundary
+-- against malicious/disguised file uploads — enforced by Supabase
+-- itself, unlike the client-side checks in src/lib/upload.js which a
+-- determined attacker could bypass. "do update set" (not "do nothing")
+-- so re-running this file always re-applies these limits even if the
+-- bucket already existed from an earlier version of this schema.
+-- =====================================================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'product-images', 'product-images', true,
+  5242880, -- 5 MB
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "public read product images" on storage.objects
+  for select using (bucket_id = 'product-images');
+
+create policy "admin upload product images" on storage.objects
+  for insert with check (bucket_id = 'product-images' and is_admin());
+
+create policy "admin delete product images" on storage.objects
+  for delete using (bucket_id = 'product-images' and is_admin());
 
 -- =====================================================================
 -- SEED DATA (optional — remove or edit before going live)

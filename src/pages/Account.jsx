@@ -149,7 +149,7 @@ export default function Account() {
                         <li key={item.id} className="flex justify-between text-sm">
                           <span>
                             {localize(item.product_name)} × {item.quantity}
-                            {item.size ? ` (${item.size})` : ""}
+                            {[item.color, item.size].filter(Boolean).map((v) => ` (${v})`).join("")}
                           </span>
                           <span>{item.unit_price * item.quantity}</span>
                         </li>

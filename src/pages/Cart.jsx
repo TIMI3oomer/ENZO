@@ -35,7 +35,9 @@ export default function Cart() {
             </div>
             <div className="flex-1 text-start">
               <p className="font-medium">{localize(item.name)}</p>
-              {item.size && <p className="text-sm text-enzo-muted">{item.size}</p>}
+              {(item.size || item.color) && (
+                <p className="text-sm text-enzo-muted">{[item.color, item.size].filter(Boolean).join(" / ")}</p>
+              )}
               <div className="mt-2 flex items-center gap-3">
                 <button onClick={() => updateQuantity(item.key, item.quantity - 1)}>
                   <Minus size={16} />

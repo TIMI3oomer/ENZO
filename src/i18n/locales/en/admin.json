@@ -27,7 +27,13 @@
     "price": "Price",
     "stock": "Stock quantity",
     "category": "Category",
-    "save": "Save"
+    "save": "Save",
+    "sizes": "Sizes",
+    "colors": "Colors",
+    "images": "Images",
+    "uploadImages": "Upload from device",
+    "uploading": "Uploading...",
+    "removeImage": "Remove"
   },
   "orders": {
     "title": "Orders",
@@ -49,6 +55,12 @@
     "ordersByStatus": "Orders by status",
     "topProducts": "Top products",
     "revenue": "Revenue",
+    "orders": "Orders"
+  },
+  "customersPage": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
     "orders": "Orders"
   }
 }

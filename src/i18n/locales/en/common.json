@@ -23,7 +23,8 @@
     "outOfStock": "Out of stock",
     "size": "Size",
     "quantity": "Quantity",
-    "relatedProducts": "You might also like"
+    "relatedProducts": "You might also like",
+    "color": "Color"
   },
   "cart": {
     "title": "Shopping cart",

@@ -27,7 +27,13 @@
     "price": "السعر",
     "stock": "الكمية المتوفرة",
     "category": "التصنيف",
-    "save": "حفظ"
+    "save": "حفظ",
+    "sizes": "المقاسات",
+    "colors": "الألوان",
+    "images": "الصور",
+    "uploadImages": "رفع صور من الجهاز",
+    "uploading": "جارٍ الرفع...",
+    "removeImage": "إزالة"
   },
   "orders": {
     "title": "الطلبات",
@@ -49,6 +55,12 @@
     "ordersByStatus": "الطلبات حسب الحالة",
     "topProducts": "الأكثر مبيعاً",
     "revenue": "الإيرادات",
+    "orders": "الطلبات"
+  },
+  "customersPage": {
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "phone": "رقم الهاتف",
     "orders": "الطلبات"
   }
 }

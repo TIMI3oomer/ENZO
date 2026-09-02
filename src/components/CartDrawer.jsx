@@ -55,7 +55,9 @@ export default function CartDrawer({ open, onClose }) {
                       </div>
                       <div className="flex flex-1 flex-col gap-1">
                         <p className="text-sm font-medium">{localize(item.name)}</p>
-                        {item.size && <p className="text-xs text-enzo-muted">{item.size}</p>}
+                        {(item.size || item.color) && (
+                          <p className="text-xs text-enzo-muted">{[item.color, item.size].filter(Boolean).join(" / ")}</p>
+                        )}
                         <div className="mt-1 flex items-center gap-3">
                           <button onClick={() => updateQuantity(item.key, item.quantity - 1)}>
                             <Minus size={14} />

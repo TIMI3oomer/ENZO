@@ -1,72 +1,35 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import ClothesMarquee from "./ClothesMarquee.jsx";
 import OrbitingGarments from "./OrbitingGarments.jsx";
-import SpotlightOverlay from "./SpotlightOverlay.jsx";
 
 // CHECKPOINT NOTE (components/AnimatedHero.jsx):
-// Replaces the old CoinFlipHero.jsx, driven by ONE scroll range (a tall
-// wrapper with sticky content pinned inside it):
+// The hover-spotlight effect (blur everything except the hovered logo/
+// icon) was REMOVED per your note — hover doesn't exist on touch devices,
+// and this is primarily a mobile audience, so it was dead code for most
+// visitors. Tap-to-navigate (already how the logo/icons work via <Link>)
+// is what actually matters on phones, and that still works exactly the
+// same. Everything else — the coin flip, the orbiting garments, the
+// ambient marquee — is unchanged.
 //
 //   AT REST (scroll 0)   Headline/subtitle/CTA are fully visible
-//                        immediately — no fade-in wait. The logo sits
-//                        small, blurred, and dim behind/beside it.
-//   scroll 0.00 - 0.20   As the user starts scrolling, the text fades
-//                        AWAY (not in) while the logo flips (rotateY
-//                        0->360) and scales/sharpens into focus --
-//                        "from background to front."
-//   scroll 0.14 - ~0.35  OrbitingGarments.jsx staggers in fast — every
-//                        item fully visible within a short window, not
-//                        dragged out, so they're clear and clickable
-//                        quickly.
-//
-// ClothesMarquee.jsx (the blurred, low-opacity sliding strip) sits
-// specifically BEHIND the headline text, inside the same relative
-// container as the text (-z-10).
+//                        immediately. Logo sits small, blurred, dim.
+//   scroll 0.00 - 0.20   Text fades away while the logo flips (rotateY
+//                        0->360) and scales/sharpens into focus.
+//   scroll 0.14 - ~0.35  OrbitingGarments.jsx staggers in fast.
 //
 // Everything here only animates transform/opacity/filter (all
 // GPU-composited). useReducedMotion() flattens the flip/scatter to a
 // plain fade for anyone with that OS preference.
-//
-// CHECKPOINT NOTE — HOVER SPOTLIGHT: `focused` tracks which element (the
-// logo, or a specific orbit item index) currently has hover/keyboard
-// focus. SpotlightOverlay.jsx renders a full-page blurred layer above
-// everything at z-45; the focused element is bumped to z-50 (see its
-// conditional className below and in OrbitingGarments.jsx) so it renders
-// ABOVE that blur and stays sharp while it's active.
 export default function AnimatedHero({ products }) {
   const { t } = useTranslation("common");
   const wrapperRef = useRef(null);
   const reduceMotion = useReducedMotion();
-  const [focused, setFocused] = useState(null); // null | "logo" | orbit item index
-  const blurTimer = useRef(null);
-
-  // CHECKPOINT NOTE — debounced hover: without this, moving the mouse
-  // between two nearby orbit icons (crossing a small gap of unfocused
-  // space in between) flickered the blur overlay off and back on rapidly
-  // — this was the main thing making the spotlight feel bad. `focusItem`
-  // clears any pending "blur" immediately; `blurItem` waits a beat before
-  // actually clearing focus, giving enough time to land on the next icon
-  // without the overlay ever fully dropping in between.
-  function focusItem(key) {
-    if (blurTimer.current) clearTimeout(blurTimer.current);
-    setFocused(key);
-  }
-  function blurItem(key) {
-    blurTimer.current = setTimeout(() => {
-      setFocused((f) => (f === key ? null : f));
-    }, 120);
-  }
 
   const { scrollYProgress } = useScroll({ target: wrapperRef, offset: ["start start", "end start"] });
 
-  // CHECKPOINT NOTE — reworked per your latest note: the headline is now
-  // visible immediately at rest (progress 0), not faded in after
-  // scrolling. As the user starts scrolling, the text fades AWAY and the
-  // logo flip + orbiting icons take over — so scrolling reveals "just the
-  // icons," not text-then-icons stacked together.
   const rotateY = useTransform(scrollYProgress, [0, 0.2], reduceMotion ? [0, 0] : [0, 360]);
   const logoScale = useTransform(scrollYProgress, [0, 0.2], reduceMotion ? [1, 1] : [0.45, 1]);
   const logoBlur = useTransform(scrollYProgress, [0, 0.2], reduceMotion ? [0, 0] : [6, 0]);
@@ -80,7 +43,6 @@ export default function AnimatedHero({ products }) {
 
   return (
     <div ref={wrapperRef} className="relative h-[160vh]">
-      <SpotlightOverlay active={focused !== null} />
       <div
         className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
         style={{ perspective: "1200px" }}
@@ -90,17 +52,10 @@ export default function AnimatedHero({ products }) {
             <motion.img
               src="/logo.jpg"
               alt="ENZO"
-              tabIndex={0}
-              onMouseEnter={() => focusItem("logo")}
-              onMouseLeave={() => blurItem("logo")}
-              onFocus={() => focusItem("logo")}
-              onBlur={() => blurItem("logo")}
               style={{ rotateY, scale: logoScale, opacity: logoOpacity, filter: logoFilter, transformStyle: "preserve-3d" }}
-              className={`relative h-32 w-32 rounded-full shadow-2xl outline-none transition-shadow duration-200 sm:h-44 sm:w-44 ${
-                focused === "logo" ? "z-[50] shadow-[0_0_40px_rgba(255,210,63,0.55)]" : "z-10"
-              }`}
+              className="relative z-10 h-32 w-32 rounded-full shadow-2xl sm:h-44 sm:w-44"
             />
-            <OrbitingGarments products={products} progress={scrollYProgress} focused={focused} focusItem={focusItem} blurItem={blurItem} />
+            <OrbitingGarments products={products} progress={scrollYProgress} />
           </div>
 
           <motion.div style={{ opacity: textOpacity, y: textY }} className="relative z-10 mt-10">

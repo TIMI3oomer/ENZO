@@ -30,10 +30,10 @@ export default function AdminCustomers() {
           <table className="w-full text-start text-sm">
             <thead className="bg-enzo-panel text-enzo-muted">
               <tr>
-                <th className="px-4 py-3 text-start">Name</th>
-                <th className="px-4 py-3 text-start">Email</th>
-                <th className="px-4 py-3 text-start">Phone</th>
-                <th className="px-4 py-3 text-start">{t("orders.title")}</th>
+                <th className="px-4 py-3 text-start">{t("customersPage.name")}</th>
+                <th className="px-4 py-3 text-start">{t("customersPage.email")}</th>
+                <th className="px-4 py-3 text-start">{t("customersPage.phone")}</th>
+                <th className="px-4 py-3 text-start">{t("customersPage.orders")}</th>
               </tr>
             </thead>
             <tbody>

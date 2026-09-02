@@ -4,11 +4,12 @@ const CartContext = createContext(null);
 const STORAGE_KEY = "enzo_cart_v1";
 
 // CHECKPOINT NOTE (CartContext.jsx):
-// Cart is stored client-side (localStorage) keyed by product id + size, and
-// is completely independent of the language context — switching between
-// Arabic and English never clears or resets it. Each cart line stores the
-// bilingual product name snapshot so the cart can render correctly in
-// whichever language is active without re-fetching the product.
+// Cart is stored client-side (localStorage) keyed by product id + size +
+// color, and is completely independent of the language context —
+// switching between Arabic and English never clears or resets it. Each
+// cart line stores the bilingual product name snapshot so the cart can
+// render correctly in whichever language is active without re-fetching
+// the product.
 export function CartProvider({ children }) {
   const [items, setItems] = useState(() => {
     try {
@@ -23,9 +24,9 @@ export function CartProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
-  const addItem = (product, size, quantity = 1) => {
+  const addItem = (product, size, color, quantity = 1) => {
     setItems((prev) => {
-      const key = `${product.id}__${size ?? "onesize"}`;
+      const key = `${product.id}__${size ?? "onesize"}__${color ?? "nocolor"}`;
       const existing = prev.find((i) => i.key === key);
       if (existing) {
         return prev.map((i) =>
@@ -42,6 +43,7 @@ export function CartProvider({ children }) {
           price: product.price,
           image: product.images?.[0] ?? null,
           size,
+          color,
           quantity,
         },
       ];

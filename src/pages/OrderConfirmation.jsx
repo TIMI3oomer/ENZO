@@ -35,7 +35,7 @@ export default function OrderConfirmation() {
               <li key={i} className="flex justify-between text-sm">
                 <span>
                   {localize(item.name)} × {item.quantity}
-                  {item.size ? ` (${item.size})` : ""}
+                  {[item.color, item.size].filter(Boolean).map((v) => ` (${v})`).join("")}
                 </span>
                 <span>{item.price * item.quantity}</span>
               </li>

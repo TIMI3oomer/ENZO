@@ -1,8 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { X, Upload } from "lucide-react";
 import { api } from "../../lib/api.js";
+import { uploadProductImage } from "../../lib/upload.js";
 import AdminLayout from "../../components/AdminLayout.jsx";
+
+const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+const PRESET_COLORS = [
+  { name: "Black", hex: "#0A0A0A" },
+  { name: "White", hex: "#FAFAF7" },
+  { name: "Gold", hex: "#C9A227" },
+  { name: "Gray", hex: "#6B6B6B" },
+  { name: "Navy", hex: "#1F2A44" },
+  { name: "Beige", hex: "#D8C3A5" },
+  { name: "Red", hex: "#B3312C" },
+  { name: "Green", hex: "#3C6B4A" },
+];
 
 const empty = {
   slug: "",
@@ -19,19 +33,26 @@ const empty = {
   price: "",
   stock: "",
   category_id: "",
-  sizes: "S,M,L,XL",
-  images: "",
+  sizes: [],
+  colors: [],
+  images: [],
 };
 
 // CHECKPOINT NOTE (admin/ProductForm.jsx):
-// This form is the concrete implementation of spec section 4 ("Bilingual
-// product data") — every localized field has an explicit ar/en input pair
-// side by side, so the admin can never accidentally publish a product with
-// only one language filled in. Images are entered as comma-separated URLs
-// for now; swap this input for a real Supabase Storage file uploader when
-// you're ready (flagged here as a clear upgrade point, not built silently).
+// Rebuilt per your request for an easier product-adding experience:
+// - Sizes and colors are now click-to-toggle menus (ALL_SIZES /
+//   PRESET_COLORS above), not comma-separated text you had to type
+//   correctly. Both are stored as plain string arrays on the product
+//   (e.g. sizes: ["S","M","L"], colors: ["Black","Gold"]) -- add more
+//   options to either constant if you need sizes/colors not listed here.
+// - Images are uploaded straight from your device/gallery via
+//   src/lib/upload.js (Supabase Storage), not pasted as URLs. Multiple
+//   files can be selected at once; each shows a thumbnail with a remove
+//   (x) button. Requires the "product-images" Storage bucket, created
+//   automatically by schema.sql / migration_v6.sql.
 export default function AdminProductForm() {
   const { t } = useTranslation("admin");
+  const { t: tc } = useTranslation("common");
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
@@ -39,6 +60,7 @@ export default function AdminProductForm() {
   const [form, setForm] = useState(empty);
   const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -66,14 +88,47 @@ export default function AdminProductForm() {
           price: data.price,
           stock: data.stock,
           category_id: data.category_id || "",
-          sizes: (data.sizes || []).join(","),
-          images: (data.images || []).join(","),
+          sizes: data.sizes || [],
+          colors: data.colors || [],
+          images: data.images || [],
         });
       })
       .catch(() => {});
   }, [id, isEdit]);
 
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  function toggleInArray(key, value) {
+    setForm((f) => ({
+      ...f,
+      [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value],
+    }));
+  }
+
+  async function handleFilesSelected(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploading(true);
+    setError("");
+
+    // Promise.allSettled (not Promise.all): one rejected file — e.g. a
+    // fake/oversized upload rejected by src/lib/upload.js's checks —
+    // should not also block the OTHER, valid files in the same batch
+    // from uploading successfully.
+    const results = await Promise.allSettled(files.map(uploadProductImage));
+    const urls = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+    const failures = results.filter((r) => r.status === "rejected").map((r) => r.reason.message);
+
+    if (urls.length > 0) setForm((f) => ({ ...f, images: [...f.images, ...urls] }));
+    if (failures.length > 0) setError(failures.join(" "));
+
+    setUploading(false);
+    e.target.value = ""; // allow re-selecting the same file later
+  }
+
+  function removeImage(url) {
+    setForm((f) => ({ ...f, images: f.images.filter((i) => i !== url) }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -90,8 +145,9 @@ export default function AdminProductForm() {
       price: Number(form.price) || 0,
       stock: Number(form.stock) || 0,
       category_id: form.category_id || null,
-      sizes: form.sizes.split(",").map((s) => s.trim()).filter(Boolean),
-      images: form.images.split(",").map((s) => s.trim()).filter(Boolean),
+      sizes: form.sizes,
+      colors: form.colors,
+      images: form.images,
     };
 
     try {
@@ -132,29 +188,29 @@ export default function AdminProductForm() {
         </div>
 
         <div>
-          <Label>Material (AR)</Label>
+          <Label>{tc("product.material")} (AR)</Label>
           <input className="input" dir="rtl" value={form.material_ar} onChange={update("material_ar")} />
         </div>
         <div>
-          <Label>Material (EN)</Label>
+          <Label>{tc("product.material")} (EN)</Label>
           <input className="input" dir="ltr" value={form.material_en} onChange={update("material_en")} />
         </div>
 
         <div>
-          <Label>Fit (AR)</Label>
+          <Label>{tc("product.fit")} (AR)</Label>
           <input className="input" dir="rtl" value={form.fit_ar} onChange={update("fit_ar")} />
         </div>
         <div>
-          <Label>Fit (EN)</Label>
+          <Label>{tc("product.fit")} (EN)</Label>
           <input className="input" dir="ltr" value={form.fit_en} onChange={update("fit_en")} />
         </div>
 
         <div>
-          <Label>Care (AR)</Label>
+          <Label>{tc("product.care")} (AR)</Label>
           <input className="input" dir="rtl" value={form.care_ar} onChange={update("care_ar")} />
         </div>
         <div>
-          <Label>Care (EN)</Label>
+          <Label>{tc("product.care")} (EN)</Label>
           <input className="input" dir="ltr" value={form.care_en} onChange={update("care_en")} />
         </div>
 
@@ -167,7 +223,7 @@ export default function AdminProductForm() {
           <input className="input" type="number" value={form.stock} onChange={update("stock")} required />
         </div>
 
-        <div>
+        <FullRow>
           <Label>{t("products.category")}</Label>
           <select className="input" value={form.category_id} onChange={update("category_id")}>
             <option value="">—</option>
@@ -177,23 +233,89 @@ export default function AdminProductForm() {
               </option>
             ))}
           </select>
-        </div>
-        <div>
-          <Label>Sizes (comma separated)</Label>
-          <input className="input" dir="ltr" value={form.sizes} onChange={update("sizes")} />
-        </div>
-
-        <FullRow>
-          <Label>Image URLs (comma separated)</Label>
-          <input className="input" dir="ltr" value={form.images} onChange={update("images")} />
         </FullRow>
 
-        {error && <FullRow><p className="text-sm text-enzo-error">{error}</p></FullRow>}
+        {/* Sizes menu */}
+        <FullRow>
+          <Label>{t("products.sizes")}</Label>
+          <div className="flex flex-wrap gap-2">
+            {ALL_SIZES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => toggleInArray("sizes", s)}
+                className={`rounded-md border px-3 py-1.5 text-sm ${
+                  form.sizes.includes(s)
+                    ? "border-enzo-goldBright bg-enzo-goldBright text-enzo-black"
+                    : "border-enzo-line text-enzo-muted"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </FullRow>
+
+        {/* Colors menu */}
+        <FullRow>
+          <Label>{t("products.colors")}</Label>
+          <div className="flex flex-wrap gap-3">
+            {PRESET_COLORS.map((c) => {
+              const active = form.colors.includes(c.name);
+              return (
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => toggleInArray("colors", c.name)}
+                  title={c.name}
+                  className={`flex flex-col items-center gap-1 rounded-md p-1.5 ${active ? "ring-2 ring-enzo-goldBright" : ""}`}
+                >
+                  <span className="h-7 w-7 rounded-full border border-enzo-line" style={{ backgroundColor: c.hex }} />
+                  <span className="text-[10px] text-enzo-muted">{c.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </FullRow>
+
+        {/* Image upload from gallery */}
+        <FullRow>
+          <Label>{t("products.images")}</Label>
+          <label className="flex w-fit cursor-pointer items-center gap-2 rounded-md border border-dashed border-enzo-line px-4 py-2 text-sm text-enzo-muted hover:border-enzo-goldBright hover:text-enzo-white">
+            <Upload size={16} />
+            {uploading ? t("products.uploading") : t("products.uploadImages")}
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={handleFilesSelected} disabled={uploading} />
+          </label>
+
+          {form.images.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-3">
+              {form.images.map((url) => (
+                <div key={url} className="group relative h-20 w-16 overflow-hidden rounded-md bg-enzo-panel">
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    aria-label={t("products.removeImage")}
+                    className="absolute end-1 top-1 rounded-full bg-enzo-black/80 p-1 text-enzo-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </FullRow>
+
+        {error && (
+          <FullRow>
+            <p className="text-sm text-enzo-error">{error}</p>
+          </FullRow>
+        )}
 
         <FullRow>
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || uploading}
             className="rounded-md bg-enzo-gradient px-6 py-3 font-semibold text-enzo-black disabled:opacity-40"
           >
             {t("products.save")}

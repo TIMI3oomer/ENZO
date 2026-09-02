@@ -440,3 +440,87 @@ dim was also strengthened (30% → 55% black) so the effect reads clearly
 against the site's already-dark theme, and the focused logo/icon now gets
 a gold glow (`shadow`/`ring`) so it's obvious which element is "in focus,"
 not just sharp-vs-blurred.
+
+## 14. Update — removed hover-blur, added colors + gallery upload, fixed i18n gaps
+
+**Removed — hover-spotlight effect**
+Deleted entirely (`SpotlightContext.jsx`, all related code in
+`AnimatedHero.jsx`/`OrbitingGarments.jsx`). Hover has no meaning on touch
+devices, and this is primarily a mobile audience — it was dead code for
+most visitors. Tapping the logo/icons still navigates to `/shop` exactly
+as before.
+
+**Run this new migration:** `supabase/migration_v6.sql` (adds
+`products.colors`, `order_items.color`, and the `product-images` Storage
+bucket + policies). Already included in the consolidated `schema.sql` for
+fresh installs.
+
+**Checkpoint 34 — Size and color menus instead of typed text**
+`admin/ProductForm.jsx` rebuilt: sizes and colors are now click-to-toggle
+button/swatch menus (`ALL_SIZES` / `PRESET_COLORS` in that file), stored
+as plain string arrays — no more typing comma-separated values correctly.
+Add more options to either constant if you need something not listed.
+
+**Checkpoint 35 — Upload photos from your gallery**
+`src/lib/upload.js` uploads straight to Supabase Storage using the
+admin's own session (the `product-images` bucket + its admin-only-write
+policy enforce security server-side, same pattern as everywhere else in
+this app). The image field in `ProductForm.jsx` is now a real file
+picker with thumbnail previews and remove buttons — no more pasting URLs.
+
+**Checkpoint 36 — Colors threaded through the whole order flow**
+Added color selection to `ProductDetail.jsx` (a swatch picker next to
+size), and threaded it through `CartContext.jsx`, `Cart.jsx`,
+`CartDrawer.jsx`, `Checkout.jsx`, `OrderConfirmation.jsx`, `Account.jsx`,
+and admin `Orders.jsx` — everywhere size already showed, color now shows
+alongside it (e.g. "Gold / M"). `place_order()` (the atomic checkout
+function) now stores color per line item too.
+
+**Bug fixes — i18n gaps found during the alignment audit**
+- Admin `Customers.jsx` had hardcoded English column headers ("Name",
+  "Email", "Phone") that never translated to Arabic — fixed with proper
+  `customersPage.*` translation keys.
+- `ProductForm.jsx`'s "Material"/"Fit"/"Care" field labels were
+  hardcoded English — now reuse the existing `product.material` /
+  `product.fit` / `product.care` keys from `common.json`.
+- Full re-audit of every component for hardcoded `left-`/`right-`/
+  `ml-`/`mr-`/`pl-`/`pr-` classes found none outside of code comments —
+  the logical-properties discipline has held since the last audit.
+
+## 15. Update — real security checks on image uploads
+
+**Run this new migration:** `supabase/migration_v7.sql` (locks down the
+`product-images` bucket). Already included in the consolidated
+`schema.sql` for fresh installs.
+
+**Checkpoint 37 — Three-layer defense against disguised/malicious file uploads**
+Previously, `accept="image/*"` on the file input was just a UI hint — it
+doesn't stop someone from uploading a renamed non-image file. Now there
+are three independent layers, explained in full in `src/lib/upload.js`:
+
+1. **MIME type check** — fast, but the browser-reported type can be
+   spoofed, so this alone isn't real security.
+2. **Magic-byte signature check** — reads the actual first few bytes of
+   the file and confirms they match a real image format's binary
+   signature. This is what catches something like `malware.exe` renamed
+   to `totally-a-shirt.jpg` — renaming a file doesn't change its actual
+   byte content, so the disguise fails here even though the extension
+   and reported MIME type look fine.
+3. **Storage-level enforcement** (`schema.sql`'s bucket definition —
+   `file_size_limit` + `allowed_mime_types`) — **this is the real
+   security boundary.** It's enforced by Supabase itself, so it can't be
+   bypassed by editing the frontend JS or calling the upload API
+   directly with another tool. Layers 1-2 just give the admin a fast,
+   friendly error message instead of a raw rejection.
+
+Also: one rejected file in a multi-file selection no longer blocks the
+other valid files in the same batch from uploading (`Promise.allSettled`,
+not `Promise.all`).
+
+**Honest scope note:** these checks confirm a file IS a real image and
+isn't grossly oversized — they don't scan image *content* for hidden
+exploits (e.g., a maliciously crafted image designed to exploit a bug in
+some specific image-viewing software). That's a deeper concern usually
+solved with a server-side re-encoding pipeline, which is a separate,
+larger addition if you ever want it — not something this checklist
+silently skipped.

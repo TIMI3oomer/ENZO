@@ -48,5 +48,4 @@ app.use("/api/account", accountRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`[ENZO server] listening on port ${port}`));
+export default app;

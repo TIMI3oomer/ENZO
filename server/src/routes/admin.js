@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabaseAdmin.js";
 import { attachUser, requireAdmin } from "../middleware/auth.js";
-import { productSchema, orderStatusSchema, parseOrThrow } from "../utils/validation.js";
+import { productSchema, orderStatusSchema, categorySchema, parseOrThrow } from "../utils/validation.js";
 import { sendOrderStatusEmail } from "../lib/email.js";
 
 const router = Router();
@@ -191,13 +191,42 @@ router.get("/analytics", async (_req, res, next) => {
   }
 });
 
-// ---------- Categories ----------
+// ---------- Categories (full CRUD — admin names/edits/removes their own) ----------
+// CHECKPOINT NOTE: deleting a category is safe for existing products —
+// products.category_id has `on delete set null` (see schema.sql), so a
+// product just becomes "uncategorized" rather than being deleted too.
 router.post("/categories", async (req, res, next) => {
   try {
-    const { slug, name } = req.body;
-    const { data, error } = await supabaseAdmin.from("categories").insert({ slug, name }).select().single();
+    const body = parseOrThrow(categorySchema, req.body);
+    const { data, error } = await supabaseAdmin.from("categories").insert(body).select().single();
     if (error) throw error;
     res.status(201).json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/categories/:id", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(categorySchema, req.body);
+    const { data, error } = await supabaseAdmin
+      .from("categories")
+      .update(body)
+      .eq("id", req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/categories/:id", async (req, res, next) => {
+  try {
+    const { error } = await supabaseAdmin.from("categories").delete().eq("id", req.params.id);
+    if (error) throw error;
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

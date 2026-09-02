@@ -62,5 +62,18 @@
     "email": "Email",
     "phone": "Phone",
     "orders": "Orders"
+  },
+  "categoriesPage": {
+    "title": "Categories",
+    "add": "Add category",
+    "nameAr": "Name (Arabic)",
+    "nameEn": "Name (English)",
+    "slug": "Slug (lowercase, no spaces)",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "empty": "No categories yet",
+    "confirmDelete": "Delete this category? Products using it will become uncategorized."
   }
 }

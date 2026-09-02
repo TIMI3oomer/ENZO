@@ -56,6 +56,16 @@ export const orderStatusSchema = z.object({
   note: z.string().trim().max(1000).optional().nullable(),
 });
 
+export const categorySchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase letters, numbers, and hyphens only"),
+  name: localizedText,
+});
+
 // Small helper used by every route: validates `req.body` against a zod
 // schema and throws a clean 400 error (caught by errorHandler.js) if it
 // doesn't match, instead of letting a malformed request reach Supabase.

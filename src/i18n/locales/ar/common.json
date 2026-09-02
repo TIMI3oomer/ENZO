@@ -70,7 +70,9 @@
     "myOrders": "طلباتي",
     "noOrders": "لا توجد طلبات بعد",
     "passwordMismatch": "كلمتا المرور غير متطابقتين",
-    "welcomeBack": "مرحباً بعودتك"
+    "welcomeBack": "مرحباً بعودتك",
+    "controlPanel": "لوحة التحكم",
+    "controlPanelHint": "الانتقال إلى لوحة الإدارة ←"
   },
   "filters": {
     "sortBy": "ترتيب حسب",

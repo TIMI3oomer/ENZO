@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Menu, X, ShoppingBag, Search, User } from "lucide-react";
+import { Menu, X, ShoppingBag, Search, User, LayoutDashboard } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
 import CartDrawer from "./CartDrawer.jsx";
 import { useCart } from "../context/CartContext.jsx";
@@ -12,12 +12,18 @@ import { useAuth } from "../context/AuthContext.jsx";
 // flex, never left/right classes, so it mirrors correctly for RTL/LTR
 // without any conditional className branching. Icons come from lucide-react
 // (external icon library, per your note to lean on outside libs).
+//
+// ADMIN SHORTCUT: there's no separate admin login anymore (see
+// ProtectedAdminRoute.jsx) — an admin account is just a regular account
+// via /login that happens to be in admin_users. When that's the signed-in
+// account, a small gold "Control Panel" icon appears here, linking
+// straight to /admin. Invisible to every normal customer.
 export default function Navbar() {
   const { t } = useTranslation("common");
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const { count } = useCart();
-  const { session } = useAuth();
+  const { session, isAdmin } = useAuth();
 
   const links = [
     { to: "/", label: t("nav.home") },
@@ -69,6 +75,17 @@ export default function Navbar() {
             <User size={20} />
           </Link>
 
+          {isAdmin && (
+            <Link
+              to="/admin"
+              aria-label={t("auth.controlPanel")}
+              title={t("auth.controlPanel")}
+              className="hidden text-enzo-gold transition-colors hover:text-enzo-goldBright sm:block"
+            >
+              <LayoutDashboard size={20} />
+            </Link>
+          )}
+
           <button
             aria-label={t("nav.cart")}
             onClick={() => setCartOpen(true)}
@@ -113,6 +130,15 @@ export default function Navbar() {
             >
               {session ? t("auth.myAccount") : t("auth.login")}
             </Link>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={() => setMenuOpen(false)}
+                className="text-base font-medium text-enzo-gold"
+              >
+                {t("auth.controlPanel")}
+              </Link>
+            )}
             <LanguageSwitcher />
           </nav>
         </div>

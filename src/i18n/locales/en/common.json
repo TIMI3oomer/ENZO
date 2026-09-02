@@ -70,7 +70,9 @@
     "myOrders": "My orders",
     "noOrders": "No orders yet",
     "passwordMismatch": "Passwords don't match",
-    "welcomeBack": "Welcome back"
+    "welcomeBack": "Welcome back",
+    "controlPanel": "Control Panel",
+    "controlPanelHint": "Go to admin dashboard →"
   },
   "filters": {
     "sortBy": "Sort by",

@@ -11,12 +11,12 @@ import OrderConfirmation from "./pages/OrderConfirmation.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Account from "./pages/Account.jsx";
-import AdminLogin from "./pages/admin/Login.jsx";
 import AdminDashboard from "./pages/admin/Dashboard.jsx";
 import AdminProducts from "./pages/admin/Products.jsx";
 import AdminProductForm from "./pages/admin/ProductForm.jsx";
 import AdminOrders from "./pages/admin/Orders.jsx";
 import AdminCustomers from "./pages/admin/Customers.jsx";
+import AdminCategories from "./pages/admin/Categories.jsx";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute.jsx";
 import PageTransition from "./components/PageTransition.jsx";
 
@@ -59,7 +59,6 @@ export default function App() {
       />
 
       {/* ---------- Admin ---------- */}
-      <Route path="/admin/login" element={<AdminLogin />} />
       <Route
         path="/admin"
         element={
@@ -105,6 +104,14 @@ export default function App() {
         element={
           <ProtectedAdminRoute>
             <AdminCustomers />
+          </ProtectedAdminRoute>
+        }
+      />
+      <Route
+        path="/admin/categories"
+        element={
+          <ProtectedAdminRoute>
+            <AdminCategories />
           </ProtectedAdminRoute>
         }
       />

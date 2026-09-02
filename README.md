@@ -524,3 +524,53 @@ some specific image-viewing software). That's a deeper concern usually
 solved with a server-side re-encoding pipeline, which is a separate,
 larger addition if you ever want it — not something this checklist
 silently skipped.
+
+## 16. Update — admin-managed categories (no more static/seeded-only list)
+
+**Checkpoint 38 — Full category management in the dashboard**
+Previously, categories only existed via the one-time SQL seed in
+`schema.sql` (t-shirts, sweats, shoes, pants, training) — the only way
+to add or rename one was editing SQL directly. Now there's a full admin
+page for it:
+- `src/pages/admin/Categories.jsx` — new sidebar tab. Add a category with
+  any name (Arabic + English) and slug you want, rename any existing one
+  inline, or delete one.
+- Backend: `POST` / `PUT` / `DELETE /api/admin/categories` in
+  `server/src/routes/admin.js`, validated with a new `categorySchema` in
+  `server/src/utils/validation.js`.
+- Deleting a category is safe — `products.category_id` has `on delete set
+  null` (see `schema.sql`), so products using a deleted category just
+  become "uncategorized" rather than being deleted themselves.
+- No changes needed anywhere else: `Shop.jsx`'s category tabs and
+  `ProductForm.jsx`'s category dropdown already read live from
+  `GET /api/categories`, so whatever you name things here shows up
+  everywhere immediately.
+
+The SQL-seeded categories are still there as a starting point when you
+first set up the database, but they're just regular rows now — rename or
+delete them from the new admin page like any category you add yourself.
+
+## 17. Update — unified login, admin gets a "Control Panel" shortcut instead of a separate login
+
+**Removed — the separate `/admin/login` page**
+An admin was always just a regular Supabase Auth account that happens to
+have a row in `admin_users` — there was no real reason for a second,
+separate login page. Now there's exactly ONE login (`/login`) for
+everyone, customer or admin.
+
+**Checkpoint 39 — Admin sees a "Control Panel" shortcut after signing in**
+- `Navbar.jsx`: a small gold dashboard icon appears next to the account
+  icon — but ONLY for accounts in `admin_users`. Invisible to every
+  normal customer. Same shortcut added to the mobile menu.
+- `Account.jsx`: signing in and landing on your account page now shows a
+  prominent "Control Panel" card right at the top if you're an admin,
+  linking straight to `/admin`.
+- `ProtectedAdminRoute.jsx` reworked: visiting `/admin` while logged out
+  now sends you to the normal `/login` (and back to `/admin`
+  automatically after signing in) instead of a separate login form.
+  Visiting it while logged in as a non-admin sends you home instead of
+  looping back to a login page you're already past.
+
+Nothing about the actual security changed — RLS policies and the
+backend's `requireAdmin` middleware are still the real enforcement,
+exactly as before. This only changes how an admin *reaches* the panel.

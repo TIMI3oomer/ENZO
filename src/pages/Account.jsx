@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LayoutDashboard } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { api } from "../lib/api.js";
@@ -13,7 +13,7 @@ import { api } from "../lib/api.js";
 export default function Account() {
   const { t } = useTranslation("common");
   const localize = useLocalizedField();
-  const { session, loading: authLoading, logout } = useAuth();
+  const { session, isAdmin, loading: authLoading, logout } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +80,19 @@ export default function Account() {
           {t("auth.logout")}
         </button>
       </div>
+
+      {isAdmin && (
+        <Link
+          to="/admin"
+          className="mb-8 flex items-center justify-between rounded-lg border border-enzo-goldBright/40 bg-enzo-gold/10 p-4 text-start transition-colors hover:bg-enzo-gold/20"
+        >
+          <div className="flex items-center gap-3">
+            <LayoutDashboard size={20} className="text-enzo-goldBright" />
+            <span className="font-medium text-enzo-white">{t("auth.controlPanel")}</span>
+          </div>
+          <span className="text-sm text-enzo-muted">{t("auth.controlPanelHint")}</span>
+        </Link>
+      )}
 
       <form onSubmit={handleSaveProfile} className="mb-12 rounded-lg border hairline p-5">
         <h2 className="mb-4 text-lg font-medium">{t("auth.fullName")}</h2>

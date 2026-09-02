@@ -28,7 +28,7 @@ export default function AdminLayout({ children, title }) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <aside className="hidden w-60 flex-none flex-col border-e hairline bg-enzo-panel p-6 md:flex">
         <img src="/logo.jpg" alt="ENZO" className="mb-8 h-10 w-10 rounded-full" />
         <nav className="flex flex-1 flex-col gap-1">
@@ -55,8 +55,42 @@ export default function AdminLayout({ children, title }) {
         </button>
       </aside>
 
-      <main className="flex-1 p-6 sm:p-10">
-        <h1 className="mb-8 font-display text-2xl">{title}</h1>
+      <div className="w-full md:hidden">
+        <div className="border-b hairline bg-enzo-panel px-3 py-3">
+          <nav className="flex gap-2 overflow-x-auto pb-1">
+            {links.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `flex shrink-0 items-center gap-2 rounded-md border px-3 py-2 text-xs ${
+                    isActive ? "border-enzo-gold bg-enzo-gold/10 text-enzo-white" : "border-transparent text-enzo-muted"
+                  }`
+                }
+              >
+                <Icon size={14} />
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+        <div className="flex items-center justify-between border-b hairline bg-enzo-panel px-4 py-3">
+          <div className="flex items-center gap-3">
+            <img src="/logo.jpg" alt="ENZO" className="h-8 w-8 rounded-full" />
+            <h1 className="font-display text-xl">{title}</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher className="text-xs" />
+            <button onClick={handleLogout} className="text-sm text-enzo-muted hover:text-enzo-white" aria-label={t("nav.logout")}>
+              <LogOut size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <main className="flex-1 p-4 sm:p-6 md:p-10">
+        <h1 className="mb-8 hidden font-display text-2xl md:block">{title}</h1>
         {children}
       </main>
     </div>

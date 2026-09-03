@@ -40,6 +40,7 @@ create table if not exists products (
   price numeric(10,2) not null check (price >= 0),
   sizes text[] not null default '{}',
   colors text[] not null default '{}',
+  color_images jsonb not null default '{}', -- { "Black": "https://...", "Gold": "https://..." }
   images text[] not null default '{}',
   stock int not null default 0 check (stock >= 0),
   is_active boolean not null default true,

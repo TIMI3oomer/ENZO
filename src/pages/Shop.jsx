@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
 import { useLocalizedField, useLanguage } from "../context/LanguageContext.jsx";
 import ProductCard from "../components/ProductCard.jsx";
+import ErrorBanner from "../components/ErrorBanner.jsx";
 
 const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
@@ -25,13 +26,15 @@ export default function Shop() {
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState("newest");
   const [sizeFilter, setSizeFilter] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    api.get("/categories").then((data) => setCategories(data || []));
+    api.get("/categories").then((data) => setCategories(data || [])).catch(() => {});
   }, []);
 
-  useEffect(() => {
+  function loadProducts() {
     setLoading(true);
+    setError(null);
     const params = new URLSearchParams();
     if (categorySlug) params.set("category", categorySlug);
     if (sizeFilter) params.set("size", sizeFilter);
@@ -40,7 +43,13 @@ export default function Shop() {
     api
       .get(`/products?${params.toString()}`)
       .then((data) => setProducts(data || []))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorySlug, sort, sizeFilter]);
 
   const activeCategory = categories.find((c) => c.slug === categorySlug);
@@ -127,7 +136,9 @@ export default function Shop() {
         )}
       </div>
 
-      {loading ? (
+      {error ? (
+        <ErrorBanner message={error} onRetry={loadProducts} />
+      ) : loading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="animate-pulse">

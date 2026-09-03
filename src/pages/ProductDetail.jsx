@@ -4,21 +4,16 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
-
-// Maps preset color NAMES (stored on the product, see admin/ProductForm.jsx)
-// to a swatch hex for display here. Keep this in sync with PRESET_COLORS
-// in ProductForm.jsx if you add more options there.
-const COLOR_SWATCHES = {
-  Black: "#0A0A0A", White: "#FAFAF7", Gold: "#C9A227", Gray: "#6B6B6B",
-  Navy: "#1F2A44", Beige: "#D8C3A5", Red: "#B3312C", Green: "#3C6B4A",
-};
+import ErrorBanner from "../components/ErrorBanner.jsx";
+import { COLOR_HEX } from "../lib/colors.js";
 
 // CHECKPOINT NOTE (ProductDetail.jsx):
 // Fetches from GET /api/products/:slug (backend). The product stays the
 // SAME object across a language switch (slugs are language-neutral).
-// Color picker added alongside size, mirroring the same pattern — both
-// are optional per-product (a product with no colors set just won't show
-// that picker at all).
+// Clicking a color swatch now also swaps the displayed photo if the
+// admin assigned one to that color (product.color_images, set in
+// admin/ProductForm.jsx) — falls back to the default photo if that color
+// has no specific image assigned.
 export default function ProductDetail() {
   const { slug } = useParams();
   const { t } = useTranslation("common");
@@ -27,12 +22,14 @@ export default function ProductDetail() {
 
   const [product, setProduct] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState(null);
   const [size, setSize] = useState(null);
   const [color, setColor] = useState(null);
   const [activeImage, setActiveImage] = useState(0);
   const [added, setAdded] = useState(false);
 
-  useEffect(() => {
+  function load() {
+    setError(null);
     api
       .get(`/products/${slug}`)
       .then((data) => {
@@ -40,9 +37,21 @@ export default function ProductDetail() {
         setSize(data?.sizes?.[0] ?? null);
         setColor(data?.colors?.[0] ?? null);
       })
-      .catch(() => setNotFound(true));
-  }, [slug]);
+      .catch((err) => (err.status === 404 ? setNotFound(true) : setError(err.message)));
+  }
 
+  useEffect(load, [slug]);
+
+  function handleColorSelect(c) {
+    setColor(c);
+    const assignedUrl = product.color_images?.[c];
+    if (assignedUrl) {
+      const idx = product.images.indexOf(assignedUrl);
+      if (idx !== -1) setActiveImage(idx);
+    }
+  }
+
+  if (error) return <div className="p-10"><ErrorBanner message={error} onRetry={load} /></div>;
   if (notFound) return <div className="p-10 text-center text-enzo-muted">{t("errors.notFound")}</div>;
   if (!product) return <div className="p-10 text-center text-enzo-muted">…</div>;
 
@@ -91,10 +100,10 @@ export default function ProductDetail() {
               {product.colors.map((c) => (
                 <button
                   key={c}
-                  onClick={() => setColor(c)}
+                  onClick={() => handleColorSelect(c)}
                   title={c}
                   className={`h-9 w-9 rounded-full border-2 ${color === c ? "border-enzo-goldBright" : "border-enzo-line"}`}
-                  style={{ backgroundColor: COLOR_SWATCHES[c] || "#333" }}
+                  style={{ backgroundColor: COLOR_HEX[c] || "#333" }}
                 />
               ))}
             </div>

@@ -574,3 +574,70 @@ everyone, customer or admin.
 Nothing about the actual security changed — RLS policies and the
 backend's `requireAdmin` middleware are still the real enforcement,
 exactly as before. This only changes how an admin *reaches* the panel.
+
+## 18. Update — bilingual fetch-error messages + color-swatch photo previews
+
+**Run this new migration:** `supabase/migration_v8.sql` (adds
+`products.color_images`). Already included in the consolidated
+`schema.sql` for fresh installs.
+
+**Checkpoint 40 — Bilingual, actionable error messages when a fetch fails**
+Especially relevant right after a deploy (misconfigured `VITE_API_URL`,
+CORS, or a sleeping/down backend are the classic first-week issues):
+- `src/lib/api.js` now distinguishes a genuine network failure (request
+  never reached the server at all) from a normal error response, and
+  produces a translated, actionable message either way — using the
+  `i18n` singleton directly so it respects whichever language is active,
+  even though `api.js` isn't a React component.
+- `src/components/ErrorBanner.jsx` — a reusable banner with a "Try
+  again" button, wired into `Shop.jsx` and `ProductDetail.jsx` (the pages
+  where a fetch failure would otherwise leave the customer stuck looking
+  at a blank/empty page with no explanation). `Home.jsx`'s hero
+  sections intentionally keep their existing silent fallback to
+  placeholder content instead — that's the right call for a decorative
+  section, not a page the customer is trying to accomplish something on.
+- Thrown errors now carry the real HTTP status (`err.status`), so e.g.
+  `ProductDetail.jsx` can tell a genuine 404 ("this product doesn't
+  exist") apart from a server hiccup ("try again") instead of lumping
+  both into the same generic message.
+
+**Checkpoint 41 — See the same product in a different color**
+- `src/lib/colors.js` — new single source of truth for the preset color
+  palette, used by the admin color picker AND the storefront display, so
+  they can never drift out of sync with each other.
+- `admin/ProductForm.jsx` — after picking colors and uploading photos,
+  a new section lets you assign a specific photo to each color (optional
+  — a color with nothing assigned just falls back to the default photo).
+- `ProductCard.jsx` (the grid used on Shop/Home) — small swatch dots
+  appear over a product's photo when it has 2+ colors with assigned
+  images. Hovering (desktop) or tapping (mobile) a swatch swaps the shown
+  photo right there in the grid, without leaving the page.
+- `ProductDetail.jsx` — clicking a color swatch on the product page now
+  also swaps the main gallery photo to that color's assigned image.
+
+## 19. Update — iPhone (HEIC) photo support
+
+**Install:** `npm install` in the project root (adds `heic2any`).
+
+**Checkpoint 42 — iPhone camera photos now work correctly**
+iPhones save camera photos as HEIC/HEIF by default — this was broken in
+two separate ways before, not just one:
+1. HEIC wasn't in the allowed upload types, so it was rejected outright.
+2. Even if allowed, HEIC can't be *displayed* by most browsers besides
+   Safari — a customer on Chrome, Android, or Windows would just see a
+   broken image icon where the product photo should be.
+
+`src/lib/upload.js` now detects a HEIC/HEIF file (checking both the
+reported MIME type and the file extension, since some iOS/Safari
+versions report an empty type for camera-roll photos) and converts it to
+a real JPEG in the browser — via `heic2any`, a WASM-based decoder —
+*before* any of the existing security/validation checks run. The file
+that actually gets stored is always a genuine, universally-viewable
+JPEG, regardless of what device or format the original photo came from.
+This isn't a workaround around the validation from Checkpoint 37 — it's
+a real format conversion that produces a file the checks then validate
+normally.
+
+If a HEIC file can't be converted (a very unusual/corrupted file), the
+admin gets a clear message suggesting they re-save it as JPEG first,
+rather than a confusing generic upload failure.

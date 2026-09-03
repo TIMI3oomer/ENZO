@@ -33,7 +33,10 @@
     "images": "الصور",
     "uploadImages": "رفع صور من الجهاز",
     "uploading": "جارٍ الرفع...",
-    "removeImage": "إزالة"
+    "removeImage": "إزالة",
+    "colorImages": "ربط صورة بكل لون",
+    "noImageAssigned": "بدون صورة محددة",
+    "photoNumber": "صورة رقم {{n}}"
   },
   "orders": {
     "title": "الطلبات",

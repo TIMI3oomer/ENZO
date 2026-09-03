@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import i18n from "../i18n/index.js";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
@@ -23,13 +24,32 @@ async function request(path, options = {}) {
     ...options.headers,
   };
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  } catch (networkErr) {
+    // CHECKPOINT NOTE — this catch is specifically for when `fetch` itself
+    // throws, meaning the request never reached the server at all: no
+    // internet, the backend is down/asleep, CORS blocked it, VITE_API_URL
+    // points at the wrong place, DNS failure, etc. This is the #1 thing
+    // that goes wrong right after a fresh deploy (frontend and backend
+    // pointing at each other incorrectly), so it gets a clear, translated,
+    // actionable message — not a raw "Failed to fetch" the customer can't
+    // do anything with. Uses the i18n singleton directly (not a React
+    // hook) since this file isn't a component, but still respects
+    // whichever language is currently active.
+    const err = new Error(i18n.t("errors.network", { ns: "common" }));
+    err.isNetworkError = true;
+    throw err;
+  }
 
   if (res.status === 204) return null;
 
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(body?.error || `Request failed (${res.status})`);
+    const err = new Error(body?.error || i18n.t("errors.generic", { ns: "common" }));
+    err.status = res.status;
+    throw err;
   }
   return body;
 }

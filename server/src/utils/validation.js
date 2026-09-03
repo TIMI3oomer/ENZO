@@ -47,6 +47,7 @@ export const productSchema = z.object({
   category_id: z.string().uuid().nullable().optional(),
   sizes: z.array(z.string().max(10)).default([]),
   colors: z.array(z.string().max(30)).default([]),
+  color_images: z.record(z.string().url()).optional().default({}),
   images: z.array(z.string().url()).default([]),
   is_active: z.boolean().optional(),
 });

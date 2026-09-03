@@ -4,19 +4,11 @@ import { useTranslation } from "react-i18next";
 import { X, Upload } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { uploadProductImage } from "../../lib/upload.js";
+import { PRESET_COLORS } from "../../lib/colors.js";
 import AdminLayout from "../../components/AdminLayout.jsx";
 
 const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
-const PRESET_COLORS = [
-  { name: "Black", hex: "#0A0A0A" },
-  { name: "White", hex: "#FAFAF7" },
-  { name: "Gold", hex: "#C9A227" },
-  { name: "Gray", hex: "#6B6B6B" },
-  { name: "Navy", hex: "#1F2A44" },
-  { name: "Beige", hex: "#D8C3A5" },
-  { name: "Red", hex: "#B3312C" },
-  { name: "Green", hex: "#3C6B4A" },
-];
+
 
 const empty = {
   slug: "",
@@ -35,6 +27,7 @@ const empty = {
   category_id: "",
   sizes: [],
   colors: [],
+  color_images: {},
   images: [],
 };
 
@@ -90,6 +83,7 @@ export default function AdminProductForm() {
           category_id: data.category_id || "",
           sizes: data.sizes || [],
           colors: data.colors || [],
+          color_images: data.color_images || {},
           images: data.images || [],
         });
       })
@@ -147,6 +141,7 @@ export default function AdminProductForm() {
       category_id: form.category_id || null,
       sizes: form.sizes,
       colors: form.colors,
+      color_images: form.color_images,
       images: form.images,
     };
 
@@ -284,7 +279,7 @@ export default function AdminProductForm() {
           <label className="flex w-fit cursor-pointer items-center gap-2 rounded-md border border-dashed border-enzo-line px-4 py-2 text-sm text-enzo-muted hover:border-enzo-goldBright hover:text-enzo-white">
             <Upload size={16} />
             {uploading ? t("products.uploading") : t("products.uploadImages")}
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={handleFilesSelected} disabled={uploading} />
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif" multiple className="hidden" onChange={handleFilesSelected} disabled={uploading} />
           </label>
 
           {form.images.length > 0 && (
@@ -305,6 +300,40 @@ export default function AdminProductForm() {
             </div>
           )}
         </FullRow>
+
+        {/* Assign one photo per color — this is what lets the storefront
+            swap the shown photo when a shopper picks a color (see
+            ProductCard.jsx / ProductDetail.jsx). Optional: a color with
+            no assigned photo just falls back to the product's default image. */}
+        {form.colors.length > 0 && form.images.length > 0 && (
+          <FullRow>
+            <Label>{t("products.colorImages")}</Label>
+            <div className="flex flex-col gap-2">
+              {form.colors.map((colorName) => (
+                <div key={colorName} className="flex items-center gap-3">
+                  <span className="w-20 text-sm text-enzo-muted">{colorName}</span>
+                  <select
+                    className="input w-auto py-1.5 text-sm"
+                    value={form.color_images[colorName] || ""}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, color_images: { ...f.color_images, [colorName]: e.target.value } }))
+                    }
+                  >
+                    <option value="">{t("products.noImageAssigned")}</option>
+                    {form.images.map((url, i) => (
+                      <option key={url} value={url}>
+                        {t("products.photoNumber", { n: i + 1 })}
+                      </option>
+                    ))}
+                  </select>
+                  {form.color_images[colorName] && (
+                    <img src={form.color_images[colorName]} alt="" className="h-10 w-8 rounded object-cover" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </FullRow>
+        )}
 
         {error && (
           <FullRow>

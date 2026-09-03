@@ -33,7 +33,10 @@
     "images": "Images",
     "uploadImages": "Upload from device",
     "uploading": "Uploading...",
-    "removeImage": "Remove"
+    "removeImage": "Remove",
+    "colorImages": "Assign a photo per color",
+    "noImageAssigned": "No photo assigned",
+    "photoNumber": "Photo #{{n}}"
   },
   "orders": {
     "title": "Orders",

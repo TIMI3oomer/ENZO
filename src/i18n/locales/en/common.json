@@ -45,9 +45,10 @@
     "en": "English"
   },
   "errors": {
-    "generic": "Something went wrong, please try again",
+    "generic": "Something went wrong on our end. Please try again shortly.",
     "notFound": "Page not found",
-    "network": "Could not connect to the server"
+    "network": "Couldn't load the data. Check your internet connection and try again in a moment.",
+    "retry": "Try again"
   },
   "success": {
     "addedToCart": "Added to cart"

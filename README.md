@@ -754,3 +754,37 @@ standard use case.
 **To apply:** just redeploy the backend project — no environment
 variable or Vercel dashboard settings need to change, only the file
 structure in the repo.
+
+## 22. Fix — CORS still blocking every request after setting FRONTEND_URL
+
+If every single API call fails with "blocked by CORS policy... No
+'Access-Control-Allow-Origin' header," the backend doesn't recognize
+your frontend's origin as allowed yet. `server/src/app.js` now:
+- Strips trailing slashes and stray quotes from `FRONTEND_URL`
+  automatically (both are common copy-paste mistakes).
+- Logs the parsed allowed origins on startup, and logs every blocked
+  origin when it happens — visible in Vercel → your backend project →
+  Deployments → (latest) → Function Logs. This tells you exactly what
+  the backend thinks is allowed vs. what's actually being sent.
+
+**The most common real cause on Vercel specifically: environment variable
+scope.** Vercel lets you set a variable per-environment (Production /
+Preview / Development) — if `FRONTEND_URL` was only saved under one
+scope but you're testing a deployment in a different one, it won't
+apply. When adding/editing the variable, make sure all three checkboxes
+(Production, Preview, Development) are selected unless you specifically
+need different values per environment.
+
+**Checklist, in order:**
+1. Backend project → Settings → Environment Variables → `FRONTEND_URL` →
+   confirm it's checked for the environment you're actually testing
+   (Production, most likely, if you're using the default `.vercel.app`
+   domain).
+2. Confirm the value is exactly `https://enzo-front.vercel.app` (or
+   whatever your real frontend domain is) — no quotes needed, trailing
+   slash no longer matters after this fix.
+3. Redeploy the backend (env var changes never apply retroactively to
+   existing deployments).
+4. Check Function Logs on the new deployment for the
+   `[ENZO server] CORS allowed origins:` line — confirms what the
+   backend actually loaded.

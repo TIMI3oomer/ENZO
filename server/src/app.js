@@ -38,14 +38,19 @@ const app = express();
 //   than silently glossed over.
 const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
-  .map((s) => s.trim());
+  .map((s) => s.trim().replace(/^["']|["']$/g, "").replace(/\/$/, "")); // strip stray quotes and trailing slashes -- both are common copy-paste mistakes in env var values
+
+console.log("[ENZO server] CORS allowed origins:", allowedOrigins);
 
 app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow no-origin requests (e.g. curl, server-to-server health checks)
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      if (!origin) return callback(null, true);
+      const normalized = origin.replace(/\/$/, "");
+      if (allowedOrigins.includes(normalized)) return callback(null, true);
+      console.warn(`[ENZO server] Blocked CORS request from origin: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     },
   })

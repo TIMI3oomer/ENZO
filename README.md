@@ -641,3 +641,91 @@ normally.
 If a HEIC file can't be converted (a very unusual/corrupted file), the
 admin gets a clear message suggesting they re-save it as JPEG first,
 rather than a confusing generic upload failure.
+
+## 20. Fix — image upload RLS error, and Vercel deployment
+
+### Fixing "new row violates row-level security policy" on image upload
+
+**Run `supabase/migration_v9.sql`.** This is a self-contained, safe-to-
+rerun fix: it re-creates the `product-images` bucket settings and drops +
+recreates its three security policies with the admin check explicitly
+schema-qualified (`public.is_admin()`), which removes any ambiguity
+about which function is being called — the most common cause of this
+exact error when the setup looks correct but still fails.
+
+After running it, also double check:
+- **`admin_users` has the right row.** Table Editor → `admin_users` →
+  confirm the `user_id` there exactly matches the account you're logged
+  in as when you try to upload (Authentication → Users → copy the
+  correct User UID).
+- **You're actually logged in as that account in the browser** when
+  uploading — not just viewing admin pages from a stale session.
+
+### Deploying to Vercel
+
+This project needs **two separate Vercel projects** — one for the React
+frontend (a static site), one for the Node backend (serverless
+functions). They're two different kinds of things Vercel treats
+differently, so they can't be one project.
+
+**Project 1 — Backend (`/server`)**
+1. In Vercel: New Project → import your repo → for **Root Directory**,
+   select `server` (not the repo root).
+2. Framework preset: Other. Build command / output directory: leave blank
+   (nothing to build — it's just serverless functions).
+3. Environment variables (Project Settings → Environment Variables):
+   - `SUPABASE_URL` — your Supabase project URL
+   - `SUPABASE_SERVICE_ROLE_KEY` — the **service_role** key (never the
+     anon key)
+   - `FRONTEND_URL` — the URL your frontend project will end up at (you
+     can update this after deploying the frontend and redeploy the
+     backend once you know it — see step below)
+   - `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USER` / `EMAIL_PASS` /
+     `EMAIL_FROM` — optional, for order-status emails
+4. Deploy. Vercel gives you a URL like `https://enzo-api.vercel.app`.
+   Visit `https://enzo-api.vercel.app/api/health` — you should see
+   `{"ok":true}`. If not, check the deployment's function logs.
+
+**Project 2 — Frontend (repo root)**
+1. New Project → import the same repo → **Root Directory**: leave as
+   the repo root (default).
+2. Framework preset: Vite (auto-detected).
+3. Environment variables:
+   - `VITE_SUPABASE_URL` — same Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` — the **anon** key (never service_role)
+   - `VITE_API_URL` — `https://enzo-api.vercel.app/api` (your backend
+     project's URL from above, with `/api` on the end)
+   - `VITE_WHATSAPP_NUMBER` — your real WhatsApp number
+4. Deploy. Vercel gives you a URL like `https://enzo.vercel.app`.
+
+**Connect them:** go back to the **backend** project's environment
+variables and set `FRONTEND_URL` to your actual frontend URL from step 4
+(e.g. `https://enzo.vercel.app`), then redeploy the backend (Deployments
+→ ⋯ → Redeploy) so the CORS check actually allows requests from your
+real site.
+
+**What was changed in the code to make this work:**
+- `server/src/app.js` — the Express app itself, exported (no
+  `app.listen()`). `server/src/index.js` now just imports this and calls
+  `.listen()` for local development only.
+- `server/api/index.js` — the actual Vercel entry point. Vercel treats
+  any file under `/api` as a serverless function; an Express app is
+  itself a valid `(req, res) => {}` handler, so exporting it directly
+  here is all that's needed, no adapter library required.
+- `server/vercel.json` — routes every request to that one function.
+- `vercel.json` (repo root) — makes the frontend's client-side routes
+  (`/shop`, `/product/xyz`, `/admin`, etc.) work on direct navigation or
+  refresh. Without this, Vercel's static hosting would 404 on any URL
+  other than the homepage, since those routes only exist inside the
+  React app, not as real files.
+- CORS now accepts a comma-separated list in `FRONTEND_URL`, useful if
+  you want both your real domain and a Vercel preview URL allowed at
+  once while testing changes.
+
+**Honest limitation:** the order-creation rate limiter
+(`server/src/app.js`) uses an in-memory store. On Vercel, each
+serverless invocation can run in a fresh instance, so this limit resets
+more often than it would on a single always-running server — it's
+"best effort" there, not a hard global guarantee. Fine for a small
+store; if abuse ever becomes a real problem at scale, that's a sign to
+move it to a shared store like Redis.

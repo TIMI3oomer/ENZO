@@ -729,3 +729,28 @@ more often than it would on a single always-running server — it's
 "best effort" there, not a hard global guarantee. Fine for a small
 store; if abuse ever becomes a real problem at scale, that's a sign to
 move it to a shared store like Redis.
+
+## 21. Fix — Vercel "internal rewrites" warning on the backend
+
+If you saw: *"WARNING! Internal rewrites in backend framework projects
+now route requests using the rewritten destination path..."* — this was
+caused by `server/vercel.json`'s rewrite rule, which routed every
+request to one function via a `rewrites` config. Vercel changed how that
+behavior is handled and now flags it for review.
+
+**Fixed by switching to Vercel's native catch-all convention instead:**
+- `server/api/index.js` → renamed to `server/api/[...path].js`. This
+  bracket syntax is Vercel's own built-in convention (the same one
+  Next.js uses for catch-all API routes, but it works for any Vercel
+  Node.js project) for making one function handle every request under
+  `/api/*` — no rewrite rule needed at all.
+- `server/vercel.json` deleted entirely — nothing left for it to do.
+
+The frontend's `vercel.json` (repo root) is unrelated and unchanged —
+that one makes a static site serve `index.html` for client-side routes
+like `/shop` and `/admin`, a completely different and still fully
+standard use case.
+
+**To apply:** just redeploy the backend project — no environment
+variable or Vercel dashboard settings need to change, only the file
+structure in the repo.

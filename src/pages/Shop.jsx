@@ -141,9 +141,12 @@ export default function Shop() {
       ) : loading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="aspect-[3/4] rounded-lg bg-enzo-panel" />
-              <div className="mt-3 h-3 w-3/4 rounded bg-enzo-panel" />
+            <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-enzo-line/60 bg-enzo-panel">
+              <div className="aspect-[3/4] bg-enzo-black/40" />
+              <div className="flex flex-col gap-2 px-3 py-3">
+                <div className="h-3 w-3/4 rounded bg-enzo-black/40" />
+                <div className="h-3 w-1/3 rounded bg-enzo-black/40" />
+              </div>
             </div>
           ))}
         </div>

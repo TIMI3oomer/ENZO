@@ -67,6 +67,31 @@ html[dir="ltr"] .font-display {
   opacity: 1;
 }
 
+/* Rectangular variant of the ring glow above, for card-shaped elements
+   (product cards) where the fully-rounded mask would clip oddly against
+   straight corners. Same brand gradient, radius matched to rounded-2xl. */
+.enzo-ring-card {
+  position: relative;
+}
+.enzo-ring-card::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 1.15rem;
+  padding: 1.5px;
+  background: linear-gradient(135deg, #C9A227, #FFFFFF 55%, #FFD23F);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.enzo-ring-card:hover::before,
+.enzo-ring-card:focus-visible::before {
+  opacity: 1;
+}
+
 /* Visible keyboard focus everywhere, direction-agnostic */
 :focus-visible {
   outline: 2px solid #FFFFFF;

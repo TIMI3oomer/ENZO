@@ -68,6 +68,12 @@ const orderLimiter = rateLimit({
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/debug-cors",(_req,res) =>{
+  res.json({
+    rawFrontendUrlEnvVar: process.env.FRONTEND_URL ?? null,
+    parsedAllowedOrigins: allowedOrigins,
+  });
+});
 
 app.use("/api/products", productsRoutes);
 app.use("/api/categories", categoriesRoutes);

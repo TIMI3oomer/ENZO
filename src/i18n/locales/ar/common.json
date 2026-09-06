@@ -83,5 +83,11 @@
     "size": "المقاس",
     "allSizes": "كل المقاسات",
     "clear": "مسح الفلاتر"
+  },
+  "trust": {
+    "fastDelivery": "توصيل سريع",
+    "securePayment": "دفع آمن",
+    "easyReturns": "إرجاع سهل",
+    "qualityChecked": "جودة مضمونة"
   }
 }

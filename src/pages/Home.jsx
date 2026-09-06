@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
 import AnimatedHero from "../components/AnimatedHero.jsx";
 import ScrollShowcase from "../components/ScrollShowcase.jsx";
+import TrustBadges from "../components/TrustBadges.jsx";
 
 // CHECKPOINT NOTE (Home.jsx):
 // AnimatedHero.jsx is the entry sequence (logo flips from background to
@@ -28,6 +29,7 @@ export default function Home() {
   return (
     <div>
       <AnimatedHero products={products} />
+      <TrustBadges />
 
       <div>
         <h2 className="mx-auto max-w-7xl px-4 pt-4 text-start font-display text-2xl sm:px-6">

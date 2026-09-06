@@ -83,5 +83,11 @@
     "size": "Size",
     "allSizes": "All sizes",
     "clear": "Clear filters"
+  },
+  "trust": {
+    "fastDelivery": "Fast delivery",
+    "securePayment": "Secure payment",
+    "easyReturns": "Easy returns",
+    "qualityChecked": "Quality checked"
   }
 }

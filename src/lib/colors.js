@@ -13,6 +13,9 @@ export const PRESET_COLORS = [
   { name: "Beige", hex: "#D8C3A5" },
   { name: "Red", hex: "#B3312C" },
   { name: "Green", hex: "#3C6B4A" },
+  { name: "Blue", hex: "#2A5CAA" },
+  { name: "Yellow", hex: "#E8B923" },
+  { name: "Orange", hex: "#D9702E" },
 ];
 
 export const COLOR_HEX = Object.fromEntries(PRESET_COLORS.map((c) => [c.name, c.hex]));

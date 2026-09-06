@@ -170,3 +170,39 @@ html[dir="ltr"] .font-display {
   background-clip: text;
   color: transparent;
 }
+
+/* Shine-sweep hover on gold CTAs -- combine with the existing
+   bg-enzo-gradient class (see AnimatedHero.jsx's "Shop Now" button for
+   an example). A light diagonal highlight sweeps across on hover, a
+   common premium-brand touch. */
+.enzo-shine {
+  position: relative;
+  overflow: hidden;
+}
+.enzo-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+}
+.enzo-shine:hover::after {
+  transform: translateX(120%);
+}
+
+/* Subtle film-grain texture -- adds cinematic depth to flat black
+   backgrounds. Applied to AnimatedHero.jsx's wrapper. Deliberately very
+   low opacity; it should be felt more than seen. */
+.enzo-grain {
+  position: relative;
+}
+.enzo-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}

@@ -42,7 +42,7 @@ export default function AnimatedHero({ products }) {
   const heroFadeOut = useTransform(scrollYProgress, [0.85, 1], [1, 0]);
 
   return (
-    <div ref={wrapperRef} className="relative h-[160vh]">
+    <div ref={wrapperRef} className="relative h-[160vh] enzo-grain">
       <div
         className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
         style={{ perspective: "1200px" }}
@@ -61,12 +61,12 @@ export default function AnimatedHero({ products }) {
           <motion.div style={{ opacity: textOpacity, y: textY }} className="relative z-10 mt-10">
             <div className="relative">
               <ClothesMarquee products={products} />
-              <h1 className="relative z-10 font-display text-4xl leading-tight sm:text-6xl">{t("hero.title")}</h1>
+              <h1 className="relative z-10 font-display text-4xl leading-tight enzo-gradient-text sm:text-6xl">{t("hero.title")}</h1>
               <p className="relative z-10 mx-auto mt-4 max-w-xl text-enzo-muted sm:text-lg">{t("hero.subtitle")}</p>
             </div>
             <Link
               to="/shop"
-              className="relative z-10 mt-8 inline-block rounded-md bg-enzo-gradient px-8 py-3 font-semibold text-enzo-black"
+              className="enzo-shine relative z-10 mt-8 inline-block rounded-md bg-enzo-gradient px-8 py-3 font-semibold text-enzo-black"
             >
               {t("hero.cta")}
             </Link>

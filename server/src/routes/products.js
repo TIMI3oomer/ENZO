@@ -10,8 +10,18 @@ const router = Router();
 // on a policy it just bypassed.
 router.get("/", async (req, res, next) => {
   try {
-    const { category, size, sort } = req.query;
+    const { category, size, sort, ids } = req.query;
     let query = supabaseAdmin.from("products").select("*").eq("is_active", true);
+
+    // CHECKPOINT NOTE: `ids` (comma-separated) is what Cart.jsx uses to
+    // refresh the live price/stock of whatever's already sitting in
+    // someone's cart -- items are stored client-side with a price
+    // SNAPSHOT from when they were added, which can go stale if the
+    // admin changes a price or a product sells out later.
+    if (ids) {
+      const idList = ids.split(",").map((s) => s.trim()).filter(Boolean);
+      query = query.in("id", idList);
+    }
 
     if (category) {
       const { data: cat } = await supabaseAdmin

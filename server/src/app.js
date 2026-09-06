@@ -10,6 +10,8 @@ import categoriesRoutes from "./routes/categories.js";
 import ordersRoutes from "./routes/orders.js";
 import adminRoutes from "./routes/admin.js";
 import accountRoutes from "./routes/account.js";
+import settingsRoutes from "./routes/settings.js";
+import webhooksRoutes from "./routes/webhooks.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -55,6 +57,14 @@ app.use(
     },
   })
 );
+
+// CHECKPOINT NOTE: the Stripe webhook is mounted here, BEFORE
+// express.json() below, because it needs the raw request body for
+// signature verification (see webhooks.js's own comment for why). Every
+// other route needs JSON parsing; this one specifically must not have it
+// applied globally beforehand.
+app.use("/api/webhooks", webhooksRoutes);
+
 app.use(express.json({ limit: "100kb" }));
 app.use(morgan("dev"));
 
@@ -80,6 +90,7 @@ app.use("/api/categories", categoriesRoutes);
 app.use("/api/orders", orderLimiter, ordersRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/account", accountRoutes);
+app.use("/api/settings", settingsRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

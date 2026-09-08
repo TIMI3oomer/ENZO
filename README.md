@@ -755,6 +755,20 @@ standard use case.
 variable or Vercel dashboard settings need to change, only the file
 structure in the repo.
 
+**UPDATE — reverted.** In production, `server/api/[...path].js` silently
+failed to route any *multi-segment* path under `/api/*` — e.g.
+`/api/products/:slug` (product detail pages) and every `/api/admin/*`
+route never reached the function at all (zero trace in Vercel's logs,
+not even an error), while single-segment paths like `/api/products` and
+`/api/categories` worked fine. Confirmed consistently across several
+separate deployments. So this is back to the `server/vercel.json` +
+`server/api/index.js` rewrite-based setup this section describes — yes,
+that brings back the cosmetic "internal rewrites" warning above, but a
+build warning is a much smaller problem than product pages and the
+entire admin panel being unreachable. If Vercel's catch-all convention
+is ever revisited, multi-segment routes need to be verified working in
+a real deployment first, not just assumed from the docs.
+
 ## 22. Fix — CORS still blocking every request after setting FRONTEND_URL
 
 If every single API call fails with "blocked by CORS policy... No

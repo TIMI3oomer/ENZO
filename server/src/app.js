@@ -19,9 +19,9 @@ const app = express();
 // This file used to be index.js and called app.listen() directly. Split
 // out so the same configured app can be used two ways:
 //   - server/src/index.js: local development (calls app.listen())
-//   - server/api/[...path].js: Vercel deployment (Vercel calls the
-//     exported app itself as a serverless function -- it manages the
-//     actual listening/port, so app.listen() would be wrong/unused there).
+//   - server/api/index.js: Vercel deployment (Vercel calls the exported
+//     app itself as a serverless function -- it manages the actual
+//     listening/port, so app.listen() would be wrong/unused there).
 //
 // - helmet() sets a batch of standard security headers (no X-Powered-By,
 //   sensible defaults against clickjacking/sniffing, etc.).

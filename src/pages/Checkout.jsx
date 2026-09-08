@@ -4,30 +4,34 @@ import { useTranslation } from "react-i18next";
 import { useCart } from "../context/CartContext.jsx";
 import { useLanguage, useLocalizedField } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useSettings } from "../context/SettingsContext.jsx";
+import { formatPrice } from "../lib/formatPrice.js";
 import { api } from "../lib/api.js";
 
 const initialForm = { fullName: "", email: "", phone: "", city: "", address: "", notes: "", paymentMethod: "cod" };
 
 // CHECKPOINT NOTE (Checkout.jsx):
 // - The request sent to the backend contains ONLY product ids, sizes, and
-//   quantities -- never a price. POST /api/orders (server/src/routes/orders.js)
-//   calls the place_order() Postgres function (supabase/migration_v3.sql),
-//   which looks up real prices/stock itself. Even if someone edited this
-//   page's JS in devtools to send a fake price, the backend would ignore
-//   it entirely -- there's no price field for it to send.
-// - Client-side validation here only improves UX (instant feedback); the
-//   backend re-validates everything independently with zod
-//   (server/src/utils/validation.js).
-// - GUEST CHECKOUT IS STILL FULLY SUPPORTED. Logging in is optional: if a
-//   session exists, the full name is prefilled and the order is linked to
-//   that account (so it shows up on /account); if not, it's a normal
-//   guest order.
+//   quantities -- never a price. All money math happens server-side.
+// - DELIVERY FEE: shown here for transparency (fetched via useSettings()),
+//   but the amount actually charged is always recalculated server-side
+//   inside place_order() from store_settings directly -- this page's
+//   display of it is just UX, not the source of truth.
+// - PAYMENT SPLIT: "cod" and "reflect" go straight to POST /api/orders
+//   and create the order immediately, same as before. "visa" (card) is
+//   different -- it calls POST /api/orders/stripe-session instead, which
+//   returns a Stripe-hosted checkout URL to redirect to. The order itself
+//   isn't created until Stripe confirms the payment (via a webhook), so
+//   the cart is intentionally NOT cleared here for the card path -- see
+//   PaymentSuccess.jsx, which clears it once the order is confirmed.
+// - GUEST CHECKOUT IS STILL FULLY SUPPORTED for all three payment methods.
 export default function Checkout() {
   const { t } = useTranslation("checkout");
   const { t: tc } = useTranslation("common");
   const { items, subtotal, clearCart } = useCart();
   const { lang } = useLanguage();
   const { session } = useAuth();
+  const { delivery_fee, currency_symbol } = useSettings();
   const localize = useLocalizedField();
   const navigate = useNavigate();
 
@@ -53,6 +57,10 @@ export default function Checkout() {
     else if (!/^[0-9+\-\s]{7,15}$/.test(form.phone.trim())) errs.phone = t("validation.invalidPhone");
     if (!form.city.trim()) errs.city = t("validation.required");
     if (!form.address.trim()) errs.address = t("validation.required");
+    // Card payments need an email so the customer has a way to see their
+    // receipt/confirmation even without an account -- cod/reflect don't
+    // strictly need one since they're arranged in person or manually.
+    if (form.paymentMethod === "visa" && !form.email.trim()) errs.email = t("validation.required");
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -65,28 +73,39 @@ export default function Checkout() {
     setSubmitting(true);
     setSubmitError("");
 
+    const orderPayload = {
+      fullName: form.fullName.trim(),
+      email: form.email.trim() || null,
+      phone: form.phone.trim(),
+      city: form.city.trim(),
+      address: form.address.trim(),
+      notes: form.notes.trim() || null,
+      paymentMethod: form.paymentMethod,
+      locale: lang,
+      items: items.map((item) => ({
+        product_id: item.productId,
+        size: item.size ?? null,
+        color: item.color ?? null,
+        quantity: item.quantity,
+      })),
+    };
+
     try {
-      const result = await api.post("/orders", {
-        fullName: form.fullName.trim(),
-        email: form.email.trim() || null,
-        phone: form.phone.trim(),
-        city: form.city.trim(),
-        address: form.address.trim(),
-        notes: form.notes.trim() || null,
-        paymentMethod: form.paymentMethod,
-        locale: lang,
-        items: items.map((item) => ({
-          product_id: item.productId,
-          size: item.size ?? null,
-          color: item.color ?? null,
-          quantity: item.quantity,
-        })),
-      });
+      if (form.paymentMethod === "visa") {
+        // Card payment: redirect to Stripe's hosted checkout page. The
+        // order is created by the webhook only once payment succeeds --
+        // see server/src/routes/webhooks.js. Cart stays intact until then
+        // (in case the customer backs out of the Stripe page).
+        const { url } = await api.post("/orders/stripe-session", orderPayload);
+        window.location.href = url;
+        return; // leaving the page now, no need to setSubmitting(false)
+      }
+
+      const result = await api.post("/orders", orderPayload);
 
       // Pass the items/total along to the confirmation page BEFORE
       // clearing the cart -- once cleared, this is the only place that
       // still has "what did I just order, what size, how many" in memory.
-      // See OrderConfirmation.jsx, which reads this from location.state.
       const confirmedItems = items.map((item) => ({
         name: item.name,
         size: item.size,
@@ -103,10 +122,11 @@ export default function Checkout() {
       // place_order() raises clean messages like "Insufficient stock for
       // enzo-black-tee: only 1 left" -- safe to show directly.
       setSubmitError(err.message || tc("errors.network"));
-    } finally {
       setSubmitting(false);
     }
   }
+
+  const total = subtotal + delivery_fee;
 
   return (
     <div className="mx-auto grid max-w-5xl grid-cols-1 gap-10 px-4 py-10 sm:px-6 md:grid-cols-2">
@@ -170,7 +190,7 @@ export default function Checkout() {
           disabled={submitting || items.length === 0}
           className="mt-8 w-full rounded-md bg-enzo-gradient py-3 font-semibold text-enzo-black disabled:opacity-40"
         >
-          {t("placeOrder")}
+          {form.paymentMethod === "visa" ? t("continueToPay") : t("placeOrder")}
         </button>
       </form>
 
@@ -183,13 +203,25 @@ export default function Checkout() {
                 {localize(item.name)} × {item.quantity}
                 {[item.color, item.size].filter(Boolean).map((v) => ` (${v})`).join("")}
               </span>
-              <span>{item.price * item.quantity}</span>
+              <span>{formatPrice(item.price * item.quantity, currency_symbol)}</span>
             </li>
           ))}
         </ul>
-        <div className="mt-4 flex justify-between font-semibold">
-          <span>{t("total")}</span>
-          <span>{subtotal}</span>
+        <div className="mt-4 flex flex-col gap-2">
+          <div className="flex justify-between text-sm text-enzo-muted">
+            <span>{t("subtotal")}</span>
+            <span>{formatPrice(subtotal, currency_symbol)}</span>
+          </div>
+          {delivery_fee > 0 && (
+            <div className="flex justify-between text-sm text-enzo-muted">
+              <span>{t("shipping")}</span>
+              <span>{formatPrice(delivery_fee, currency_symbol)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-lg font-semibold">
+            <span>{t("total")}</span>
+            <span>{formatPrice(total, currency_symbol)}</span>
+          </div>
         </div>
         <p className="mt-2 text-xs text-enzo-muted">
           {lang === "ar"

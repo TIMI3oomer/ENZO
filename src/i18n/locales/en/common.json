@@ -32,7 +32,11 @@
     "continueShopping": "Continue shopping",
     "subtotal": "Subtotal",
     "checkout": "Checkout",
-    "remove": "Remove"
+    "remove": "Remove",
+    "delivery": "Delivery",
+    "total": "Total",
+    "itemRemoved": "{{name}} was removed because it's no longer available.",
+    "quantityReduced": "{{name}} quantity was reduced to {{stock}} based on availability."
   },
   "footer": {
     "rights": "All rights reserved",

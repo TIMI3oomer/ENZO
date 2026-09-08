@@ -67,6 +67,11 @@ export const categorySchema = z.object({
   name: localizedText,
 });
 
+export const settingsSchema = z.object({
+  delivery_fee: z.number().nonnegative(),
+  currency_symbol: z.string().trim().min(1).max(10).optional(),
+});
+
 // Small helper used by every route: validates `req.body` against a zod
 // schema and throws a clean 400 error (caught by errorHandler.js) if it
 // doesn't match, instead of letting a malformed request reach Supabase.

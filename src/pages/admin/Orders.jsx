@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { useLocalizedField } from "../../context/LanguageContext.jsx";
+import { useSettings } from "../../context/SettingsContext.jsx";
+import { formatPrice } from "../../lib/formatPrice.js";
 import AdminLayout from "../../components/AdminLayout.jsx";
 
 const STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
@@ -16,6 +18,7 @@ const STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
 export default function AdminOrders() {
   const { t } = useTranslation("admin");
   const localize = useLocalizedField();
+  const { currency_symbol } = useSettings();
   const [orders, setOrders] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [itemsByOrder, setItemsByOrder] = useState({});
@@ -66,6 +69,17 @@ export default function AdminOrders() {
               <span className="font-medium">#{o.order_number}</span>
               <span>{o.customer_name}</span>
               <span className="text-enzo-muted">{new Date(o.created_at).toLocaleDateString()}</span>
+              {o.payment_method === "visa" && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs ${
+                    o.payment_status === "paid"
+                      ? "bg-enzo-gold/20 text-enzo-goldBright"
+                      : "bg-enzo-error/20 text-enzo-error"
+                  }`}
+                >
+                  {o.payment_status === "paid" ? t("orders.paid") : t("orders.unpaid")}
+                </span>
+              )}
               <span className="rounded-full border hairline px-3 py-1 text-xs text-enzo-muted">{o.status}</span>
               <ChevronDown size={16} className={`transition-transform ${expanded === o.id ? "rotate-180" : ""}`} />
             </button>
@@ -88,11 +102,19 @@ export default function AdminOrders() {
                           {localize(item.product_name)} × {item.quantity}
                           {[item.color, item.size].filter(Boolean).map((v) => ` (${v})`).join("")}
                         </span>
-                        <span>{item.unit_price * item.quantity}</span>
+                        <span>{formatPrice(item.unit_price * item.quantity, currency_symbol)}</span>
                       </li>
                     ))}
                   </ul>
                 )}
+
+                <div className="mb-4 flex justify-between border-b hairline pb-3 text-sm">
+                  <span className="text-enzo-muted">
+                    {t("orders.subtotal")} {formatPrice(o.subtotal, currency_symbol)}
+                    {o.delivery_fee > 0 && ` + ${t("orders.delivery")} ${formatPrice(o.delivery_fee, currency_symbol)}`}
+                  </span>
+                  <span className="font-semibold">{formatPrice(o.total, currency_symbol)}</span>
+                </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   <div className="flex-1">

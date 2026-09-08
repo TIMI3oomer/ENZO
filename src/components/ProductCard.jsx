@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
+import { useSettings } from "../context/SettingsContext.jsx";
+import { formatPrice } from "../lib/formatPrice.js";
 import { COLOR_HEX } from "../lib/colors.js";
 
 // CHECKPOINT NOTE (ProductCard.jsx):
@@ -29,6 +31,7 @@ import { COLOR_HEX } from "../lib/colors.js";
 export default function ProductCard({ product }) {
   const { t } = useTranslation("common");
   const localize = useLocalizedField();
+  const { currency_symbol } = useSettings();
   const [previewColor, setPreviewColor] = useState(null);
 
   const colorImages = product.color_images || {};
@@ -95,7 +98,7 @@ export default function ProductCard({ product }) {
 
         <div className="flex flex-1 flex-col gap-1 px-3 py-3 text-start">
           <p className="line-clamp-1 text-sm font-medium">{name}</p>
-          <p className="mt-auto text-sm font-semibold text-enzo-goldBright">{product.price}</p>
+          <p className="mt-auto text-sm font-semibold text-enzo-goldBright">{formatPrice(product.price, currency_symbol)}</p>
         </div>
       </div>
     </Link>

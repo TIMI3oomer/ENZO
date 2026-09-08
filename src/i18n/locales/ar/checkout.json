@@ -27,5 +27,10 @@
     "required": "هذا الحقل مطلوب",
     "invalidPhone": "رقم الهاتف غير صالح",
     "invalidEmail": "بريد إلكتروني غير صالح"
-  }
+  },
+  "continueToPay": "المتابعة للدفع",
+  "confirmingPayment": "جارٍ تأكيد الدفع...",
+  "paymentTakingLong": "الدفع يستغرق وقتاً أطول من المعتاد",
+  "paymentTakingLongHint": "إذا تم خصم المبلغ، سيصلك تأكيد الطلب قريباً. إذا استمرت المشكلة، تواصل معنا.",
+  "paymentSessionMissing": "لم يتم العثور على معلومات الدفع."
 }

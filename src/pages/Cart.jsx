@@ -1,17 +1,74 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
+import { useSettings } from "../context/SettingsContext.jsx";
+import { formatPrice } from "../lib/formatPrice.js";
+import { api } from "../lib/api.js";
 
 // CHECKPOINT NOTE (Cart.jsx):
 // Full-page cart (in addition to the CartDrawer) for people who land on
-// /cart directly (e.g. from a saved link). Shares the same CartContext,
-// so both stay in sync automatically.
+// /cart directly. Shares the same CartContext, so both stay in sync.
+//
+// BUG FIX -- STALE CART DATA: cart items store a price/stock SNAPSHOT
+// from whenever they were added, which goes stale if the admin changes a
+// price or the product sells out later. On mount, this page fetches the
+// CURRENT state of every product still in the cart (GET /api/products?ids=)
+// and reconciles: prices are updated to match reality, quantities are
+// clamped down if stock dropped, and anything now inactive/deleted is
+// removed entirely -- with a visible notice explaining what changed,
+// rather than silently surprising the customer at checkout.
 export default function Cart() {
   const { t } = useTranslation("common");
-  const { items, removeItem, updateQuantity, subtotal } = useCart();
+  const { items, removeItem, updateQuantity, syncItem, subtotal } = useCart();
   const localize = useLocalizedField();
+  const { delivery_fee, currency_symbol } = useSettings();
+  const [notice, setNotice] = useState(null);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    if (items.length === 0 || checked) return;
+
+    const ids = items.map((i) => i.productId).join(",");
+    api
+      .get(`/products?ids=${ids}`)
+      .then((liveProducts) => {
+        const changes = [];
+
+        for (const item of items) {
+          const live = liveProducts.find((p) => p.id === item.productId);
+
+          if (!live) {
+            removeItem(item.key);
+            changes.push(t("cart.itemRemoved", { name: localize(item.name) }));
+            continue;
+          }
+
+          const updates = {};
+          if (live.price !== item.price) updates.price = live.price;
+          if (live.stock !== item.stock) updates.stock = live.stock;
+
+          if (live.stock < item.quantity) {
+            updateQuantity(item.key, Math.max(1, live.stock));
+            if (live.stock === 0) {
+              removeItem(item.key);
+              changes.push(t("cart.itemRemoved", { name: localize(item.name) }));
+              continue;
+            }
+            changes.push(t("cart.quantityReduced", { name: localize(item.name), stock: live.stock }));
+          }
+
+          if (Object.keys(updates).length > 0) syncItem(item.key, updates);
+        }
+
+        if (changes.length > 0) setNotice(changes.join(" "));
+      })
+      .catch(() => {}) // if this fails, just leave the cart as-is -- checkout still re-validates everything server-side regardless
+      .finally(() => setChecked(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checked]);
 
   if (items.length === 0) {
     return (
@@ -27,6 +84,14 @@ export default function Cart() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <h1 className="mb-8 font-display text-3xl">{t("cart.title")}</h1>
+
+      {notice && (
+        <div className="mb-6 flex items-start gap-2 rounded-lg border border-enzo-goldBright/40 bg-enzo-gold/10 p-4 text-sm">
+          <AlertTriangle size={18} className="mt-0.5 flex-none text-enzo-goldBright" />
+          <p>{notice}</p>
+        </div>
+      )}
+
       <ul className="flex flex-col gap-4">
         {items.map((item) => (
           <li key={item.key} className="flex items-center gap-4 border-b hairline pb-4">
@@ -43,12 +108,16 @@ export default function Cart() {
                   <Minus size={16} />
                 </button>
                 <span>{item.quantity}</span>
-                <button onClick={() => updateQuantity(item.key, item.quantity + 1)}>
+                <button
+                  onClick={() => updateQuantity(item.key, item.quantity + 1)}
+                  disabled={item.stock != null && item.quantity >= item.stock}
+                  className="disabled:opacity-30"
+                >
                   <Plus size={16} />
                 </button>
               </div>
             </div>
-            <p className="font-medium">{item.price * item.quantity}</p>
+            <p className="font-medium">{formatPrice(item.price * item.quantity, currency_symbol)}</p>
             <button onClick={() => removeItem(item.key)} className="text-enzo-muted hover:text-enzo-error">
               <Trash2 size={18} />
             </button>
@@ -56,9 +125,21 @@ export default function Cart() {
         ))}
       </ul>
 
-      <div className="mt-8 flex items-center justify-between border-t hairline pt-6">
-        <span className="text-enzo-muted">{t("cart.subtotal")}</span>
-        <span className="text-xl font-semibold">{subtotal}</span>
+      <div className="mt-8 flex flex-col gap-2 border-t hairline pt-6">
+        <div className="flex items-center justify-between text-sm text-enzo-muted">
+          <span>{t("cart.subtotal")}</span>
+          <span>{formatPrice(subtotal, currency_symbol)}</span>
+        </div>
+        {delivery_fee > 0 && (
+          <div className="flex items-center justify-between text-sm text-enzo-muted">
+            <span>{t("cart.delivery")}</span>
+            <span>{formatPrice(delivery_fee, currency_symbol)}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-lg font-semibold">
+          <span>{t("cart.total")}</span>
+          <span>{formatPrice(subtotal + delivery_fee, currency_symbol)}</span>
+        </div>
       </div>
 
       <Link

@@ -4,6 +4,8 @@ import { X, Minus, Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "../context/CartContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
+import { useSettings } from "../context/SettingsContext.jsx";
+import { formatPrice } from "../lib/formatPrice.js";
 
 // CHECKPOINT NOTE (CartDrawer.jsx):
 // Slides in from the "end" edge (inset-inline-end), which is the right side
@@ -14,6 +16,7 @@ export default function CartDrawer({ open, onClose }) {
   const { t } = useTranslation("common");
   const { items, removeItem, updateQuantity, subtotal } = useCart();
   const localize = useLocalizedField();
+  const { delivery_fee, currency_symbol } = useSettings();
 
   return (
     <AnimatePresence>
@@ -63,7 +66,11 @@ export default function CartDrawer({ open, onClose }) {
                             <Minus size={14} />
                           </button>
                           <span className="text-sm">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.key, item.quantity + 1)}>
+                          <button
+                            onClick={() => updateQuantity(item.key, item.quantity + 1)}
+                            disabled={item.stock != null && item.quantity >= item.stock}
+                            className="disabled:opacity-30"
+                          >
                             <Plus size={14} />
                           </button>
                           <button
@@ -75,7 +82,7 @@ export default function CartDrawer({ open, onClose }) {
                           </button>
                         </div>
                       </div>
-                      <p className="font-medium">{item.price * item.quantity}</p>
+                      <p className="font-medium">{formatPrice(item.price * item.quantity, currency_symbol)}</p>
                     </li>
                   ))}
                 </ul>
@@ -84,9 +91,21 @@ export default function CartDrawer({ open, onClose }) {
 
             {items.length > 0 && (
               <div className="border-t hairline px-5 py-4">
-                <div className="mb-4 flex justify-between text-sm">
-                  <span className="text-enzo-muted">{t("cart.subtotal")}</span>
-                  <span className="font-semibold">{subtotal}</span>
+                <div className="mb-4 flex flex-col gap-1.5 text-sm">
+                  <div className="flex justify-between text-enzo-muted">
+                    <span>{t("cart.subtotal")}</span>
+                    <span>{formatPrice(subtotal, currency_symbol)}</span>
+                  </div>
+                  {delivery_fee > 0 && (
+                    <div className="flex justify-between text-enzo-muted">
+                      <span>{t("cart.delivery")}</span>
+                      <span>{formatPrice(delivery_fee, currency_symbol)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold text-enzo-white">
+                    <span>{t("cart.total")}</span>
+                    <span>{formatPrice(subtotal + delivery_fee, currency_symbol)}</span>
+                  </div>
                 </div>
                 <Link
                   to="/checkout"

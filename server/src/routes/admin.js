@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabaseAdmin.js";
 import { attachUser, requireAdmin } from "../middleware/auth.js";
-import { productSchema, orderStatusSchema, categorySchema, parseOrThrow } from "../utils/validation.js";
+import { productSchema, orderStatusSchema, categorySchema, settingsSchema, parseOrThrow } from "../utils/validation.js";
 import { sendOrderStatusEmail } from "../lib/email.js";
 
 const router = Router();
@@ -269,6 +269,23 @@ router.get("/customers", async (_req, res, next) => {
     }));
 
     res.json(customers);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------- Store settings (delivery fee, currency) ----------
+router.put("/settings", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(settingsSchema, req.body);
+    const { data, error } = await supabaseAdmin
+      .from("store_settings")
+      .update({ ...body, updated_at: new Date().toISOString() })
+      .eq("id", true)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     next(err);
   }

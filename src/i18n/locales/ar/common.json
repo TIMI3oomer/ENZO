@@ -32,7 +32,11 @@
     "continueShopping": "متابعة التسوق",
     "subtotal": "المجموع الفرعي",
     "checkout": "إتمام الطلب",
-    "remove": "إزالة"
+    "remove": "إزالة",
+    "delivery": "التوصيل",
+    "total": "الإجمالي",
+    "itemRemoved": "تمت إزالة {{name}} لأنه لم يعد متوفراً.",
+    "quantityReduced": "تم تقليل كمية {{name}} إلى {{stock}} حسب المتوفر."
   },
   "footer": {
     "rights": "جميع الحقوق محفوظة",

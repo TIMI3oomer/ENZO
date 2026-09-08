@@ -1,6 +1,8 @@
 import { useParams, useLocation, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
+import { useSettings } from "../context/SettingsContext.jsx";
+import { formatPrice } from "../lib/formatPrice.js";
 
 // CHECKPOINT NOTE (OrderConfirmation.jsx):
 // Items/total are read from router state, passed by Checkout.jsx right
@@ -16,6 +18,7 @@ export default function OrderConfirmation() {
   const location = useLocation();
   const { t } = useTranslation("checkout");
   const localize = useLocalizedField();
+  const { currency_symbol } = useSettings();
 
   const items = location.state?.items;
   const total = location.state?.total;
@@ -37,13 +40,13 @@ export default function OrderConfirmation() {
                   {localize(item.name)} × {item.quantity}
                   {[item.color, item.size].filter(Boolean).map((v) => ` (${v})`).join("")}
                 </span>
-                <span>{item.price * item.quantity}</span>
+                <span>{formatPrice(item.price * item.quantity, currency_symbol)}</span>
               </li>
             ))}
           </ul>
           <div className="mt-4 flex justify-between font-semibold">
             <span>{t("total")}</span>
-            <span>{total}</span>
+            <span>{formatPrice(total, currency_symbol)}</span>
           </div>
         </div>
       ) : (

@@ -27,5 +27,10 @@
     "invalidEmail": "Invalid email"
   },
   "email": "Email (optional)",
-  "emailPlaceholder": "To send you order updates"
+  "emailPlaceholder": "To send you order updates",
+  "continueToPay": "Continue to Payment",
+  "confirmingPayment": "Confirming your payment...",
+  "paymentTakingLong": "This is taking longer than usual",
+  "paymentTakingLongHint": "If you were charged, your order confirmation will arrive shortly. Contact us if this continues.",
+  "paymentSessionMissing": "No payment information was found."
 }

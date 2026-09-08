@@ -51,7 +51,11 @@
     "statusCancelled": "Cancelled",
     "note": "Note to customer (optional)",
     "sendUpdate": "Update & send",
-    "items": "Items"
+    "items": "Items",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "subtotal": "Subtotal",
+    "delivery": "Delivery"
   },
   "analytics": {
     "salesLast14Days": "Sales — last 14 days",
@@ -78,5 +82,9 @@
     "cancel": "Cancel",
     "empty": "No categories yet",
     "confirmDelete": "Delete this category? Products using it will become uncategorized."
+  },
+  "settingsPage": {
+    "deliveryFee": "Delivery fee",
+    "currencySymbol": "Currency symbol"
   }
 }

@@ -6,6 +6,7 @@ import "./i18n"; // must be imported before any component renders
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import { SettingsProvider } from "./context/SettingsContext.jsx";
 import SmoothScrollProvider from "./components/SmoothScrollProvider.jsx";
 import "./index.css";
 
@@ -14,11 +15,13 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <BrowserRouter>
       <LanguageProvider>
         <AuthProvider>
-          <CartProvider>
-            <SmoothScrollProvider>
-              <App />
-            </SmoothScrollProvider>
-          </CartProvider>
+          <SettingsProvider>
+            <CartProvider>
+              <SmoothScrollProvider>
+                <App />
+              </SmoothScrollProvider>
+            </CartProvider>
+          </SettingsProvider>
         </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>

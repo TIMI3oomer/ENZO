@@ -51,7 +51,11 @@
     "statusCancelled": "ملغي",
     "note": "ملاحظة للعميل (اختياري)",
     "sendUpdate": "تحديث وإرسال",
-    "items": "المنتجات"
+    "items": "المنتجات",
+    "paid": "مدفوع",
+    "unpaid": "غير مدفوع",
+    "subtotal": "المجموع الفرعي",
+    "delivery": "التوصيل"
   },
   "analytics": {
     "salesLast14Days": "المبيعات آخر ١٤ يوم",
@@ -78,5 +82,9 @@
     "cancel": "إلغاء",
     "empty": "لا توجد تصنيفات بعد",
     "confirmDelete": "حذف هذا التصنيف؟ المنتجات المرتبطة به ستبقى بدون تصنيف."
+  },
+  "settingsPage": {
+    "deliveryFee": "رسوم التوصيل",
+    "currencySymbol": "رمز العملة"
   }
 }

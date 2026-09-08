@@ -45,6 +45,7 @@ export function CartProvider({ children }) {
           size,
           color,
           quantity,
+          stock: product.stock, // snapshot, refreshed live on the Cart page -- see Cart.jsx
         },
       ];
     });
@@ -53,10 +54,24 @@ export function CartProvider({ children }) {
   const removeItem = (key) =>
     setItems((prev) => prev.filter((i) => i.key !== key));
 
+  // BUG FIX: previously only clamped the LOWER bound (never below 1),
+  // with nothing stopping someone from clicking "+" past what's actually
+  // in stock -- the mistake would only surface later at checkout. Now
+  // also clamps to the item's known stock, when we have it.
   const updateQuantity = (key, quantity) =>
     setItems((prev) =>
-      prev.map((i) => (i.key === key ? { ...i, quantity: Math.max(1, quantity) } : i))
+      prev.map((i) =>
+        i.key === key
+          ? { ...i, quantity: Math.max(1, Math.min(quantity, i.stock ?? Infinity)) }
+          : i
+      )
     );
+
+  // Used by Cart.jsx to refresh stale price/stock/name snapshots and
+  // drop items that are no longer available, without needing to touch
+  // any of the other cart logic above.
+  const syncItem = (key, updates) =>
+    setItems((prev) => prev.map((i) => (i.key === key ? { ...i, ...updates } : i)));
 
   const clearCart = () => setItems([]);
 
@@ -70,7 +85,7 @@ export function CartProvider({ children }) {
     [items]
   );
 
-  const value = { items, addItem, removeItem, updateQuantity, clearCart, subtotal, count };
+  const value = { items, addItem, removeItem, updateQuantity, syncItem, clearCart, subtotal, count };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

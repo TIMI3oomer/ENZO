@@ -7,6 +7,7 @@ import Shop from "./pages/Shop.jsx";
 import ProductDetail from "./pages/ProductDetail.jsx";
 import Cart from "./pages/Cart.jsx";
 import Checkout from "./pages/Checkout.jsx";
+import PaymentSuccess from "./pages/PaymentSuccess.jsx";
 import OrderConfirmation from "./pages/OrderConfirmation.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
@@ -17,6 +18,7 @@ import AdminProductForm from "./pages/admin/ProductForm.jsx";
 import AdminOrders from "./pages/admin/Orders.jsx";
 import AdminCustomers from "./pages/admin/Customers.jsx";
 import AdminCategories from "./pages/admin/Categories.jsx";
+import AdminSettings from "./pages/admin/Settings.jsx";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute.jsx";
 import PageTransition from "./components/PageTransition.jsx";
 
@@ -45,6 +47,7 @@ export default function App() {
                   <Route path="/product/:slug" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/payment-success" element={<PaymentSuccess />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/account" element={<Account />} />
@@ -112,6 +115,14 @@ export default function App() {
         element={
           <ProtectedAdminRoute>
             <AdminCategories />
+          </ProtectedAdminRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedAdminRoute>
+            <AdminSettings />
           </ProtectedAdminRoute>
         }
       />

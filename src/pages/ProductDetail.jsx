@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
+import { useSettings } from "../context/SettingsContext.jsx";
+import { formatPrice } from "../lib/formatPrice.js";
 import ErrorBanner from "../components/ErrorBanner.jsx";
 import { COLOR_HEX } from "../lib/colors.js";
 
@@ -17,6 +19,7 @@ import { COLOR_HEX } from "../lib/colors.js";
 export default function ProductDetail() {
   const { slug } = useParams();
   const { t } = useTranslation("common");
+  const { currency_symbol } = useSettings();
   const localize = useLocalizedField();
   const { addItem } = useCart();
 
@@ -90,7 +93,7 @@ export default function ProductDetail() {
       {/* Info */}
       <div className="text-start">
         <h1 className="font-display text-3xl">{localize(product.name)}</h1>
-        <p className="mt-2 text-xl text-enzo-muted">{product.price}</p>
+        <p className="mt-2 text-xl text-enzo-muted">{formatPrice(product.price, currency_symbol)}</p>
         <p className="mt-6 leading-relaxed text-enzo-muted">{localize(product.description)}</p>
 
         {product.colors?.length > 0 && (

@@ -105,6 +105,27 @@ create table if not exists profiles (
   created_at timestamptz not null default now()
 );
 
+-- ---------- STORE SETTINGS (single row) ----------
+-- Holds store-wide config the admin can edit: delivery fee, currency
+-- symbol. The `id boolean primary key default true check (id)` trick
+-- guarantees there is EXACTLY one row ever -- true is the only possible
+-- value a boolean can be to satisfy the check, so a second insert would
+-- collide on the primary key.
+create table if not exists store_settings (
+  id boolean primary key default true check (id),
+  delivery_fee numeric(10,2) not null default 0,
+  currency_symbol text not null default '₪',
+  updated_at timestamptz not null default now()
+);
+insert into store_settings (id) values (true) on conflict (id) do nothing;
+
+-- ---------- ORDERS: delivery fee + card-payment tracking ----------
+alter table orders add column if not exists delivery_fee numeric(10,2) not null default 0;
+alter table orders add column if not exists payment_status text not null default 'pending'
+  check (payment_status in ('pending', 'paid', 'failed'));
+alter table orders add column if not exists stripe_session_id text;
+create index if not exists idx_orders_stripe_session on orders(stripe_session_id);
+
 -- =====================================================================
 -- ROW LEVEL SECURITY
 -- =====================================================================
@@ -114,6 +135,7 @@ alter table orders enable row level security;
 alter table order_items enable row level security;
 alter table admin_users enable row level security;
 alter table profiles enable row level security;
+alter table store_settings enable row level security;
 
 create or replace function is_admin()
 returns boolean
@@ -146,6 +168,12 @@ create policy "customer read own profile" on profiles for select using (auth.uid
 create policy "customer update own profile" on profiles for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "admin read all profiles" on profiles for select using (is_admin());
 
+drop policy if exists "public read store settings" on store_settings;
+create policy "public read store settings" on store_settings for select using (true);
+
+drop policy if exists "admin write store settings" on store_settings;
+create policy "admin write store settings" on store_settings for update using (is_admin()) with check (is_admin());
+
 -- =====================================================================
 -- Auto-create a profile row on signup, pulling full_name out of the
 -- metadata AuthContext.jsx's register() function sets at sign-up time.
@@ -174,6 +202,18 @@ create trigger on_auth_user_created
 -- key. Looks up real prices/stock itself (never trusts the client),
 -- locks rows to prevent overselling, and writes the order + line items +
 -- stock decrement as one transaction.
+--
+-- DELIVERY FEE: read from store_settings INSIDE this function, not
+-- passed in as a parameter — same "never trust the client for money"
+-- principle as the per-item prices above. If the admin changes the fee
+-- later, orders already placed keep whatever fee was in effect when they
+-- were created (the fee is copied onto the order row, not recalculated
+-- from store_settings after the fact).
+--
+-- PAYMENT STATUS: p_payment_status lets card payments (created only
+-- AFTER Stripe confirms payment, via the webhook) be recorded as 'paid'
+-- immediately, while cash-on-delivery/manual-transfer orders default to
+-- 'pending' (money hasn't actually been collected yet).
 -- =====================================================================
 create or replace function place_order(
   p_customer_name text,
@@ -185,7 +225,9 @@ create or replace function place_order(
   p_locale text,
   p_user_id uuid,
   p_items jsonb,
-  p_email text default null
+  p_email text default null,
+  p_payment_status text default 'pending',
+  p_stripe_session_id text default null
 ) returns table(order_id uuid, order_number bigint, total numeric)
 language plpgsql
 security definer
@@ -194,6 +236,8 @@ declare
   v_order_id uuid;
   v_order_number bigint;
   v_subtotal numeric := 0;
+  v_delivery_fee numeric := 0;
+  v_total numeric := 0;
   v_item jsonb;
   v_product products%rowtype;
   v_qty int;
@@ -201,6 +245,9 @@ begin
   if jsonb_array_length(p_items) = 0 then
     raise exception 'Cannot place an order with no items';
   end if;
+
+  select delivery_fee into v_delivery_fee from store_settings where id = true;
+  v_delivery_fee := coalesce(v_delivery_fee, 0);
 
   for v_item in select * from jsonb_array_elements(p_items)
   loop
@@ -228,12 +275,16 @@ begin
     v_subtotal := v_subtotal + (v_product.price * v_qty);
   end loop;
 
+  v_total := v_subtotal + v_delivery_fee;
+
   insert into orders (
     customer_name, phone, city, address, notes,
-    payment_method, subtotal, total, locale, user_id, customer_email
+    payment_method, subtotal, delivery_fee, total, locale, user_id, customer_email,
+    payment_status, stripe_session_id
   ) values (
     p_customer_name, p_phone, p_city, p_address, p_notes,
-    p_payment_method, v_subtotal, v_subtotal, p_locale, p_user_id, p_email
+    p_payment_method, v_subtotal, v_delivery_fee, v_total, p_locale, p_user_id, p_email,
+    p_payment_status, p_stripe_session_id
   )
   returning id, orders.order_number into v_order_id, v_order_number;
 
@@ -248,7 +299,7 @@ begin
     update products set stock = stock - v_qty where id = v_product.id;
   end loop;
 
-  return query select v_order_id, v_order_number, v_subtotal;
+  return query select v_order_id, v_order_number, v_total;
 end;
 $$;
 

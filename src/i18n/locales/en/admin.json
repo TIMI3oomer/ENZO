@@ -36,10 +36,7 @@
     "colorImages": "Assign a photo per color",
     "noImageAssigned": "No photo assigned",
     "photoNumber": "Photo #{{n}}",
-    "slugOptional": "Slug (optional — auto-generated if left blank)",
-    "selectSizeError": "Please select at least one size",
-    "selectColorError": "Please select at least one color",
-    "selectImageError": "Please upload at least one image"
+    "slugOptional": "Slug (optional — auto-generated if left blank)"
   },
   "orders": {
     "title": "Orders",

@@ -9,8 +9,8 @@ import AdminLayout from "../../components/AdminLayout.jsx";
 
 const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
 
-// Every field is required except slug, so a blank slug is filled in from
-// the (required) English name instead of blocking the admin from saving.
+// Every field is optional -- a blank slug is filled in from the name
+// (English, falling back to Arabic) instead of blocking the save.
 function generateSlug(base) {
   const cleaned = (base || "")
     .toString()
@@ -140,13 +140,6 @@ export default function AdminProductForm() {
     e.preventDefault();
     setError("");
 
-    // Sizes/colors/images are click-to-toggle widgets, not native inputs,
-    // so the browser's `required` validation can't cover them -- checked
-    // by hand before saving.
-    if (form.sizes.length === 0) return setError(t("products.selectSizeError"));
-    if (form.colors.length === 0) return setError(t("products.selectColorError"));
-    if (form.images.length === 0) return setError(t("products.selectImageError"));
-
     setSaving(true);
 
     const payload = {
@@ -186,61 +179,61 @@ export default function AdminProductForm() {
 
         <div>
           <Label>{t("products.nameAr")}</Label>
-          <input className="input" dir="rtl" value={form.name_ar} onChange={update("name_ar")} required />
+          <input className="input" dir="rtl" value={form.name_ar} onChange={update("name_ar")} />
         </div>
         <div>
           <Label>{t("products.nameEn")}</Label>
-          <input className="input" dir="ltr" value={form.name_en} onChange={update("name_en")} required />
+          <input className="input" dir="ltr" value={form.name_en} onChange={update("name_en")} />
         </div>
 
         <div>
           <Label>{t("products.descAr")}</Label>
-          <textarea className="input" dir="rtl" rows={3} value={form.description_ar} onChange={update("description_ar")} required />
+          <textarea className="input" dir="rtl" rows={3} value={form.description_ar} onChange={update("description_ar")} />
         </div>
         <div>
           <Label>{t("products.descEn")}</Label>
-          <textarea className="input" dir="ltr" rows={3} value={form.description_en} onChange={update("description_en")} required />
+          <textarea className="input" dir="ltr" rows={3} value={form.description_en} onChange={update("description_en")} />
         </div>
 
         <div>
           <Label>{tc("product.material")} (AR)</Label>
-          <input className="input" dir="rtl" value={form.material_ar} onChange={update("material_ar")} required />
+          <input className="input" dir="rtl" value={form.material_ar} onChange={update("material_ar")} />
         </div>
         <div>
           <Label>{tc("product.material")} (EN)</Label>
-          <input className="input" dir="ltr" value={form.material_en} onChange={update("material_en")} required />
+          <input className="input" dir="ltr" value={form.material_en} onChange={update("material_en")} />
         </div>
 
         <div>
           <Label>{tc("product.fit")} (AR)</Label>
-          <input className="input" dir="rtl" value={form.fit_ar} onChange={update("fit_ar")} required />
+          <input className="input" dir="rtl" value={form.fit_ar} onChange={update("fit_ar")} />
         </div>
         <div>
           <Label>{tc("product.fit")} (EN)</Label>
-          <input className="input" dir="ltr" value={form.fit_en} onChange={update("fit_en")} required />
+          <input className="input" dir="ltr" value={form.fit_en} onChange={update("fit_en")} />
         </div>
 
         <div>
           <Label>{tc("product.care")} (AR)</Label>
-          <input className="input" dir="rtl" value={form.care_ar} onChange={update("care_ar")} required />
+          <input className="input" dir="rtl" value={form.care_ar} onChange={update("care_ar")} />
         </div>
         <div>
           <Label>{tc("product.care")} (EN)</Label>
-          <input className="input" dir="ltr" value={form.care_en} onChange={update("care_en")} required />
+          <input className="input" dir="ltr" value={form.care_en} onChange={update("care_en")} />
         </div>
 
         <div>
           <Label>{t("products.price")}</Label>
-          <input className="input" type="number" step="0.01" value={form.price} onChange={update("price")} required />
+          <input className="input" type="number" step="0.01" value={form.price} onChange={update("price")} />
         </div>
         <div>
           <Label>{t("products.stock")}</Label>
-          <input className="input" type="number" value={form.stock} onChange={update("stock")} required />
+          <input className="input" type="number" value={form.stock} onChange={update("stock")} />
         </div>
 
         <FullRow>
           <Label>{t("products.category")}</Label>
-          <select className="input" value={form.category_id} onChange={update("category_id")} required>
+          <select className="input" value={form.category_id} onChange={update("category_id")}>
             <option value="">—</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>

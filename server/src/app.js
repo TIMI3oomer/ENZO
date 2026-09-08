@@ -42,6 +42,21 @@ const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
   .map((s) => s.trim().replace(/^["']|["']$/g, "").replace(/\/$/, "")); // strip stray quotes and trailing slashes -- both are common copy-paste mistakes in env var values
 
+// Vercel gives every deployment of the frontend (each PR preview, and
+// every new production deploy before a custom domain is attached) its own
+// unique URL like `enzo-front-<hash>-<team>.vercel.app`, on top of the one
+// stable domain configured in FRONTEND_URL -- a fresh, never-whitelisted
+// origin every time. So alongside the exact FRONTEND_URL match, also
+// allow same-project Vercel deployment URLs derived from it (e.g.
+// `enzo-front.vercel.app` -> `enzo-front-*.vercel.app`), instead of
+// silently blocking every preview build.
+const vercelDeploymentPatterns = allowedOrigins
+  .filter((o) => /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(o))
+  .map((o) => {
+    const slug = o.replace("https://", "").split(".")[0];
+    return new RegExp(`^https:\\/\\/${slug}-[a-z0-9-]+\\.vercel\\.app$`);
+  });
+
 console.log("[ENZO server] CORS allowed origins:", allowedOrigins);
 
 app.use(helmet());
@@ -51,9 +66,13 @@ app.use(
       // Allow no-origin requests (e.g. curl, server-to-server health checks)
       if (!origin) return callback(null, true);
       const normalized = origin.replace(/\/$/, "");
-      if (allowedOrigins.includes(normalized)) return callback(null, true);
+      const isAllowed =
+        allowedOrigins.includes(normalized) || vercelDeploymentPatterns.some((re) => re.test(normalized));
+      if (isAllowed) return callback(null, true);
       console.warn(`[ENZO server] Blocked CORS request from origin: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
+      const err = new Error("Not allowed by CORS");
+      err.status = 403; // not a server fault -- keep it out of the generic 500 bucket in logs/monitoring
+      callback(err);
     },
   })
 );

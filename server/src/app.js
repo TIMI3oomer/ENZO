@@ -40,7 +40,8 @@ const app = express();
 //   than silently glossed over.
 const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
-  .map((s) => s.trim().replace(/^["']|["']$/g, "").replace(/\/$/, "")); // strip stray quotes and trailing slashes -- both are common copy-paste mistakes in env var values
+  .map((s) => s.trim().replace(/^["']|["']$/g, "").replace(/\/$/, "")) // strip stray quotes and trailing slashes -- both are common copy-paste mistakes in env var values
+  .map((s) => (/^https?:\/\//.test(s) ? s : `https://${s}`)); // and tolerate a bare domain with no scheme at all -- also common, and otherwise silently matches nothing, since a real browser Origin header always includes one
 
 // Vercel gives every deployment of the frontend (each PR preview, and
 // every new production deploy before a custom domain is attached) its own

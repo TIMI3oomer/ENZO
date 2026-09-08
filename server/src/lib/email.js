@@ -23,6 +23,14 @@ const transporter = hasEmailConfig
     })
   : null;
 
+// Kept as a plain constant (not admin-editable) now that store_settings
+// is gone -- this is a single-currency store, so there's nothing to
+// configure here.
+const CURRENCY_SYMBOL = "₪";
+function formatMoney(amount) {
+  return `${(Number(amount) || 0).toLocaleString()} ${CURRENCY_SYMBOL}`;
+}
+
 const STATUS_LABELS = {
   pending: { ar: "قيد المراجعة", en: "Pending" },
   confirmed: { ar: "مؤكد", en: "Confirmed" },
@@ -71,7 +79,68 @@ function buildEmail({ orderNumber, status, note, locale }) {
 export async function sendOrderStatusEmail({ to, orderNumber, status, note, locale = "ar" }) {
   if (!to) return; // guest checkout with no email provided -- nothing to send
   const { subject, text, html } = buildEmail({ orderNumber, status, note, locale });
+  await dispatch(to, subject, text, html);
+}
 
+// CHECKPOINT NOTE (sendOrderTotalEmail):
+// Delivery fee varies by city, so it's never charged/guessed at
+// checkout -- the customer's total isn't actually final until the admin
+// sets the real delivery fee for their order (see PATCH
+// /api/admin/orders/:id/delivery-fee in routes/admin.js). THIS is the
+// email that goes out at that moment: subtotal + the now-confirmed
+// delivery fee + the resulting final total, so the customer knows
+// exactly what to have ready (this store is mostly cash-on-delivery).
+function buildTotalEmail({ orderNumber, subtotal, deliveryFee, total, locale }) {
+  const isAr = locale === "ar";
+
+  const subject = isAr
+    ? `السعر النهائي لطلبك #${orderNumber} — ENZO`
+    : `Your order #${orderNumber} — final price — ENZO`;
+
+  const greeting = isAr ? "مرحباً," : "Hello,";
+  const intro = isAr
+    ? `تم تأكيد رسوم التوصيل لطلبك رقم #${orderNumber}. هذا هو السعر النهائي:`
+    : `Delivery has been confirmed for your order #${orderNumber}. Here's your final price:`;
+  const subtotalLabel = isAr ? "المجموع الفرعي" : "Subtotal";
+  const deliveryLabel = isAr ? "رسوم التوصيل" : "Delivery fee";
+  const totalLabel = isAr ? "السعر النهائي" : "Final total";
+  const signOff = isAr ? "شكراً لتسوقك من ENZO" : "Thank you for shopping with ENZO";
+
+  const text = [
+    greeting,
+    "",
+    intro,
+    `${subtotalLabel}: ${formatMoney(subtotal)}`,
+    `${deliveryLabel}: ${formatMoney(deliveryFee)}`,
+    `${totalLabel}: ${formatMoney(total)}`,
+    "",
+    signOff,
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:sans-serif;background:#0A0A0A;color:#F5F5F2;padding:32px;direction:${isAr ? "rtl" : "ltr"};text-align:${isAr ? "right" : "left"}">
+      <h2 style="margin:0 0 16px;">ENZO</h2>
+      <p>${greeting}</p>
+      <p>${intro}</p>
+      <table style="width:100%;max-width:360px;margin-top:16px;color:#9A9A94;">
+        <tr><td>${subtotalLabel}</td><td style="text-align:${isAr ? "left" : "right"}">${formatMoney(subtotal)}</td></tr>
+        <tr><td>${deliveryLabel}</td><td style="text-align:${isAr ? "left" : "right"}">${formatMoney(deliveryFee)}</td></tr>
+      </table>
+      <p style="margin-top:16px;font-size:20px;font-weight:bold;color:#C9A227;">${totalLabel}: ${formatMoney(total)}</p>
+      <p style="margin-top:32px;color:#9A9A94;">${signOff}</p>
+    </div>
+  `;
+
+  return { subject, text, html };
+}
+
+export async function sendOrderTotalEmail({ to, orderNumber, subtotal, deliveryFee, total, locale = "ar" }) {
+  if (!to) return; // guest checkout with no email provided -- nothing to send
+  const { subject, text, html } = buildTotalEmail({ orderNumber, subtotal, deliveryFee, total, locale });
+  await dispatch(to, subject, text, html);
+}
+
+async function dispatch(to, subject, text, html) {
   if (!transporter) {
     console.log(`[ENZO email — NOT SENT, no SMTP configured] To: ${to} | ${subject}`);
     return;
@@ -86,7 +155,8 @@ export async function sendOrderStatusEmail({ to, orderNumber, status, note, loca
       html,
     });
   } catch (err) {
-    // A failed email should never block the order-status update itself.
+    // A failed email should never block the action that triggered it
+    // (an order-status update, or the admin confirming a delivery fee).
     console.error("[ENZO email] Failed to send:", err.message);
   }
 }

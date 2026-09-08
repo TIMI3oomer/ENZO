@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { Minus, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
-import { useSettings } from "../context/SettingsContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 import { api } from "../lib/api.js";
 
@@ -24,7 +23,6 @@ export default function Cart() {
   const { t } = useTranslation("common");
   const { items, removeItem, updateQuantity, syncItem, subtotal } = useCart();
   const localize = useLocalizedField();
-  const { delivery_fee, currency_symbol } = useSettings();
   const [notice, setNotice] = useState(null);
   const [checked, setChecked] = useState(false);
 
@@ -117,7 +115,7 @@ export default function Cart() {
                 </button>
               </div>
             </div>
-            <p className="font-medium">{formatPrice(item.price * item.quantity, currency_symbol)}</p>
+            <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
             <button onClick={() => removeItem(item.key)} className="text-enzo-muted hover:text-enzo-error">
               <Trash2 size={18} />
             </button>
@@ -126,20 +124,11 @@ export default function Cart() {
       </ul>
 
       <div className="mt-8 flex flex-col gap-2 border-t hairline pt-6">
-        <div className="flex items-center justify-between text-sm text-enzo-muted">
-          <span>{t("cart.subtotal")}</span>
-          <span>{formatPrice(subtotal, currency_symbol)}</span>
-        </div>
-        {delivery_fee > 0 && (
-          <div className="flex items-center justify-between text-sm text-enzo-muted">
-            <span>{t("cart.delivery")}</span>
-            <span>{formatPrice(delivery_fee, currency_symbol)}</span>
-          </div>
-        )}
         <div className="flex items-center justify-between text-lg font-semibold">
-          <span>{t("cart.total")}</span>
-          <span>{formatPrice(subtotal + delivery_fee, currency_symbol)}</span>
+          <span>{t("cart.subtotal")}</span>
+          <span>{formatPrice(subtotal)}</span>
         </div>
+        <p className="text-xs text-enzo-muted">{t("cart.deliveryNote")}</p>
       </div>
 
       <Link

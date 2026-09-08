@@ -13,15 +13,15 @@
   "reflect": "Reflect",
   "placeOrder": "تأكيد الطلب",
   "orderSummary": "ملخص الطلب",
-  "shipping": "الشحن",
-  "total": "الإجمالي",
+  "subtotal": "المجموع الفرعي",
   "confirmation": {
     "success": "تم استلام طلبك بنجاح!",
     "orderNumber": "رقم الطلب",
     "status": "حالة الطلب",
     "pending": "قيد المراجعة",
     "backHome": "العودة للرئيسية",
-    "detailsSentSeparately": "سيتم التواصل معك قريباً بتفاصيل الطلب."
+    "detailsSentSeparately": "سيتم التواصل معك قريباً بتفاصيل الطلب.",
+    "deliveryNote": "رسوم التوصيل تعتمد على مدينتك — سنؤكدها ونرسل لك السعر النهائي بالبريد الإلكتروني."
   },
   "validation": {
     "required": "هذا الحقل مطلوب",

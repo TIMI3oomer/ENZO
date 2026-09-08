@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { useCart } from "../context/CartContext.jsx";
 import { useLanguage, useLocalizedField } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useSettings } from "../context/SettingsContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 import { api } from "../lib/api.js";
 
@@ -13,10 +12,10 @@ const initialForm = { fullName: "", email: "", phone: "", city: "", address: "",
 // CHECKPOINT NOTE (Checkout.jsx):
 // - The request sent to the backend contains ONLY product ids, sizes, and
 //   quantities -- never a price. All money math happens server-side.
-// - DELIVERY FEE: shown here for transparency (fetched via useSettings()),
-//   but the amount actually charged is always recalculated server-side
-//   inside place_order() from store_settings directly -- this page's
-//   display of it is just UX, not the source of truth.
+// - DELIVERY FEE: NOT charged or estimated here -- it varies by city, so
+//   the admin sets the real fee for this specific order afterward (see
+//   admin/Orders.jsx), which is what emails the customer their confirmed
+//   final total. The total shown/placed here is subtotal only.
 // - PAYMENT SPLIT: "cod" and "reflect" go straight to POST /api/orders
 //   and create the order immediately, same as before. "visa" (card) is
 //   different -- it calls POST /api/orders/stripe-session instead, which
@@ -31,7 +30,6 @@ export default function Checkout() {
   const { items, subtotal, clearCart } = useCart();
   const { lang } = useLanguage();
   const { session } = useAuth();
-  const { delivery_fee, currency_symbol } = useSettings();
   const localize = useLocalizedField();
   const navigate = useNavigate();
 
@@ -126,8 +124,6 @@ export default function Checkout() {
     }
   }
 
-  const total = subtotal + delivery_fee;
-
   return (
     <div className="mx-auto grid max-w-5xl grid-cols-1 gap-10 px-4 py-10 sm:px-6 md:grid-cols-2">
       <form onSubmit={handleSubmit} className="text-start">
@@ -203,30 +199,20 @@ export default function Checkout() {
                 {localize(item.name)} × {item.quantity}
                 {[item.color, item.size].filter(Boolean).map((v) => ` (${v})`).join("")}
               </span>
-              <span>{formatPrice(item.price * item.quantity, currency_symbol)}</span>
+              <span>{formatPrice(item.price * item.quantity)}</span>
             </li>
           ))}
         </ul>
         <div className="mt-4 flex flex-col gap-2">
-          <div className="flex justify-between text-sm text-enzo-muted">
-            <span>{t("subtotal")}</span>
-            <span>{formatPrice(subtotal, currency_symbol)}</span>
-          </div>
-          {delivery_fee > 0 && (
-            <div className="flex justify-between text-sm text-enzo-muted">
-              <span>{t("shipping")}</span>
-              <span>{formatPrice(delivery_fee, currency_symbol)}</span>
-            </div>
-          )}
           <div className="flex justify-between text-lg font-semibold">
-            <span>{t("total")}</span>
-            <span>{formatPrice(total, currency_symbol)}</span>
+            <span>{t("subtotal")}</span>
+            <span>{formatPrice(subtotal)}</span>
           </div>
         </div>
         <p className="mt-2 text-xs text-enzo-muted">
           {lang === "ar"
-            ? "السعر النهائي يُحتسب من الخادم عند تأكيد الطلب."
-            : "Final price is recalculated by the server when you confirm."}
+            ? "رسوم التوصيل تعتمد على مدينتك — سنؤكدها بعد الطلب ونرسل لك السعر النهائي بالبريد الإلكتروني."
+            : "Delivery fee depends on your city — we'll confirm it after you order and email you the final total."}
         </p>
       </div>
     </div>

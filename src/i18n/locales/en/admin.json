@@ -6,7 +6,6 @@
     "customers": "Customers",
     "analytics": "Analytics",
     "categories": "Categories",
-    "settings": "Settings",
     "logout": "Log out"
   },
   "login": {
@@ -59,7 +58,11 @@
     "paid": "Paid",
     "unpaid": "Unpaid",
     "subtotal": "Subtotal",
-    "delivery": "Delivery"
+    "delivery": "Delivery",
+    "deliveryFeeLabel": "Delivery fee for this order",
+    "deliveryFeeUnset": "Not set yet",
+    "confirmDeliveryFee": "Confirm & email customer",
+    "deliveryPending": "(delivery fee pending)"
   },
   "analytics": {
     "salesLast14Days": "Sales — last 14 days",
@@ -86,9 +89,5 @@
     "cancel": "Cancel",
     "empty": "No categories yet",
     "confirmDelete": "Delete this category? Products using it will become uncategorized."
-  },
-  "settingsPage": {
-    "deliveryFee": "Delivery fee",
-    "currencySymbol": "Currency symbol"
   }
 }

@@ -67,9 +67,10 @@ export const categorySchema = z.object({
   name: localizedText,
 });
 
-export const settingsSchema = z.object({
+// Delivery cost varies by city, so it's set per order by the admin (see
+// PATCH /api/admin/orders/:id/delivery-fee) instead of one global rate.
+export const deliveryFeeSchema = z.object({
   delivery_fee: z.number().nonnegative(),
-  currency_symbol: z.string().trim().min(1).max(10).optional(),
 });
 
 // Small helper used by every route: validates `req.body` against a zod

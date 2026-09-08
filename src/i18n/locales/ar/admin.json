@@ -6,7 +6,6 @@
     "customers": "العملاء",
     "analytics": "التحليلات",
     "categories": "التصنيفات",
-    "settings": "الإعدادات",
     "logout": "تسجيل الخروج"
   },
   "login": {
@@ -59,7 +58,11 @@
     "paid": "مدفوع",
     "unpaid": "غير مدفوع",
     "subtotal": "المجموع الفرعي",
-    "delivery": "التوصيل"
+    "delivery": "التوصيل",
+    "deliveryFeeLabel": "رسوم التوصيل لهذا الطلب",
+    "deliveryFeeUnset": "لم تُحدد بعد",
+    "confirmDeliveryFee": "تأكيد وإرسال للعميل",
+    "deliveryPending": "(رسوم التوصيل قيد التحديد)"
   },
   "analytics": {
     "salesLast14Days": "المبيعات آخر ١٤ يوم",
@@ -86,9 +89,5 @@
     "cancel": "إلغاء",
     "empty": "لا توجد تصنيفات بعد",
     "confirmDelete": "حذف هذا التصنيف؟ المنتجات المرتبطة به ستبقى بدون تصنيف."
-  },
-  "settingsPage": {
-    "deliveryFee": "رسوم التوصيل",
-    "currencySymbol": "رمز العملة"
   }
 }

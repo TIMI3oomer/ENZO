@@ -12,8 +12,10 @@ const router = Router();
 // sizes, and quantities — never a price. All money math happens inside
 // the `place_order` Postgres function, which looks up real prices and
 // checks real stock, locking rows so two simultaneous purchases of the
-// last item can't both succeed. It also now adds the delivery fee
-// (read server-side from store_settings) to every order automatically.
+// last item can't both succeed. Delivery fee is NOT added here -- it
+// varies by city, so the admin sets it per order afterward (see
+// PATCH /api/admin/orders/:id/delivery-fee), which is what emails the
+// customer their confirmed final total.
 //
 // PAYMENT SPLIT: "cod" (cash on delivery) and "reflect" (manual transfer
 // app) create the order immediately, same as before — no money has
@@ -97,13 +99,10 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
       .in("id", productIds);
     if (productsError) throw productsError;
 
-    const { data: settings } = await supabaseAdmin
-      .from("store_settings")
-      .select("delivery_fee, currency_symbol")
-      .eq("id", true)
-      .maybeSingle();
-    const deliveryFee = settings?.delivery_fee || 0;
-    const currency = "ils"; // Stripe currency code -- change here if you switch currency_symbol away from ₪
+    // Delivery fee is NOT charged here -- it varies by city and isn't
+    // known yet at checkout, same as the cod/reflect path in place_order()
+    // (see schema.sql). The admin fills it in per order afterward.
+    const currency = "ils"; // Stripe currency code -- change here if this store switches currency
 
     const lineItems = body.items.map((item) => {
       const product = products.find((p) => p.id === item.product_id);
@@ -131,17 +130,6 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
         },
       };
     });
-
-    if (deliveryFee > 0) {
-      lineItems.push({
-        quantity: 1,
-        price_data: {
-          currency,
-          unit_amount: Math.round(deliveryFee * 100),
-          product_data: { name: "Delivery" },
-        },
-      });
-    }
 
     const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").split(",")[0].trim();
 

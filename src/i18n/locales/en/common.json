@@ -33,8 +33,7 @@
     "subtotal": "Subtotal",
     "checkout": "Checkout",
     "remove": "Remove",
-    "delivery": "Delivery",
-    "total": "Total",
+    "deliveryNote": "Delivery fee depends on your city — we'll confirm it and email you the final total.",
     "itemRemoved": "{{name}} was removed because it's no longer available.",
     "quantityReduced": "{{name}} quantity was reduced to {{stock}} based on availability."
   },
@@ -74,6 +73,7 @@
     "continueAsGuest": "Continue as guest",
     "myOrders": "My orders",
     "noOrders": "No orders yet",
+    "deliveryPending": "+ delivery, confirmed by email",
     "passwordMismatch": "Passwords don't match",
     "welcomeBack": "Welcome back",
     "controlPanel": "Control Panel",

@@ -3,27 +3,35 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { useLocalizedField } from "../../context/LanguageContext.jsx";
-import { useSettings } from "../../context/SettingsContext.jsx";
 import { formatPrice } from "../../lib/formatPrice.js";
 import AdminLayout from "../../components/AdminLayout.jsx";
 
 const STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
 
 // CHECKPOINT NOTE (admin/Orders.jsx):
-// Expanding a row shows its line items (product/size/quantity) plus a
-// status dropdown and a note field. Clicking "Update & send" calls
-// PATCH /api/admin/orders/:id/status with both — the backend then emails
-// the customer (if they gave an email at checkout) with the new status
-// and that note, via server/src/lib/email.js.
+// Expanding a row shows its line items (product/size/quantity), a
+// delivery-fee field, and a status dropdown + note field.
+// - DELIVERY FEE varies by city, so every order starts with it unset
+//   (delivery_fee_confirmed = false, total = subtotal only -- see
+//   place_order() in schema.sql). "Confirm & email customer" calls
+//   PATCH /api/admin/orders/:id/delivery-fee, which recalculates the
+//   order's total AND is what actually emails the customer their
+//   confirmed final price (see sendOrderTotalEmail in email.js) -- this
+//   is a separate action from the status update below.
+// - "Update & send" calls PATCH /api/admin/orders/:id/status with the
+//   status + note — the backend then emails the customer (if they gave
+//   an email at checkout) with the new status and that note, via
+//   server/src/lib/email.js.
 export default function AdminOrders() {
   const { t } = useTranslation("admin");
   const localize = useLocalizedField();
-  const { currency_symbol } = useSettings();
   const [orders, setOrders] = useState([]);
   const [expanded, setExpanded] = useState(null);
   const [itemsByOrder, setItemsByOrder] = useState({});
   const [draft, setDraft] = useState({}); // { [orderId]: { status, note } }
   const [sending, setSending] = useState(null);
+  const [feeDraft, setFeeDraft] = useState({}); // { [orderId]: string }
+  const [savingFee, setSavingFee] = useState(null);
 
   useEffect(() => {
     load();
@@ -57,6 +65,18 @@ export default function AdminOrders() {
     }
   }
 
+  async function saveDeliveryFee(orderId) {
+    setSavingFee(orderId);
+    try {
+      await api.patch(`/admin/orders/${orderId}/delivery-fee`, {
+        delivery_fee: Number(feeDraft[orderId]) || 0,
+      });
+      await load();
+    } finally {
+      setSavingFee(null);
+    }
+  }
+
   return (
     <AdminLayout title={t("orders.title")}>
       <div className="flex flex-col gap-3">
@@ -81,6 +101,11 @@ export default function AdminOrders() {
                 </span>
               )}
               <span className="rounded-full border hairline px-3 py-1 text-xs text-enzo-muted">{o.status}</span>
+              {!o.delivery_fee_confirmed && (
+                <span className="rounded-full bg-enzo-gold/10 px-2 py-0.5 text-xs text-enzo-goldBright">
+                  {t("orders.deliveryPending")}
+                </span>
+              )}
               <ChevronDown size={16} className={`transition-transform ${expanded === o.id ? "rotate-180" : ""}`} />
             </button>
 
@@ -102,7 +127,7 @@ export default function AdminOrders() {
                           {localize(item.product_name)} × {item.quantity}
                           {[item.color, item.size].filter(Boolean).map((v) => ` (${v})`).join("")}
                         </span>
-                        <span>{formatPrice(item.unit_price * item.quantity, currency_symbol)}</span>
+                        <span>{formatPrice(item.unit_price * item.quantity)}</span>
                       </li>
                     ))}
                   </ul>
@@ -110,10 +135,37 @@ export default function AdminOrders() {
 
                 <div className="mb-4 flex justify-between border-b hairline pb-3 text-sm">
                   <span className="text-enzo-muted">
-                    {t("orders.subtotal")} {formatPrice(o.subtotal, currency_symbol)}
-                    {o.delivery_fee > 0 && ` + ${t("orders.delivery")} ${formatPrice(o.delivery_fee, currency_symbol)}`}
+                    {t("orders.subtotal")} {formatPrice(o.subtotal)}
+                    {o.delivery_fee_confirmed && ` + ${t("orders.delivery")} ${formatPrice(o.delivery_fee)}`}
                   </span>
-                  <span className="font-semibold">{formatPrice(o.total, currency_symbol)}</span>
+                  <span className="font-semibold">
+                    {formatPrice(o.total)}
+                    {!o.delivery_fee_confirmed && (
+                      <span className="ms-2 text-xs font-normal text-enzo-muted">{t("orders.deliveryPending")}</span>
+                    )}
+                  </span>
+                </div>
+
+                <div className="mb-4 flex flex-col gap-3 border-b hairline pb-4 sm:flex-row sm:items-end">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-xs text-enzo-muted">{t("orders.deliveryFeeLabel")}</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="input py-1.5"
+                      placeholder={t("orders.deliveryFeeUnset")}
+                      value={feeDraft[o.id] ?? (o.delivery_fee_confirmed ? o.delivery_fee : "")}
+                      onChange={(e) => setFeeDraft((d) => ({ ...d, [o.id]: e.target.value }))}
+                    />
+                  </div>
+                  <button
+                    onClick={() => saveDeliveryFee(o.id)}
+                    disabled={savingFee === o.id}
+                    className="rounded-md bg-enzo-gradient px-4 py-2 text-sm font-semibold text-enzo-black disabled:opacity-40"
+                  >
+                    {t("orders.confirmDeliveryFee")}
+                  </button>
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">

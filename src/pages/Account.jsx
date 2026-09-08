@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, LayoutDashboard } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
-import { useSettings } from "../context/SettingsContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 import { api } from "../lib/api.js";
 
@@ -14,7 +13,6 @@ import { api } from "../lib/api.js";
 // expanded (not all at once) to keep the page fast with many orders.
 export default function Account() {
   const { t } = useTranslation("common");
-  const { currency_symbol } = useSettings();
   const localize = useLocalizedField();
   const { session, isAdmin, loading: authLoading, logout } = useAuth();
   const navigate = useNavigate();
@@ -142,7 +140,10 @@ export default function Account() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-end">
-                    <p className="font-medium">{formatPrice(o.total, currency_symbol)}</p>
+                    <p className="font-medium">{formatPrice(o.total)}</p>
+                    {!o.delivery_fee_confirmed && (
+                      <p className="text-xs text-enzo-muted">{t("auth.deliveryPending")}</p>
+                    )}
                     <p className="text-sm text-enzo-muted">{o.status}</p>
                   </div>
                   <ChevronDown
@@ -167,7 +168,7 @@ export default function Account() {
                             {localize(item.product_name)} × {item.quantity}
                             {[item.color, item.size].filter(Boolean).map((v) => ` (${v})`).join("")}
                           </span>
-                          <span>{formatPrice(item.unit_price * item.quantity, currency_symbol)}</span>
+                          <span>{formatPrice(item.unit_price * item.quantity)}</span>
                         </li>
                       ))}
                     </ul>

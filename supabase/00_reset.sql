@@ -21,6 +21,7 @@ drop table if exists products cascade;
 drop table if exists categories cascade;
 drop table if exists admin_users cascade;
 drop table if exists profiles cascade;
+drop table if exists store_settings cascade;
 
 drop function if exists place_order(text, text, text, text, text, text, text, uuid, jsonb, text);
 drop function if exists place_order(text, text, text, text, text, text, text, uuid, jsonb);

@@ -51,6 +51,12 @@ create index if not exists idx_products_category on products(category_id);
 create index if not exists idx_products_active on products(is_active);
 
 -- ---------- ORDERS ----------
+-- DELIVERY FEE: varies by city, so it's never charged/guessed at
+-- checkout -- every order is created with delivery_fee = 0 and
+-- delivery_fee_confirmed = false, and the admin fills in the real fee
+-- for that specific order from the Orders page once they know it (see
+-- PATCH /api/admin/orders/:id/delivery-fee in server/src/routes/admin.js),
+-- which is what emails the customer their confirmed final total.
 create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
   order_number bigserial unique,
@@ -65,11 +71,16 @@ create table if not exists orders (
   status text not null default 'pending'
     check (status in ('pending','confirmed','shipped','delivered','cancelled')),
   subtotal numeric(10,2) not null,
+  delivery_fee numeric(10,2) not null default 0,
+  delivery_fee_confirmed boolean not null default false,
   total numeric(10,2) not null,
+  payment_status text not null default 'pending' check (payment_status in ('pending', 'paid', 'failed')),
+  stripe_session_id text,
   locale text not null default 'ar' check (locale in ('ar','en')),
   user_id uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now()
 );
+create index if not exists idx_orders_stripe_session on orders(stripe_session_id);
 
 create index if not exists idx_orders_user on orders(user_id);
 
@@ -105,27 +116,6 @@ create table if not exists profiles (
   created_at timestamptz not null default now()
 );
 
--- ---------- STORE SETTINGS (single row) ----------
--- Holds store-wide config the admin can edit: delivery fee, currency
--- symbol. The `id boolean primary key default true check (id)` trick
--- guarantees there is EXACTLY one row ever -- true is the only possible
--- value a boolean can be to satisfy the check, so a second insert would
--- collide on the primary key.
-create table if not exists store_settings (
-  id boolean primary key default true check (id),
-  delivery_fee numeric(10,2) not null default 0,
-  currency_symbol text not null default '₪',
-  updated_at timestamptz not null default now()
-);
-insert into store_settings (id) values (true) on conflict (id) do nothing;
-
--- ---------- ORDERS: delivery fee + card-payment tracking ----------
-alter table orders add column if not exists delivery_fee numeric(10,2) not null default 0;
-alter table orders add column if not exists payment_status text not null default 'pending'
-  check (payment_status in ('pending', 'paid', 'failed'));
-alter table orders add column if not exists stripe_session_id text;
-create index if not exists idx_orders_stripe_session on orders(stripe_session_id);
-
 -- =====================================================================
 -- ROW LEVEL SECURITY
 -- =====================================================================
@@ -135,7 +125,6 @@ alter table orders enable row level security;
 alter table order_items enable row level security;
 alter table admin_users enable row level security;
 alter table profiles enable row level security;
-alter table store_settings enable row level security;
 
 create or replace function is_admin()
 returns boolean
@@ -168,12 +157,6 @@ create policy "customer read own profile" on profiles for select using (auth.uid
 create policy "customer update own profile" on profiles for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "admin read all profiles" on profiles for select using (is_admin());
 
-drop policy if exists "public read store settings" on store_settings;
-create policy "public read store settings" on store_settings for select using (true);
-
-drop policy if exists "admin write store settings" on store_settings;
-create policy "admin write store settings" on store_settings for update using (is_admin()) with check (is_admin());
-
 -- =====================================================================
 -- Auto-create a profile row on signup, pulling full_name out of the
 -- metadata AuthContext.jsx's register() function sets at sign-up time.
@@ -203,12 +186,12 @@ create trigger on_auth_user_created
 -- locks rows to prevent overselling, and writes the order + line items +
 -- stock decrement as one transaction.
 --
--- DELIVERY FEE: read from store_settings INSIDE this function, not
--- passed in as a parameter — same "never trust the client for money"
--- principle as the per-item prices above. If the admin changes the fee
--- later, orders already placed keep whatever fee was in effect when they
--- were created (the fee is copied onto the order row, not recalculated
--- from store_settings after the fact).
+-- DELIVERY FEE: not charged here at all -- it varies by city, so every
+-- order is created with delivery_fee = 0 / delivery_fee_confirmed =
+-- false (total = subtotal only), and the admin fills in the real fee
+-- for this specific order afterward from the Orders page (see
+-- PATCH /api/admin/orders/:id/delivery-fee), which recalculates total
+-- and emails the customer their confirmed final price.
 --
 -- PAYMENT STATUS: p_payment_status lets card payments (created only
 -- AFTER Stripe confirms payment, via the webhook) be recorded as 'paid'
@@ -236,8 +219,6 @@ declare
   v_order_id uuid;
   v_order_number bigint;
   v_subtotal numeric := 0;
-  v_delivery_fee numeric := 0;
-  v_total numeric := 0;
   v_item jsonb;
   v_product products%rowtype;
   v_qty int;
@@ -245,9 +226,6 @@ begin
   if jsonb_array_length(p_items) = 0 then
     raise exception 'Cannot place an order with no items';
   end if;
-
-  select delivery_fee into v_delivery_fee from store_settings where id = true;
-  v_delivery_fee := coalesce(v_delivery_fee, 0);
 
   for v_item in select * from jsonb_array_elements(p_items)
   loop
@@ -275,15 +253,15 @@ begin
     v_subtotal := v_subtotal + (v_product.price * v_qty);
   end loop;
 
-  v_total := v_subtotal + v_delivery_fee;
-
+  -- delivery_fee / delivery_fee_confirmed are left at their column
+  -- defaults (0 / false) -- not known yet, see the note above.
   insert into orders (
     customer_name, phone, city, address, notes,
-    payment_method, subtotal, delivery_fee, total, locale, user_id, customer_email,
+    payment_method, subtotal, total, locale, user_id, customer_email,
     payment_status, stripe_session_id
   ) values (
     p_customer_name, p_phone, p_city, p_address, p_notes,
-    p_payment_method, v_subtotal, v_delivery_fee, v_total, p_locale, p_user_id, p_email,
+    p_payment_method, v_subtotal, v_subtotal, p_locale, p_user_id, p_email,
     p_payment_status, p_stripe_session_id
   )
   returning id, orders.order_number into v_order_id, v_order_number;
@@ -299,7 +277,7 @@ begin
     update products set stock = stock - v_qty where id = v_product.id;
   end loop;
 
-  return query select v_order_id, v_order_number, v_total;
+  return query select v_order_id, v_order_number, v_subtotal;
 end;
 $$;
 

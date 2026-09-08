@@ -4,7 +4,6 @@ import { X, Minus, Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "../context/CartContext.jsx";
 import { useLanguage, useLocalizedField } from "../context/LanguageContext.jsx";
-import { useSettings } from "../context/SettingsContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 
 // CHECKPOINT NOTE (CartDrawer.jsx):
@@ -16,7 +15,6 @@ export default function CartDrawer({ open, onClose }) {
   const { t } = useTranslation("common");
   const { items, removeItem, updateQuantity, subtotal } = useCart();
   const localize = useLocalizedField();
-  const { delivery_fee, currency_symbol } = useSettings();
   const { isRtl } = useLanguage();
   // The drawer is anchored with inset-inline-end (right in LTR, left in
   // RTL), so its slide-in offset must flip too, or it opens from the
@@ -87,7 +85,7 @@ export default function CartDrawer({ open, onClose }) {
                           </button>
                         </div>
                       </div>
-                      <p className="font-medium">{formatPrice(item.price * item.quantity, currency_symbol)}</p>
+                      <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
                     </li>
                   ))}
                 </ul>
@@ -97,20 +95,11 @@ export default function CartDrawer({ open, onClose }) {
             {items.length > 0 && (
               <div className="border-t hairline px-5 py-4">
                 <div className="mb-4 flex flex-col gap-1.5 text-sm">
-                  <div className="flex justify-between text-enzo-muted">
-                    <span>{t("cart.subtotal")}</span>
-                    <span>{formatPrice(subtotal, currency_symbol)}</span>
-                  </div>
-                  {delivery_fee > 0 && (
-                    <div className="flex justify-between text-enzo-muted">
-                      <span>{t("cart.delivery")}</span>
-                      <span>{formatPrice(delivery_fee, currency_symbol)}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between font-semibold text-enzo-white">
-                    <span>{t("cart.total")}</span>
-                    <span>{formatPrice(subtotal + delivery_fee, currency_symbol)}</span>
+                    <span>{t("cart.subtotal")}</span>
+                    <span>{formatPrice(subtotal)}</span>
                   </div>
+                  <p className="text-xs text-enzo-muted">{t("cart.deliveryNote")}</p>
                 </div>
                 <Link
                   to="/checkout"

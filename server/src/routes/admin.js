@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabaseAdmin.js";
 import { attachUser, requireAdmin } from "../middleware/auth.js";
-import { productSchema, orderStatusSchema, categorySchema, settingsSchema, parseOrThrow } from "../utils/validation.js";
-import { sendOrderStatusEmail } from "../lib/email.js";
+import { productSchema, orderStatusSchema, categorySchema, deliveryFeeSchema, parseOrThrow } from "../utils/validation.js";
+import { sendOrderStatusEmail, sendOrderTotalEmail } from "../lib/email.js";
 
 const router = Router();
 
@@ -127,6 +127,51 @@ router.patch("/orders/:id/status", async (req, res, next) => {
       status: data.status,
       note: data.admin_note,
       locale: data.locale,
+    });
+
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// CHECKPOINT NOTE: delivery cost varies by city, so it's never charged
+// or guessed at checkout (see place_order() in schema.sql) -- every
+// order starts with delivery_fee = 0 / delivery_fee_confirmed = false.
+// This is where the admin fills in the real fee once they know it. It
+// recalculates the order's total (subtotal + fee) AND is what actually
+// triggers sendOrderTotalEmail below -- this is the "full price" email
+// the customer is waiting for after checkout.
+router.patch("/orders/:id/delivery-fee", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(deliveryFeeSchema, req.body);
+
+    const { data: order, error: fetchError } = await supabaseAdmin
+      .from("orders")
+      .select("subtotal, customer_email, order_number, locale")
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    const total = Number(order.subtotal) + body.delivery_fee;
+
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .update({ delivery_fee: body.delivery_fee, delivery_fee_confirmed: true, total })
+      .eq("id", req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    // Fire-and-forget, same reasoning as the status-update email above.
+    sendOrderTotalEmail({
+      to: order.customer_email,
+      orderNumber: order.order_number,
+      subtotal: order.subtotal,
+      deliveryFee: body.delivery_fee,
+      total,
+      locale: order.locale,
     });
 
     res.json(data);
@@ -269,23 +314,6 @@ router.get("/customers", async (_req, res, next) => {
     }));
 
     res.json(customers);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// ---------- Store settings (delivery fee, currency) ----------
-router.put("/settings", async (req, res, next) => {
-  try {
-    const body = parseOrThrow(settingsSchema, req.body);
-    const { data, error } = await supabaseAdmin
-      .from("store_settings")
-      .update({ ...body, updated_at: new Date().toISOString() })
-      .eq("id", true)
-      .select()
-      .single();
-    if (error) throw error;
-    res.json(data);
   } catch (err) {
     next(err);
   }

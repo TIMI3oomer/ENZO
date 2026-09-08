@@ -36,7 +36,11 @@
     "removeImage": "إزالة",
     "colorImages": "ربط صورة بكل لون",
     "noImageAssigned": "بدون صورة محددة",
-    "photoNumber": "صورة رقم {{n}}"
+    "photoNumber": "صورة رقم {{n}}",
+    "slugOptional": "الرابط المختصر (اختياري — يُنشأ تلقائياً إذا تُرك فارغاً)",
+    "selectSizeError": "الرجاء اختيار مقاس واحد على الأقل",
+    "selectColorError": "الرجاء اختيار لون واحد على الأقل",
+    "selectImageError": "الرجاء رفع صورة واحدة على الأقل"
   },
   "orders": {
     "title": "الطلبات",

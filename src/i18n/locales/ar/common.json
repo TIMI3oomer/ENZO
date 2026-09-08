@@ -91,7 +91,7 @@
   "trust": {
     "fastDelivery": "توصيل سريع",
     "securePayment": "دفع آمن",
-    "easyReturns": "إرجاع سهل",
+    "cashOnDelivery": "الدفع عند الاستلام",
     "qualityChecked": "جودة مضمونة"
   }
 }

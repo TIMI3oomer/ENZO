@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { X, Minus, Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "../context/CartContext.jsx";
-import { useLocalizedField } from "../context/LanguageContext.jsx";
+import { useLanguage, useLocalizedField } from "../context/LanguageContext.jsx";
 import { useSettings } from "../context/SettingsContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 
@@ -17,6 +17,11 @@ export default function CartDrawer({ open, onClose }) {
   const { items, removeItem, updateQuantity, subtotal } = useCart();
   const localize = useLocalizedField();
   const { delivery_fee, currency_symbol } = useSettings();
+  const { isRtl } = useLanguage();
+  // The drawer is anchored with inset-inline-end (right in LTR, left in
+  // RTL), so its slide-in offset must flip too, or it opens from the
+  // wrong edge in Arabic.
+  const closedX = isRtl ? "-100%" : "100%";
 
   return (
     <AnimatePresence>
@@ -32,9 +37,9 @@ export default function CartDrawer({ open, onClose }) {
           <motion.aside
             className="fixed inset-block-0 inset-inline-end-0 z-50 flex h-full w-full max-w-sm flex-col bg-enzo-panel"
             style={{ insetBlock: 0, insetInlineEnd: 0 }}
-            initial={{ x: "100%" }}
+            initial={{ x: closedX }}
             animate={{ x: 0 }}
-            exit={{ x: "100%" }}
+            exit={{ x: closedX }}
             transition={{ type: "tween", duration: 0.25 }}
           >
             <div className="flex items-center justify-between border-b hairline px-5 py-4">

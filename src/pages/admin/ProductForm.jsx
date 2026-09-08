@@ -9,6 +9,18 @@ import AdminLayout from "../../components/AdminLayout.jsx";
 
 const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
 
+// Every field is required except slug, so a blank slug is filled in from
+// the (required) English name instead of blocking the admin from saving.
+function generateSlug(base) {
+  const cleaned = (base || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return cleaned ? `${cleaned}-${suffix}` : `product-${suffix}`;
+}
 
 const empty = {
   slug: "",
@@ -126,11 +138,19 @@ export default function AdminProductForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setSaving(true);
     setError("");
 
+    // Sizes/colors/images are click-to-toggle widgets, not native inputs,
+    // so the browser's `required` validation can't cover them -- checked
+    // by hand before saving.
+    if (form.sizes.length === 0) return setError(t("products.selectSizeError"));
+    if (form.colors.length === 0) return setError(t("products.selectColorError"));
+    if (form.images.length === 0) return setError(t("products.selectImageError"));
+
+    setSaving(true);
+
     const payload = {
-      slug: form.slug.trim(),
+      slug: form.slug.trim() || generateSlug(form.name_en || form.name_ar),
       name: { ar: form.name_ar, en: form.name_en },
       description: { ar: form.description_ar, en: form.description_en },
       material: { ar: form.material_ar, en: form.material_en },
@@ -160,8 +180,8 @@ export default function AdminProductForm() {
     <AdminLayout title={isEdit ? t("products.edit") : t("products.add")}>
       <form onSubmit={handleSubmit} className="grid max-w-3xl grid-cols-1 gap-4 text-start sm:grid-cols-2">
         <FullRow>
-          <Label>slug</Label>
-          <input className="input" value={form.slug} onChange={update("slug")} dir="ltr" required />
+          <Label>{t("products.slugOptional")}</Label>
+          <input className="input" value={form.slug} onChange={update("slug")} dir="ltr" />
         </FullRow>
 
         <div>
@@ -175,38 +195,38 @@ export default function AdminProductForm() {
 
         <div>
           <Label>{t("products.descAr")}</Label>
-          <textarea className="input" dir="rtl" rows={3} value={form.description_ar} onChange={update("description_ar")} />
+          <textarea className="input" dir="rtl" rows={3} value={form.description_ar} onChange={update("description_ar")} required />
         </div>
         <div>
           <Label>{t("products.descEn")}</Label>
-          <textarea className="input" dir="ltr" rows={3} value={form.description_en} onChange={update("description_en")} />
+          <textarea className="input" dir="ltr" rows={3} value={form.description_en} onChange={update("description_en")} required />
         </div>
 
         <div>
           <Label>{tc("product.material")} (AR)</Label>
-          <input className="input" dir="rtl" value={form.material_ar} onChange={update("material_ar")} />
+          <input className="input" dir="rtl" value={form.material_ar} onChange={update("material_ar")} required />
         </div>
         <div>
           <Label>{tc("product.material")} (EN)</Label>
-          <input className="input" dir="ltr" value={form.material_en} onChange={update("material_en")} />
+          <input className="input" dir="ltr" value={form.material_en} onChange={update("material_en")} required />
         </div>
 
         <div>
           <Label>{tc("product.fit")} (AR)</Label>
-          <input className="input" dir="rtl" value={form.fit_ar} onChange={update("fit_ar")} />
+          <input className="input" dir="rtl" value={form.fit_ar} onChange={update("fit_ar")} required />
         </div>
         <div>
           <Label>{tc("product.fit")} (EN)</Label>
-          <input className="input" dir="ltr" value={form.fit_en} onChange={update("fit_en")} />
+          <input className="input" dir="ltr" value={form.fit_en} onChange={update("fit_en")} required />
         </div>
 
         <div>
           <Label>{tc("product.care")} (AR)</Label>
-          <input className="input" dir="rtl" value={form.care_ar} onChange={update("care_ar")} />
+          <input className="input" dir="rtl" value={form.care_ar} onChange={update("care_ar")} required />
         </div>
         <div>
           <Label>{tc("product.care")} (EN)</Label>
-          <input className="input" dir="ltr" value={form.care_en} onChange={update("care_en")} />
+          <input className="input" dir="ltr" value={form.care_en} onChange={update("care_en")} required />
         </div>
 
         <div>
@@ -220,7 +240,7 @@ export default function AdminProductForm() {
 
         <FullRow>
           <Label>{t("products.category")}</Label>
-          <select className="input" value={form.category_id} onChange={update("category_id")}>
+          <select className="input" value={form.category_id} onChange={update("category_id")} required>
             <option value="">—</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>

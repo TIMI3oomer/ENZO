@@ -91,7 +91,7 @@
   "trust": {
     "fastDelivery": "Fast delivery",
     "securePayment": "Secure payment",
-    "easyReturns": "Easy returns",
+    "cashOnDelivery": "Cash on delivery",
     "qualityChecked": "Quality checked"
   }
 }

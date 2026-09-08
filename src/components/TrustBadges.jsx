@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Truck, ShieldCheck, RotateCcw, Award } from "lucide-react";
+import { Truck, ShieldCheck, Banknote, Award } from "lucide-react";
 
 // CHECKPOINT NOTE (components/TrustBadges.jsx):
 // A quick horizontal strip of reassurance points, sitting between the
@@ -9,7 +9,7 @@ import { Truck, ShieldCheck, RotateCcw, Award } from "lucide-react";
 const BADGES = [
   { icon: Truck, key: "fastDelivery" },
   { icon: ShieldCheck, key: "securePayment" },
-  { icon: RotateCcw, key: "easyReturns" },
+  { icon: Banknote, key: "cashOnDelivery" },
   { icon: Award, key: "qualityChecked" },
 ];
 

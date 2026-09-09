@@ -152,6 +152,34 @@ html[dir="ltr"] .font-display {
   border-color: #333333;
 }
 
+/* Slim, brand-colored scrollbars everywhere, instead of the browser's
+   bulky default (light-gray, sometimes with classic up/down spin arrows
+   on Windows) clashing with the dark UI -- most noticeable in scrollable
+   panels like CartDrawer.jsx. In RTL the browser already places these on
+   the correct (start) side on its own; this only changes how they look,
+   not where. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #333333 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #333333;
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #8A6D1F;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Shared form input style used across Checkout + Admin forms */
 .input {
   @apply w-full rounded-md border border-enzo-line bg-enzo-panel px-3 py-2 text-enzo-white outline-none transition-colors;

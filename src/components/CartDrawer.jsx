@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { X, Minus, Plus, Trash2 } from "lucide-react";
@@ -11,6 +12,16 @@ import { formatPrice } from "../lib/formatPrice.js";
 // in LTR and the LEFT side in RTL automatically — this is the kind of thing
 // that breaks silently if you hardcode `right-0`. framer-motion (external
 // animation library) drives the slide + fade.
+//
+// PORTAL: rendered into document.body via createPortal, not inline where
+// Navbar.jsx invokes it. Navbar's <header> has `backdrop-blur`
+// (backdrop-filter), and ANY `filter`/`backdrop-filter`/`transform` on an
+// ancestor makes that ancestor the containing block for `position: fixed`
+// descendants instead of the viewport -- without the portal, this drawer
+// was silently trapped inside the header's own ~68px height instead of
+// covering the screen (the actual bug behind the cramped, scrollbar-heavy
+// look this was fixing). Portaling to body sidesteps that regardless of
+// what CSS properties any future ancestor ends up with.
 export default function CartDrawer({ open, onClose }) {
   const { t } = useTranslation("common");
   const { items, removeItem, updateQuantity, subtotal } = useCart();
@@ -21,7 +32,7 @@ export default function CartDrawer({ open, onClose }) {
   // wrong edge in Arabic.
   const closedX = isRtl ? "-100%" : "100%";
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -113,6 +124,7 @@ export default function CartDrawer({ open, onClose }) {
           </motion.aside>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

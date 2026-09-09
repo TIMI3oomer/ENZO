@@ -186,15 +186,16 @@ router.patch("/orders/:id/delivery-fee", async (req, res, next) => {
 // move this to a SQL view/function instead of fetching every row here.
 router.get("/analytics", async (_req, res, next) => {
   try {
-    const { data: orders, error: ordersError } = await supabaseAdmin
-      .from("orders")
-      .select("created_at, total, status")
-      .order("created_at", { ascending: true });
+    // orders and order_items don't depend on each other -- fetched in
+    // parallel instead of two round trips back-to-back.
+    const [
+      { data: orders, error: ordersError },
+      { data: items, error: itemsError },
+    ] = await Promise.all([
+      supabaseAdmin.from("orders").select("created_at, total, status").order("created_at", { ascending: true }),
+      supabaseAdmin.from("order_items").select("product_name, quantity"),
+    ]);
     if (ordersError) throw ordersError;
-
-    const { data: items, error: itemsError } = await supabaseAdmin
-      .from("order_items")
-      .select("product_name, quantity");
     if (itemsError) throw itemsError;
 
     // Last 14 days, orders + revenue per day.
@@ -285,13 +286,19 @@ router.delete("/categories/:id", async (req, res, next) => {
 // quick order count per customer.
 router.get("/customers", async (_req, res, next) => {
   try {
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+    // Auth users, profiles, and orders are three independent lookups --
+    // fetched in parallel instead of three round trips back-to-back.
+    const [
+      { data: authData, error: authError },
+      { data: profiles, error: profileError },
+      { data: orders, error: ordersError },
+    ] = await Promise.all([
+      supabaseAdmin.auth.admin.listUsers(),
+      supabaseAdmin.from("profiles").select("*"),
+      supabaseAdmin.from("orders").select("user_id"),
+    ]);
     if (authError) throw authError;
-
-    const { data: profiles, error: profileError } = await supabaseAdmin.from("profiles").select("*");
     if (profileError) throw profileError;
-
-    const { data: orders, error: ordersError } = await supabaseAdmin.from("orders").select("user_id");
     if (ordersError) throw ordersError;
 
     const orderCounts = {};

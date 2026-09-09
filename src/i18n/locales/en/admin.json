@@ -6,6 +6,7 @@
     "customers": "Customers",
     "analytics": "Analytics",
     "categories": "Categories",
+    "backToStore": "Back to store",
     "logout": "Log out"
   },
   "login": {

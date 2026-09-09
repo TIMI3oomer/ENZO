@@ -1,6 +1,6 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutGrid, Package, ClipboardList, Users, Tags, LogOut } from "lucide-react";
+import { LayoutGrid, Package, ClipboardList, Users, Tags, Store, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
 
@@ -48,6 +48,13 @@ export default function AdminLayout({ children, title }) {
             </NavLink>
           ))}
         </nav>
+        <Link
+          to="/"
+          className="mb-4 flex items-center gap-3 rounded-md px-3 py-2 text-sm text-enzo-gold transition-colors hover:text-enzo-goldBright"
+        >
+          <Store size={18} />
+          {t("nav.backToStore")}
+        </Link>
         <LanguageSwitcher className="mb-4" />
         <button onClick={handleLogout} className="flex items-center gap-3 text-sm text-enzo-muted hover:text-enzo-white">
           <LogOut size={18} />

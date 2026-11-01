@@ -24,7 +24,8 @@
     "size": "Size",
     "quantity": "Quantity",
     "relatedProducts": "You might also like",
-    "color": "Color"
+    "color": "Color",
+    "onlyLeft": "Only {{count}} left in this size"
   },
   "cart": {
     "title": "Shopping cart",

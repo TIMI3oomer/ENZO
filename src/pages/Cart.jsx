@@ -6,6 +6,7 @@ import { useCart } from "../context/CartContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 import { api } from "../lib/api.js";
+import { stockFor } from "../lib/stock.js";
 
 // CHECKPOINT NOTE (Cart.jsx):
 // Full-page cart (in addition to the CartDrawer) for people who land on
@@ -44,18 +45,23 @@ export default function Cart() {
             continue;
           }
 
+          // Stock is per SIZE: compare against the size this line holds.
+          const liveStock = stockFor(live, item.size);
+
           const updates = {};
           if (live.price !== item.price) updates.price = live.price;
-          if (live.stock !== item.stock) updates.stock = live.stock;
+          if (liveStock !== item.stock) updates.stock = liveStock;
 
-          if (live.stock < item.quantity) {
-            updateQuantity(item.key, Math.max(1, live.stock));
-            if (live.stock === 0) {
+          if (liveStock < item.quantity) {
+            if (liveStock === 0) {
               removeItem(item.key);
               changes.push(t("cart.itemRemoved", { name: localize(item.name) }));
               continue;
             }
-            changes.push(t("cart.quantityReduced", { name: localize(item.name), stock: live.stock }));
+            // Clamp straight to what's left (syncItem sets it exactly;
+            // updateQuantity would be capped by the OLD, stale snapshot).
+            updates.quantity = liveStock;
+            changes.push(t("cart.quantityReduced", { name: localize(item.name), stock: liveStock }));
           }
 
           if (Object.keys(updates).length > 0) syncItem(item.key, updates);

@@ -116,7 +116,7 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
     const productIds = body.items.map((i) => i.product_id);
     const { data: products, error: productsError } = await supabaseAdmin
       .from("products")
-      .select("id, name, price, stock, is_active")
+      .select("id, name, price, stock, sizes, size_stock, is_active")
       .in("id", productIds);
     if (productsError) throw productsError;
 
@@ -139,6 +139,14 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
     // alone would charge the same number in a different currency.
     const currency = (process.env.STRIPE_CURRENCY || "ils").toLowerCase();
 
+    // STOCK PER SIZE: total wanted per (product, size) across all cart
+    // lines, so the same shirt+size in two colours is checked as one number.
+    const wanted = new Map();
+    for (const item of body.items) {
+      const key = `${item.product_id}__${item.size ?? ""}`;
+      wanted.set(key, (wanted.get(key) || 0) + item.quantity);
+    }
+
     const lineItems = body.items.map((item) => {
       const product = products.find((p) => p.id === item.product_id);
       if (!product) {
@@ -146,13 +154,26 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
         err.status = 400;
         throw err;
       }
+      const label = product.name?.en || product.name?.ar;
       if (!product.is_active) {
-        const err = new Error(`${product.name?.en || product.name?.ar} is no longer available`);
+        const err = new Error(`${label} is no longer available`);
         err.status = 400;
         throw err;
       }
-      if (product.stock < item.quantity) {
-        const err = new Error(`Insufficient stock for ${product.name?.en || product.name?.ar}`);
+
+      const hasSizes = (product.sizes || []).length > 0;
+      if (hasSizes && (!item.size || !product.sizes.includes(item.size))) {
+        const err = new Error(`Please choose a size for ${label}`);
+        err.status = 400;
+        throw err;
+      }
+      const available = hasSizes ? Number(product.size_stock?.[item.size] ?? 0) : product.stock;
+      if (available < wanted.get(`${item.product_id}__${item.size ?? ""}`)) {
+        const err = new Error(
+          hasSizes
+            ? `Insufficient stock for ${label} (size ${item.size}): only ${available} left`
+            : `Insufficient stock for ${label}`
+        );
         err.status = 400;
         throw err;
       }

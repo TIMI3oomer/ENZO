@@ -51,7 +51,11 @@ export const productSchema = z.object({
   fit: localizedText.optional(),
   care_instructions: localizedText.optional(),
   price: z.number().nonnegative(),
-  stock: z.number().int().nonnegative(),
+  // Total stock for products WITHOUT sizes. For products with sizes the
+  // database ignores this and uses the sum of size_stock instead.
+  stock: z.number().int().nonnegative().default(0),
+  // Stock per size, e.g. { "S": 2, "M": 3, "L": 5 }.
+  size_stock: z.record(z.string().max(10), z.number().int().nonnegative().max(100000)).default({}),
   category_id: z.string().uuid().nullable().optional(),
   sizes: z.array(z.string().max(10)).default([]),
   colors: z.array(z.string().max(30)).default([]),

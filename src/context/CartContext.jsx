@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { stockFor } from "../lib/stock.js";
 
 const CartContext = createContext(null);
 const STORAGE_KEY = "enzo_cart_v1";
@@ -29,8 +30,13 @@ export function CartProvider({ children }) {
       const key = `${product.id}__${size ?? "onesize"}__${color ?? "nocolor"}`;
       const existing = prev.find((i) => i.key === key);
       if (existing) {
+        // Never let repeated "add to cart" clicks go past the stock of
+        // this size (the "+" button already respected it; this didn't).
+        const cap = stockFor(product, size);
         return prev.map((i) =>
-          i.key === key ? { ...i, quantity: i.quantity + quantity } : i
+          i.key === key
+            ? { ...i, stock: cap, quantity: Math.min(i.quantity + quantity, Math.max(cap, 1)) }
+            : i
         );
       }
       return [
@@ -45,7 +51,7 @@ export function CartProvider({ children }) {
           size,
           color,
           quantity,
-          stock: product.stock, // snapshot, refreshed live on the Cart page -- see Cart.jsx
+          stock: stockFor(product, size), // stock of THIS size; snapshot, refreshed live on the Cart page -- see Cart.jsx
         },
       ];
     });

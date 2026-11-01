@@ -42,7 +42,8 @@ create table if not exists products (
   colors text[] not null default '{}',
   color_images jsonb not null default '{}', -- { "Black": "https://...", "Gold": "https://..." }
   images text[] not null default '{}',
-  stock int not null default 0 check (stock >= 0),
+  stock int not null default 0 check (stock >= 0), -- for products WITH sizes this is the auto-total of size_stock (see trigger below)
+  size_stock jsonb not null default '{}'::jsonb check (jsonb_typeof(size_stock) = 'object'), -- stock per size, e.g. {"S":2,"M":3,"L":5}
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -213,6 +214,38 @@ as $$
   end;
 $$;
 
+-- STOCK PER SIZE: products.size_stock holds stock per size and the trigger
+-- below keeps products.stock equal to their total. Products without sizes
+-- just use products.stock. (Added by migration_v14.sql on existing DBs.)
+create or replace function sync_product_stock()
+returns trigger
+language plpgsql
+as $$
+begin
+  -- Refuse malformed data instead of silently turning it into zeros.
+  if jsonb_typeof(new.size_stock) is distinct from 'object' then
+    raise exception 'size_stock must be a JSON object like {"S":2,"M":3}';
+  end if;
+
+  if coalesce(array_length(new.sizes, 1), 0) > 0 then
+    new.size_stock := coalesce(
+      (
+        select jsonb_object_agg(s, greatest(coalesce((new.size_stock ->> s)::int, 0), 0))
+        from unnest(new.sizes) as s
+      ),
+      '{}'::jsonb
+    );
+    new.stock := coalesce((select sum(value::int) from jsonb_each_text(new.size_stock)), 0);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_sync_product_stock on products;
+create trigger trg_sync_product_stock
+  before insert or update on products
+  for each row execute function sync_product_stock();
+
 create or replace function place_order(
   p_customer_name text,
   p_phone text,
@@ -237,8 +270,10 @@ declare
   v_subtotal numeric := 0;
   v_delivery_fee numeric;
   v_item jsonb;
+  v_line record;
   v_product products%rowtype;
   v_qty int;
+  v_have int;
   v_existing orders%rowtype;
 begin
   -- Stripe webhook retry: same session already turned into an order.
@@ -259,32 +294,50 @@ begin
     raise exception 'Cannot place an order with no items';
   end if;
 
-  for v_item in select * from jsonb_array_elements(p_items)
+  -- 1) VALIDATE. Lines are grouped by (product, size) so the same shirt in
+  --    the same size ordered twice (e.g. two colours) is checked as one
+  --    total. Rows are locked in a fixed order, so two simultaneous
+  --    orders can never deadlock or both take the last piece.
+  for v_line in
+    select (i ->> 'product_id')::uuid as product_id,
+           nullif(i ->> 'size', '') as size,
+           sum((i ->> 'quantity')::int) as qty
+    from jsonb_array_elements(p_items) as i
+    group by 1, 2
+    order by 1, 2
   loop
-    select * into v_product from products
-      where id = (v_item->>'product_id')::uuid
-      for update;
+    select * into v_product from products where id = v_line.product_id for update;
 
     if not found then
-      raise exception 'Product not found: %', (v_item->>'product_id');
+      raise exception 'Product not found: %', v_line.product_id;
     end if;
 
     if not v_product.is_active then
       raise exception 'Product is no longer available: %', v_product.slug;
     end if;
 
-    v_qty := (v_item->>'quantity')::int;
-    if v_qty is null or v_qty <= 0 then
+    if v_line.qty is null or v_line.qty <= 0 then
       raise exception 'Invalid quantity for product %', v_product.slug;
     end if;
 
-    if v_product.stock < v_qty then
-      raise exception 'Insufficient stock for %: only % left', v_product.slug, v_product.stock;
+    if coalesce(array_length(v_product.sizes, 1), 0) > 0 then
+      if v_line.size is null or not (v_line.size = any (v_product.sizes)) then
+        raise exception 'Please choose a size for %', v_product.slug;
+      end if;
+      v_have := coalesce((v_product.size_stock ->> v_line.size)::int, 0);
+      if v_have < v_line.qty then
+        raise exception 'Insufficient stock for % (size %): only % left', v_product.slug, v_line.size, v_have;
+      end if;
+    else
+      if v_product.stock < v_line.qty then
+        raise exception 'Insufficient stock for %: only % left', v_product.slug, v_product.stock;
+      end if;
     end if;
 
-    v_subtotal := v_subtotal + (v_product.price * v_qty);
+    v_subtotal := v_subtotal + (v_product.price * v_line.qty);
   end loop;
 
+  -- 2) CREATE the order and its line items.
   insert into orders (
     customer_name, phone, city, address, notes,
     payment_method, subtotal, delivery_fee, delivery_fee_confirmed, total,
@@ -300,13 +353,35 @@ begin
 
   for v_item in select * from jsonb_array_elements(p_items)
   loop
-    select * into v_product from products where id = (v_item->>'product_id')::uuid;
-    v_qty := (v_item->>'quantity')::int;
+    select * into v_product from products where id = (v_item ->> 'product_id')::uuid;
+    v_qty := (v_item ->> 'quantity')::int;
 
     insert into order_items (order_id, product_id, product_name, size, color, quantity, unit_price)
-    values (v_order_id, v_product.id, v_product.name, v_item->>'size', v_item->>'color', v_qty, v_product.price);
+    values (v_order_id, v_product.id, v_product.name, nullif(v_item ->> 'size', ''), v_item ->> 'color', v_qty, v_product.price);
+  end loop;
 
-    update products set stock = stock - v_qty where id = v_product.id;
+  -- 3) TAKE the stock (per size for sized products; the trigger then
+  --    refreshes products.stock to the new total).
+  for v_line in
+    select (i ->> 'product_id')::uuid as product_id,
+           nullif(i ->> 'size', '') as size,
+           sum((i ->> 'quantity')::int) as qty
+    from jsonb_array_elements(p_items) as i
+    group by 1, 2
+    order by 1, 2
+  loop
+    select * into v_product from products where id = v_line.product_id;
+    if coalesce(array_length(v_product.sizes, 1), 0) > 0 then
+      update products
+        set size_stock = jsonb_set(
+          size_stock,
+          array[v_line.size],
+          to_jsonb(coalesce((size_stock ->> v_line.size)::int, 0) - v_line.qty)
+        )
+        where id = v_product.id;
+    else
+      update products set stock = stock - v_line.qty where id = v_product.id;
+    end if;
   end loop;
 
   return query select v_order_id, v_order_number, v_subtotal + v_delivery_fee, v_delivery_fee;
@@ -315,6 +390,100 @@ $$;
 
 revoke execute on function place_order(text, text, text, text, text, text, text, uuid, jsonb, text, text, text, text) from public, anon, authenticated;
 grant execute on function place_order(text, text, text, text, text, text, text, uuid, jsonb, text, text, text, text) to service_role;
+
+-- set_order_status(): changing an order to 'cancelled' returns its items to
+-- stock (per size); moving it out of 'cancelled' takes them again.
+create or replace function set_order_status(p_order_id uuid, p_status text, p_note text default null)
+returns orders
+language plpgsql
+security definer
+as $$
+declare
+  v_order orders%rowtype;
+  v_line record;
+  v_product products%rowtype;
+  v_have int;
+begin
+  if p_status not in ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled') then
+    raise exception 'Invalid order status: %', p_status;
+  end if;
+
+  select * into v_order from orders where id = p_order_id for update;
+  if not found then
+    raise exception 'Order not found';
+  end if;
+
+  if p_status = 'cancelled' and v_order.status <> 'cancelled' then
+    -- Put the items back on the shelf.
+    for v_line in
+      select product_id, size, sum(quantity)::int as qty
+      from order_items
+      where order_id = p_order_id and product_id is not null
+      group by 1, 2
+      order by 1, 2
+    loop
+      select * into v_product from products where id = v_line.product_id for update;
+      if not found then
+        continue; -- product was deleted since; nothing to restock
+      end if;
+
+      if coalesce(array_length(v_product.sizes, 1), 0) > 0 then
+        if v_line.size is not null and v_line.size = any (v_product.sizes) then
+          update products
+            set size_stock = jsonb_set(
+              size_stock,
+              array[v_line.size],
+              to_jsonb(coalesce((size_stock ->> v_line.size)::int, 0) + v_line.qty)
+            )
+            where id = v_product.id;
+        end if;
+      else
+        update products set stock = stock + v_line.qty where id = v_product.id;
+      end if;
+    end loop;
+
+  elsif p_status <> 'cancelled' and v_order.status = 'cancelled' then
+    -- Re-opening a cancelled order: take the items again, if still there.
+    for v_line in
+      select product_id, size, sum(quantity)::int as qty
+      from order_items
+      where order_id = p_order_id and product_id is not null
+      group by 1, 2
+      order by 1, 2
+    loop
+      select * into v_product from products where id = v_line.product_id for update;
+      if not found then
+        continue;
+      end if;
+
+      if coalesce(array_length(v_product.sizes, 1), 0) > 0 then
+        if v_line.size is null or not (v_line.size = any (v_product.sizes)) then
+          raise exception 'Cannot re-open this order: size % of % is no longer offered', coalesce(v_line.size, '?'), v_product.slug;
+        end if;
+        v_have := coalesce((v_product.size_stock ->> v_line.size)::int, 0);
+        if v_have < v_line.qty then
+          raise exception 'Cannot re-open this order: only % left of % in size %', v_have, v_product.slug, v_line.size;
+        end if;
+        update products
+          set size_stock = jsonb_set(size_stock, array[v_line.size], to_jsonb(v_have - v_line.qty))
+          where id = v_product.id;
+      else
+        if v_product.stock < v_line.qty then
+          raise exception 'Cannot re-open this order: only % left of %', v_product.stock, v_product.slug;
+        end if;
+        update products set stock = stock - v_line.qty where id = v_product.id;
+      end if;
+    end loop;
+  end if;
+
+  update orders set status = p_status, admin_note = p_note where id = p_order_id returning * into v_order;
+  return v_order;
+end;
+$$;
+
+revoke execute on function set_order_status(uuid, text, text) from public, anon, authenticated;
+grant execute on function set_order_status(uuid, text, text) to service_role;
+
 
 -- =====================================================================
 -- STORAGE: product image uploads (admin panel "upload from gallery")

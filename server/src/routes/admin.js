@@ -118,13 +118,22 @@ router.get("/orders/:id/items", async (req, res, next) => {
 router.patch("/orders/:id/status", async (req, res, next) => {
   try {
     const body = parseOrThrow(orderStatusSchema, req.body);
-    const { data, error } = await supabaseAdmin
-      .from("orders")
-      .update({ status: body.status, admin_note: body.note ?? null })
-      .eq("id", req.params.id)
-      .select()
-      .single();
-    if (error) throw error;
+    // Goes through the set_order_status() database function (not a plain
+    // UPDATE) so cancelling an order puts its items back in stock -- per
+    // size -- and re-opening a cancelled order takes them again. See
+    // supabase/migration_v14.sql.
+    const { data, error } = await supabaseAdmin.rpc("set_order_status", {
+      p_order_id: req.params.id,
+      p_status: body.status,
+      p_note: body.note ?? null,
+    });
+    if (error) {
+      // The function raises readable messages on purpose ("Cannot re-open
+      // this order: only 0 left of ... in size M", "Order not found").
+      const err = new Error(error.message);
+      err.status = error.code === "P0001" ? 400 : 500;
+      throw err;
+    }
 
     // FIX: this used to be fire-and-forget (no await). On Vercel's
     // serverless runtime the function can be frozen the moment the response

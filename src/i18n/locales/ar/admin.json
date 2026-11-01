@@ -113,7 +113,27 @@
     "save": "حفظ",
     "saved": "تم الحفظ",
     "page_home": "الصفحة الرئيسية",
-    "page_site": "عناصر عامة في الموقع"
+    "page_site": "عناصر عامة في الموقع",
+    "section_hero": "البانر الرئيسي",
+    "section_promo": "شريط العروض",
+    "section_editorial": "بانر الحملة",
+    "section_announcement": "شريط الإعلانات",
+    "section_footer": "الفوتر",
+    "section_images": "الشعار",
+    "removeImage": "إزالة"
+  },
+  "preview": {
+    "title": "معاينة مباشرة",
+    "page": "الصفحة المعروضة",
+    "pageHome": "الرئيسية",
+    "pageShop": "المتجر",
+    "pageCart": "السلة",
+    "mobile": "هاتف",
+    "tablet": "تابلت",
+    "desktop": "كمبيوتر",
+    "reload": "إعادة تحميل المعاينة",
+    "openTab": "فتح في تبويب جديد",
+    "unsaved": "تغييرات غير محفوظة"
   },
   "inStoreSale": {
     "title": "بيع من المحل",

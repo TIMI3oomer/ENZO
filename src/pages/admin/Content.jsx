@@ -5,6 +5,7 @@ import { api } from "../../lib/api.js";
 import { uploadContentImage } from "../../lib/upload.js";
 import { SCALAR_FIELDS, CMS_PAGES, defaultsFor } from "../../lib/contentManifest.js";
 import AdminLayout from "../../components/AdminLayout.jsx";
+import CmsPreview from "../../components/CmsPreview.jsx";
 
 // CHECKPOINT NOTE (admin/Content.jsx):
 // Manifest-driven editor -- this page doesn't know about "hero" or
@@ -17,10 +18,14 @@ import AdminLayout from "../../components/AdminLayout.jsx";
 // admin's saved override, or the manifest default if none exists yet) --
 // not a blank box -- so hitting Save with no edits is always safe and
 // just confirms the current text/image as the explicit override.
+//
+// The right-hand panel is a live preview of the real storefront that
+// shows every edit as it's typed, before saving (components/CmsPreview.jsx).
 export default function AdminContent() {
   const { t } = useTranslation("admin");
   const { t: tc } = useTranslation("common");
   const [values, setValues] = useState({});
+  const [savedValues, setSavedValues] = useState({}); // what's in the database, to flag unsaved pages
   const [loading, setLoading] = useState(true);
   const [savingPage, setSavingPage] = useState(null);
   const [savedPage, setSavedPage] = useState(null);
@@ -47,6 +52,7 @@ export default function AdminContent() {
         next[page] = merged;
       }
       setValues(next);
+      setSavedValues(next);
       setLoading(false);
     });
   }, [tc]);
@@ -87,12 +93,15 @@ export default function AdminContent() {
       }));
       await api.put(`/admin/content/${page}`, { items, collections: [] });
       setSavedPage(page);
+      setSavedValues((v) => ({ ...v, [page]: values[page] }));
     } catch (err) {
       setError(err.message);
     } finally {
       setSavingPage(null);
     }
   }
+
+  const isDirty = (page) => JSON.stringify(values[page]) !== JSON.stringify(savedValues[page]);
 
   if (loading) {
     return (
@@ -108,17 +117,22 @@ export default function AdminContent() {
 
       {error && <p className="mb-4 text-sm text-enzo-error">{error}</p>}
 
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       <div className="flex flex-col gap-8">
         {CMS_PAGES.map((page) => {
           const fields = SCALAR_FIELDS.filter((f) => f.page === page);
           const sections = [...new Set(fields.map((f) => f.section))];
           return (
-            <div key={page} className="max-w-2xl rounded-lg border border-enzo-line bg-enzo-panel p-6">
+            <div key={page} className="rounded-lg border border-enzo-line bg-enzo-panel p-6">
               <h2 className="mb-4 font-display text-lg">{t(`content.page_${page}`, page)}</h2>
 
               <div className="flex flex-col gap-4">
-                {sections.map((section) =>
-                  fields
+                {sections.map((section) => (
+                  <div key={section} className="flex flex-col gap-4 border-t border-enzo-line pt-4 first:border-t-0 first:pt-0">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-enzo-gold">
+                    {t(`content.section_${section}`, section)}
+                  </h3>
+                  {fields
                     .filter((f) => f.section === section)
                     .map((field) => {
                       const value = values[page]?.[section]?.[field.key] ?? "";
@@ -127,8 +141,14 @@ export default function AdminContent() {
                         <div key={fieldKey}>
                           <label className="mb-1 block text-sm font-medium text-enzo-muted">{field.label}</label>
                           {field.type === "image" ? (
-                            <div className="flex items-center gap-3">
-                              {value && <img src={value} alt="" className="h-14 w-14 rounded-full object-cover" />}
+                            <div className="flex flex-wrap items-center gap-3">
+                              {value && (
+                                <img
+                                  src={value}
+                                  alt=""
+                                  className={field.key === "logo" ? "h-14 w-14 rounded-full object-cover" : "h-16 w-28 rounded object-cover"}
+                                />
+                              )}
                               <label className="flex w-fit cursor-pointer items-center gap-2 rounded-md border border-dashed border-enzo-line px-4 py-2 text-sm text-enzo-muted hover:border-enzo-goldBright hover:text-enzo-white">
                                 <Upload size={16} />
                                 {uploadingKey === fieldKey ? "..." : t("products.uploadImages")}
@@ -140,6 +160,15 @@ export default function AdminContent() {
                                   onChange={(e) => handleImageUpload(page, section, field.key, e)}
                                 />
                               </label>
+                              {value && field.key !== "logo" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setFieldValue(page, section, field.key, "")}
+                                  className="text-sm text-enzo-muted underline hover:text-enzo-error"
+                                >
+                                  {t("content.removeImage")}
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <textarea
@@ -151,8 +180,9 @@ export default function AdminContent() {
                           )}
                         </div>
                       );
-                    })
-                )}
+                    })}
+                  </div>
+                ))}
               </div>
 
               <div className="mt-5 flex items-center gap-3">
@@ -164,11 +194,20 @@ export default function AdminContent() {
                 >
                   {t("content.save")}
                 </button>
-                {savedPage === page && <span className="text-sm text-enzo-gold">{t("content.saved")}</span>}
+                {isDirty(page) ? (
+                  <span className="text-sm text-enzo-muted">{t("preview.unsaved")}</span>
+                ) : (
+                  savedPage === page && <span className="text-sm text-enzo-gold">{t("content.saved")}</span>
+                )}
               </div>
             </div>
           );
         })}
+      </div>
+
+      <div className="h-[75vh] xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)]">
+        <CmsPreview values={values} dirty={CMS_PAGES.some(isDirty)} />
+      </div>
       </div>
     </AdminLayout>
   );

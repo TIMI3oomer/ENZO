@@ -45,7 +45,11 @@
     "rights": "All rights reserved",
     "contact": "Contact us",
     "location": "Location",
-    "whatsapp": "Chat with us on WhatsApp"
+    "whatsapp": "Chat with us on WhatsApp",
+    "shop": "Shop",
+    "help": "Help",
+    "allProducts": "All products",
+    "tagline": "Streetwear with real quality. Limited pieces, your identity your way."
   },
   "language": {
     "ar": "العربية",
@@ -97,5 +101,14 @@
     "securePayment": "Secure payment",
     "cashOnDelivery": "Cash on delivery",
     "qualityChecked": "Quality checked"
+  },
+  "home": {
+    "announcement": "Cash on delivery available · Fast delivery",
+    "promo": "Limited pieces · Real quality",
+    "newArrivals": "New arrivals",
+    "viewAll": "View all",
+    "editorialTitle": "New season",
+    "editorialText": "Fresh fits for the cold days. Limited quantities, made to stand out.",
+    "editorialCta": "Discover the collection"
   }
 }

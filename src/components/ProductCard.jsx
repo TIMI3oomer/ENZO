@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
 import { COLOR_HEX } from "../lib/colors.js";
+import { ShoppingBag } from "lucide-react";
 
 // CHECKPOINT NOTE (ProductCard.jsx):
 // `text-start` (not text-left) so captions align correctly in both
@@ -27,6 +28,9 @@ import { COLOR_HEX } from "../lib/colors.js";
 // <Link> for layout reasons, so their clicks call
 // preventDefault/stopPropagation to stop that click from also triggering
 // navigation to the product page.
+//
+// LAYOUT: flat, photo-first streetwear card (no boxed shell): tall photo,
+// uppercase two-line name, gold price and a small round bag button.
 export default function ProductCard({ product }) {
   const { t } = useTranslation("common");
   const localize = useLocalizedField();
@@ -45,13 +49,14 @@ export default function ProductCard({ product }) {
 
   return (
     <Link to={`/product/${product.slug}`} className="group block h-full">
-      <div className="enzo-ring-card flex h-full flex-col overflow-hidden rounded-2xl border border-enzo-line/60 bg-enzo-panel transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:border-enzo-gold/50 group-hover:shadow-[0_18px_36px_-18px_rgba(201,162,39,0.4)] group-active:translate-y-0 group-active:scale-[0.98]">
-        <div className="relative aspect-[3/4] overflow-hidden bg-enzo-black/40">
+      <div className="flex h-full flex-col transition-transform duration-300 ease-out group-active:scale-[0.98]">
+        <div className="relative aspect-[3/4] overflow-hidden bg-enzo-panel">
           {displayedImage ? (
             <img
               src={displayedImage}
               alt={name}
-              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full items-center justify-center font-display text-lg tracking-wide text-enzo-muted">
@@ -60,19 +65,19 @@ export default function ProductCard({ product }) {
           )}
 
           {product.stock === 0 && (
-            <span className="absolute top-2.5 start-2.5 rounded-full border border-white/10 bg-enzo-black/80 px-2.5 py-1 text-[11px] uppercase tracking-wide text-enzo-white backdrop-blur-sm">
+            <span className="absolute top-2 start-2 bg-enzo-black/85 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-enzo-white">
               {t("product.outOfStock")}
             </span>
           )}
 
           {product.discount_percent > 0 && (
-            <span className="absolute top-2.5 end-2.5 rounded-full bg-enzo-error px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-enzo-white">
+            <span className="absolute bottom-2 end-2 bg-enzo-error px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-enzo-white">
               -{product.discount_percent}%
             </span>
           )}
 
           {hasColorPreviews && (
-            <div className="absolute inset-x-0 bottom-0 flex justify-center pb-2.5">
+            <div className="absolute inset-x-0 top-0 flex justify-center pt-2">
               <div className="flex items-center gap-1.5 rounded-full bg-enzo-black/45 px-2 py-1.5 backdrop-blur-sm">
                 {product.colors.map((c) => (
                   <button
@@ -100,16 +105,23 @@ export default function ProductCard({ product }) {
           )}
         </div>
 
-        <div className="flex flex-1 flex-col gap-1 px-3 py-3 text-start">
-          <p className="line-clamp-1 text-sm font-medium">{name}</p>
-          {product.discount_percent > 0 ? (
-            <p className="mt-auto flex items-center gap-2 text-sm font-semibold">
-              <span className="text-enzo-goldBright">{formatPrice(getDiscountedPrice(product.price, product.discount_percent))}</span>
-              <span className="text-xs text-enzo-muted line-through">{formatPrice(product.price)}</span>
-            </p>
-          ) : (
-            <p className="mt-auto text-sm font-semibold text-enzo-goldBright">{formatPrice(product.price)}</p>
-          )}
+        <div className="flex flex-1 flex-col gap-2 pt-3 text-start">
+          <p className="line-clamp-2 min-h-[2.5em] text-xs font-semibold uppercase leading-tight tracking-wide sm:text-[13px]">
+            {name}
+          </p>
+          <div className="mt-auto flex items-center justify-between gap-2">
+            {product.discount_percent > 0 ? (
+              <p className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
+                <span className="text-enzo-goldBright">{formatPrice(getDiscountedPrice(product.price, product.discount_percent))}</span>
+                <span className="text-xs text-enzo-muted line-through">{formatPrice(product.price)}</span>
+              </p>
+            ) : (
+              <p className="text-sm font-semibold text-enzo-goldBright">{formatPrice(product.price)}</p>
+            )}
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-enzo-line text-enzo-muted transition-colors group-hover:border-enzo-gold group-hover:bg-enzo-gold group-hover:text-enzo-black">
+              <ShoppingBag size={14} />
+            </span>
+          </div>
         </div>
       </div>
     </Link>

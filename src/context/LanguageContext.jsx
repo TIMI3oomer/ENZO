@@ -1,6 +1,7 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import i18n from "../i18n";
+import { isCmsPreview, useCmsPreviewBridge } from "../lib/cmsPreview.js";
 
 const LanguageContext = createContext(null);
 
@@ -33,8 +34,13 @@ export function LanguageProvider({ children }) {
     document.documentElement.lang = lang;
     document.documentElement.dir = dir;
     i18n.changeLanguage(lang);
-    localStorage.setItem("enzo_lang", lang);
+    // The CMS preview iframe shares localStorage with the admin page --
+    // switching the preview's language must not switch the admin's.
+    if (!isCmsPreview) localStorage.setItem("enzo_lang", lang);
   }, [lang, dir]);
+
+  // Inside the CMS preview iframe: take drafts + language from the admin.
+  useCmsPreviewBridge(setLangState);
 
   const setLang = (next) => {
     if (next !== "ar" && next !== "en") return;

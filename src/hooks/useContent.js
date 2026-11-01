@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
 import { defaultsFor } from "../lib/contentManifest.js";
+import { usePreviewDrafts } from "../lib/cmsPreview.js";
 
 // Public content loader: fetches the CMS rows for one page and merges
 // them over the manifest's hardcoded defaults, so a missing row, an empty
@@ -9,6 +10,9 @@ import { defaultsFor } from "../lib/contentManifest.js";
 // default copy/image it always showed before this CMS existed.
 //
 // Returns a flat `{ [section]: { [key]: value } }` map for that page.
+//
+// Inside the admin's live preview iframe, the admin's unsaved edits
+// (see lib/cmsPreview.js) are layered on top.
 export function useContent(page) {
   const { t } = useTranslation("common");
   const [content, setContent] = useState(() => defaultsFor(page, t));
@@ -33,5 +37,17 @@ export function useContent(page) {
     };
   }, [page, t]);
 
-  return content;
+  const drafts = usePreviewDrafts(page);
+  if (!drafts) return content;
+
+  // A field cleared in the editor shows its default, same as after saving.
+  const defaults = defaultsFor(page, t);
+  const withDrafts = { ...content };
+  for (const [section, fields] of Object.entries(drafts)) {
+    withDrafts[section] = { ...content[section] };
+    for (const [key, value] of Object.entries(fields)) {
+      withDrafts[section][key] = value == null || value === "" ? defaults[section]?.[key] ?? "" : value;
+    }
+  }
+  return withDrafts;
 }

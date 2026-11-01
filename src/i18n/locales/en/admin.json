@@ -113,7 +113,27 @@
     "save": "Save",
     "saved": "Saved",
     "page_home": "Home page",
-    "page_site": "Site-wide"
+    "page_site": "Site-wide",
+    "section_hero": "Banner slider",
+    "section_promo": "Promo strip",
+    "section_editorial": "Campaign banner",
+    "section_announcement": "Announcement bar",
+    "section_footer": "Footer",
+    "section_images": "Logo",
+    "removeImage": "Remove"
+  },
+  "preview": {
+    "title": "Live preview",
+    "page": "Page to preview",
+    "pageHome": "Home",
+    "pageShop": "Shop",
+    "pageCart": "Cart",
+    "mobile": "Phone",
+    "tablet": "Tablet",
+    "desktop": "Desktop",
+    "reload": "Reload preview",
+    "openTab": "Open in new tab",
+    "unsaved": "Unsaved changes"
   },
   "inStoreSale": {
     "title": "In-store sale",

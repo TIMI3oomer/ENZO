@@ -57,7 +57,14 @@ export default function AdminProducts() {
               <tr key={p.id} className="border-t hairline">
                 <td className="px-4 py-3">{localize(p.name)}</td>
                 <td className="px-4 py-3">{p.price}</td>
-                <td className="px-4 py-3">{p.stock}</td>
+                <td className="px-4 py-3">
+                  {p.stock}
+                  {(p.sizes || []).length > 0 && (
+                    <span className="ms-2 text-xs text-enzo-muted" dir="ltr">
+                      ({p.sizes.map((s) => `${s}:${p.size_stock?.[s] ?? 0}`).join(" ")})
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-3">
                     <Link to={`/admin/products/${p.id}/edit`} className="text-enzo-gold hover:underline">

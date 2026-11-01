@@ -19,7 +19,16 @@ router.get("/", async (req, res, next) => {
     // SNAPSHOT from when they were added, which can go stale if the
     // admin changes a price or a product sells out later.
     if (ids) {
-      const idList = ids.split(",").map((s) => s.trim()).filter(Boolean);
+      // FIX: a non-UUID in the list (typo, tampered localStorage cart) made
+      // Postgres throw and the whole request fail with a 500. Only valid
+      // UUIDs are queried, capped to keep the URL/query sane.
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const idList = String(ids)
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => uuid.test(s))
+        .slice(0, 100);
+      if (idList.length === 0) return res.json([]);
       query = query.in("id", idList);
     }
 

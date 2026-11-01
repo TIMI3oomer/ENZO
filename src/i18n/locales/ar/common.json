@@ -24,7 +24,8 @@
     "size": "المقاس",
     "quantity": "الكمية",
     "relatedProducts": "قد يعجبك أيضاً",
-    "color": "اللون"
+    "color": "اللون",
+    "onlyLeft": "بقي {{count}} فقط من هذا المقاس"
   },
   "cart": {
     "title": "سلة التسوق",

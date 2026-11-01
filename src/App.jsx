@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
@@ -12,14 +13,28 @@ import OrderConfirmation from "./pages/OrderConfirmation.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Account from "./pages/Account.jsx";
-import AdminDashboard from "./pages/admin/Dashboard.jsx";
-import AdminProducts from "./pages/admin/Products.jsx";
-import AdminProductForm from "./pages/admin/ProductForm.jsx";
-import AdminOrders from "./pages/admin/Orders.jsx";
-import AdminCustomers from "./pages/admin/Customers.jsx";
-import AdminCategories from "./pages/admin/Categories.jsx";
+import NotFound from "./pages/NotFound.jsx";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute.jsx";
 import PageTransition from "./components/PageTransition.jsx";
+
+// PERFORMANCE: the admin pages (and the charting library behind the
+// dashboard) are only ever used by the store owner, but used to be bundled
+// into the file EVERY customer downloads first -- the main bundle was
+// ~1.1 MB. They are now loaded on demand, only when /admin is opened.
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard.jsx"));
+const AdminProducts = lazy(() => import("./pages/admin/Products.jsx"));
+const AdminProductForm = lazy(() => import("./pages/admin/ProductForm.jsx"));
+const AdminOrders = lazy(() => import("./pages/admin/Orders.jsx"));
+const AdminCustomers = lazy(() => import("./pages/admin/Customers.jsx"));
+const AdminCategories = lazy(() => import("./pages/admin/Categories.jsx"));
+
+function Admin({ children }) {
+  return (
+    <ProtectedAdminRoute>
+      <Suspense fallback={null}>{children}</Suspense>
+    </ProtectedAdminRoute>
+  );
+}
 
 // CHECKPOINT NOTE (App.jsx):
 // Route structure. Storefront routes share Navbar+Footer; admin routes use
@@ -51,6 +66,7 @@ export default function App() {
                   <Route path="/register" element={<Register />} />
                   <Route path="/account" element={<Account />} />
                   <Route path="/order-confirmation/:orderNumber" element={<OrderConfirmation />} />
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </PageTransition>
             </main>
@@ -61,62 +77,13 @@ export default function App() {
       />
 
       {/* ---------- Admin ---------- */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedAdminRoute>
-            <AdminDashboard />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="/admin/products"
-        element={
-          <ProtectedAdminRoute>
-            <AdminProducts />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="/admin/products/new"
-        element={
-          <ProtectedAdminRoute>
-            <AdminProductForm />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="/admin/products/:id/edit"
-        element={
-          <ProtectedAdminRoute>
-            <AdminProductForm />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="/admin/orders"
-        element={
-          <ProtectedAdminRoute>
-            <AdminOrders />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="/admin/customers"
-        element={
-          <ProtectedAdminRoute>
-            <AdminCustomers />
-          </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="/admin/categories"
-        element={
-          <ProtectedAdminRoute>
-            <AdminCategories />
-          </ProtectedAdminRoute>
-        }
-      />
+      <Route path="/admin" element={<Admin><AdminDashboard /></Admin>} />
+      <Route path="/admin/products" element={<Admin><AdminProducts /></Admin>} />
+      <Route path="/admin/products/new" element={<Admin><AdminProductForm /></Admin>} />
+      <Route path="/admin/products/:id/edit" element={<Admin><AdminProductForm /></Admin>} />
+      <Route path="/admin/orders" element={<Admin><AdminOrders /></Admin>} />
+      <Route path="/admin/customers" element={<Admin><AdminCustomers /></Admin>} />
+      <Route path="/admin/categories" element={<Admin><AdminCategories /></Admin>} />
     </Routes>
   );
 }

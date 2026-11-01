@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../lib/supabaseAdmin.js";
 import { stripe } from "../lib/stripe.js";
 import { attachUser, requireAuth } from "../middleware/auth.js";
 import { createOrderSchema, parseOrThrow } from "../utils/validation.js";
+import { cardEnabled, reflectConfig } from "../lib/payments.js";
 
 const router = Router();
 
@@ -34,6 +35,14 @@ router.post("/", attachUser, async (req, res, next) => {
 
     if (body.paymentMethod === "visa") {
       const err = new Error("Card payments must go through /api/orders/stripe-session");
+      err.status = 400;
+      throw err;
+    }
+
+    // Reflect is a manual transfer: without payout details configured the
+    // customer would have nowhere to send the money, so don't accept it.
+    if (body.paymentMethod === "reflect" && !reflectConfig().enabled) {
+      const err = new Error("Reflect payment is not available right now -- please choose cash on delivery");
       err.status = 400;
       throw err;
     }
@@ -95,10 +104,19 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
       throw err;
     }
 
+    // Card checkout is only offered when a card provider is configured
+    // (see lib/payments.js) -- otherwise fail clearly instead of crashing
+    // at the Stripe call with a confusing error.
+    if (!cardEnabled()) {
+      const err = new Error("Card payment is not available right now -- please choose another payment method");
+      err.status = 400;
+      throw err;
+    }
+
     const productIds = body.items.map((i) => i.product_id);
     const { data: products, error: productsError } = await supabaseAdmin
       .from("products")
-      .select("id, name, price, stock, is_active")
+      .select("id, name, price, stock, sizes, size_stock, is_active")
       .in("id", productIds);
     if (productsError) throw productsError;
 
@@ -115,7 +133,19 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
       throw err;
     }
 
-    const currency = "ils"; // Stripe currency code -- change here if this store switches currency
+    // Stripe currency code. Defaults to ILS (the store's price currency);
+    // set STRIPE_CURRENCY only if your Stripe account must settle in another
+    // currency -- prices in the database are NOT converted, so changing this
+    // alone would charge the same number in a different currency.
+    const currency = (process.env.STRIPE_CURRENCY || "ils").toLowerCase();
+
+    // STOCK PER SIZE: total wanted per (product, size) across all cart
+    // lines, so the same shirt+size in two colours is checked as one number.
+    const wanted = new Map();
+    for (const item of body.items) {
+      const key = `${item.product_id}__${item.size ?? ""}`;
+      wanted.set(key, (wanted.get(key) || 0) + item.quantity);
+    }
 
     const lineItems = body.items.map((item) => {
       const product = products.find((p) => p.id === item.product_id);
@@ -124,13 +154,26 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
         err.status = 400;
         throw err;
       }
+      const label = product.name?.en || product.name?.ar;
       if (!product.is_active) {
-        const err = new Error(`${product.name?.en || product.name?.ar} is no longer available`);
+        const err = new Error(`${label} is no longer available`);
         err.status = 400;
         throw err;
       }
-      if (product.stock < item.quantity) {
-        const err = new Error(`Insufficient stock for ${product.name?.en || product.name?.ar}`);
+
+      const hasSizes = (product.sizes || []).length > 0;
+      if (hasSizes && (!item.size || !product.sizes.includes(item.size))) {
+        const err = new Error(`Please choose a size for ${label}`);
+        err.status = 400;
+        throw err;
+      }
+      const available = hasSizes ? Number(product.size_stock?.[item.size] ?? 0) : product.stock;
+      if (available < wanted.get(`${item.product_id}__${item.size ?? ""}`)) {
+        const err = new Error(
+          hasSizes
+            ? `Insufficient stock for ${label} (size ${item.size}): only ${available} left`
+            : `Insufficient stock for ${label}`
+        );
         err.status = 400;
         throw err;
       }

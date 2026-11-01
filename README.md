@@ -802,3 +802,25 @@ need different values per environment.
 4. Check Function Logs on the new deployment for the
    `[ENZO server] CORS allowed origins:` line — confirms what the
    backend actually loaded.
+
+---
+
+## Payments (Palestine) — what is on by default
+
+- **Cash on delivery** — always available.
+- **Reflect (manual transfer)** — set `REFLECT_PHONE` (and `REFLECT_ACCOUNT_NAME`) in the backend env. The customer sees your Reflect details right after ordering; when the money arrives you open **Admin → Orders → the order → "Mark as paid"**. Leave `REFLECT_PHONE` empty to hide the option.
+- **Card (Visa/Mastercard)** — hidden unless `CARD_PROVIDER=stripe` **and** `STRIPE_SECRET_KEY` are set. Stripe does not currently support businesses located in Palestine, so this stays off until you have a card gateway that works for you. The store reads which methods to show from `GET /api/config`, so no frontend change is needed when you switch one on.
+
+All backend settings are documented in `server/.env.example`; frontend ones in `.env.example`.
+
+**Existing database?** Run `supabase/migration_v13.sql` once in the Supabase SQL editor (it makes `orders.stripe_session_id` unique so a repeated Stripe webhook can never create two orders).
+
+---
+
+## Stock per size
+
+Each product with sizes now keeps its own stock **per size** (e.g. a shirt with 15 pieces = 2 S + 3 M + 5 L + ...). In **Admin → Products → edit**, pick the sizes, then type how many you have of each; the product's total is added up automatically. Products with no sizes (a cap, a bag) still use a single stock number.
+
+- Customers can only buy a size that is in stock; sold-out sizes are crossed out, and "Only N left" shows at 3 or fewer.
+- **Cancelling an order puts its items back in stock** (per size). Re-opening a cancelled order takes them again, and is refused if they have since sold out.
+- **Existing database?** Run `supabase/migration_v14.sql` once in the Supabase SQL editor. Your current stock is split evenly across each product's sizes (10 over S/M/L becomes 4/3/3, total still 10) — open each product afterwards and enter the real numbers.

@@ -10,10 +10,18 @@ import categoriesRoutes from "./routes/categories.js";
 import ordersRoutes from "./routes/orders.js";
 import adminRoutes from "./routes/admin.js";
 import accountRoutes from "./routes/account.js";
+import configRoutes from "./routes/config.js";
 import webhooksRoutes from "./routes/webhooks.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 const app = express();
+
+// FIX: Vercel (and any reverse proxy) puts the real client IP in
+// X-Forwarded-For. Without this, req.ip is the proxy's address, so
+// express-rate-limit saw EVERY visitor as the same client -- 20 orders
+// per 15 minutes for the whole store combined -- and logged
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR. "1" = trust exactly one proxy hop.
+app.set("trust proxy", 1);
 
 // CHECKPOINT NOTE (server/src/app.js):
 // This file used to be index.js and called app.listen() directly. Split
@@ -97,12 +105,15 @@ const orderLimiter = rateLimit({
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
-app.get("/api/debug-cors",(_req,res) =>{
-  res.json({
-    rawFrontendUrlEnvVar: process.env.FRONTEND_URL ?? null,
-    parsedAllowedOrigins: allowedOrigins,
-  });
-});
+
+// REMOVED: /api/debug-cors. It was publicly reachable and echoed the raw
+// FRONTEND_URL env var back to anyone. CORS origins are already logged
+// once at startup (see console.log above) -- check the Vercel function
+// logs instead of exposing configuration over HTTP.
+
+// Public, read-only: which payment methods this store currently offers and
+// the manual-transfer (Reflect) instructions. See routes/config.js.
+app.use("/api/config", configRoutes);
 
 app.use("/api/products", productsRoutes);
 app.use("/api/categories", categoriesRoutes);

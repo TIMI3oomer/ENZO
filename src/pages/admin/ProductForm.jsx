@@ -36,6 +36,7 @@ const empty = {
   care_en: "",
   price: "",
   stock: "",
+  size_stock: {}, // { S: "2", M: "3", L: "5" } -- kept as strings while typing
   category_id: "",
   sizes: [],
   colors: [],
@@ -92,6 +93,7 @@ export default function AdminProductForm() {
           care_en: data.care_instructions?.en || "",
           price: data.price,
           stock: data.stock,
+          size_stock: Object.fromEntries(Object.entries(data.size_stock || {}).map(([k, v]) => [k, String(v)])),
           category_id: data.category_id || "",
           sizes: data.sizes || [],
           colors: data.colors || [],
@@ -150,7 +152,12 @@ export default function AdminProductForm() {
       fit: { ar: form.fit_ar, en: form.fit_en },
       care_instructions: { ar: form.care_ar, en: form.care_en },
       price: Number(form.price) || 0,
-      stock: Number(form.stock) || 0,
+      // With sizes: one number per selected size (the database adds them up
+      // into the product's total). Without sizes: the single stock number.
+      stock: form.sizes.length > 0 ? 0 : Math.max(0, Math.floor(Number(form.stock) || 0)),
+      size_stock: Object.fromEntries(
+        form.sizes.map((s) => [s, Math.max(0, Math.floor(Number(form.size_stock[s]) || 0))])
+      ),
       category_id: form.category_id || null,
       sizes: form.sizes,
       colors: form.colors,
@@ -226,10 +233,14 @@ export default function AdminProductForm() {
           <Label>{t("products.price")}</Label>
           <input className="input" type="number" step="0.01" value={form.price} onChange={update("price")} />
         </div>
-        <div>
-          <Label>{t("products.stock")}</Label>
-          <input className="input" type="number" value={form.stock} onChange={update("stock")} />
-        </div>
+        {/* Stock for products WITHOUT sizes. With sizes, stock is entered per
+            size in the "Stock per size" block under the sizes menu. */}
+        {form.sizes.length === 0 && (
+          <div>
+            <Label>{t("products.stockNoSizes")}</Label>
+            <input className="input" type="number" min="0" step="1" value={form.stock} onChange={update("stock")} />
+          </div>
+        )}
 
         <FullRow>
           <Label>{t("products.category")}</Label>
@@ -262,6 +273,42 @@ export default function AdminProductForm() {
               </button>
             ))}
           </div>
+        </FullRow>
+
+        {/* Stock per size: e.g. 15 shirts = 2 S + 3 M + 5 L + ... */}
+        <FullRow>
+          <Label>{t("products.stockPerSize")}</Label>
+          {form.sizes.length === 0 ? (
+            <p className="text-sm text-enzo-muted">{t("products.stockHint")}</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-3">
+                {ALL_SIZES.filter((s) => form.sizes.includes(s)).map((s) => (
+                  <label key={s} className="flex w-20 flex-col items-center gap-1 text-sm">
+                    <span className="font-medium">{s}</span>
+                    <input
+                      className="input text-center"
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
+                      value={form.size_stock[s] ?? ""}
+                      placeholder="0"
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, size_stock: { ...f.size_stock, [s]: e.target.value } }))
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+              <p className="mt-2 text-sm text-enzo-muted">
+                {t("products.stockTotal")}:{" "}
+                <span className="font-semibold text-enzo-white">
+                  {form.sizes.reduce((sum, s) => sum + Math.max(0, Math.floor(Number(form.size_stock[s]) || 0)), 0)}
+                </span>
+              </p>
+            </>
+          )}
         </FullRow>
 
         {/* Colors menu */}

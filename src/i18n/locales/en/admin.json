@@ -37,7 +37,11 @@
     "colorImages": "Assign a photo per color",
     "noImageAssigned": "No photo assigned",
     "photoNumber": "Photo #{{n}}",
-    "slugOptional": "Slug (optional — auto-generated if left blank)"
+    "slugOptional": "Slug (optional — auto-generated if left blank)",
+    "stockPerSize": "Stock per size",
+    "stockTotal": "Total",
+    "stockNoSizes": "Stock quantity (no sizes selected)",
+    "stockHint": "Pick the sizes above, then enter how many you have of each."
   },
   "orders": {
     "title": "Orders",
@@ -65,7 +69,10 @@
       "west_bank": "West Bank",
       "jerusalem": "Jerusalem",
       "inside": "Inside (48)"
-    }
+    },
+    "markPaid": "Mark as paid",
+    "markUnpaid": "Mark as unpaid",
+    "paymentLabel": "Payment"
   },
   "analytics": {
     "salesLast14Days": "Sales — last 14 days",

@@ -7,6 +7,7 @@ import { useCart } from "../context/CartContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 import ErrorBanner from "../components/ErrorBanner.jsx";
 import { COLOR_HEX } from "../lib/colors.js";
+import { stockFor, firstAvailableSize } from "../lib/stock.js";
 
 // CHECKPOINT NOTE (ProductDetail.jsx):
 // Fetches from GET /api/products/:slug (backend). The product stays the
@@ -35,7 +36,7 @@ export default function ProductDetail() {
       .get(`/products/${slug}`)
       .then((data) => {
         setProduct(data);
-        setSize(data?.sizes?.[0] ?? null);
+        setSize(firstAvailableSize(data)); // a size that is actually in stock, not just the first one
         setColor(data?.colors?.[0] ?? null);
       })
       .catch((err) => (err.status === 404 ? setNotFound(true) : setError(err.message)));
@@ -56,7 +57,12 @@ export default function ProductDetail() {
   if (notFound) return <div className="p-10 text-center text-enzo-muted">{t("errors.notFound")}</div>;
   if (!product) return <div className="p-10 text-center text-enzo-muted">…</div>;
 
+  // Stock of the size currently selected (or the whole product if it has no sizes).
+  const sizeStock = stockFor(product, size);
+  const soldOut = sizeStock <= 0;
+
   const handleAdd = () => {
+    if (soldOut) return;
     addItem(product, size, color, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -115,27 +121,35 @@ export default function ProductDetail() {
           <div className="mt-6">
             <p className="mb-2 text-sm font-medium">{t("product.size")}</p>
             <div className="flex flex-wrap gap-2">
-              {product.sizes.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSize(s)}
-                  className={`rounded border px-4 py-2 text-sm ${
-                    size === s ? "border-enzo-white bg-enzo-white text-enzo-black" : "border-enzo-line text-enzo-muted"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
+              {product.sizes.map((s) => {
+                const out = stockFor(product, s) <= 0;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setSize(s)}
+                    aria-disabled={out}
+                    title={out ? t("product.outOfStock") : undefined}
+                    className={`rounded border px-4 py-2 text-sm ${
+                      size === s ? "border-enzo-white bg-enzo-white text-enzo-black" : "border-enzo-line text-enzo-muted"
+                    } ${out ? "line-through opacity-40" : ""}`}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
             </div>
+            {!soldOut && sizeStock <= 3 && (
+              <p className="mt-2 text-xs text-enzo-goldBright">{t("product.onlyLeft", { count: sizeStock })}</p>
+            )}
           </div>
         )}
 
         <button
           onClick={handleAdd}
-          disabled={product.stock === 0}
+          disabled={soldOut}
           className="mt-8 w-full rounded-md bg-enzo-gradient py-3 font-semibold text-enzo-black disabled:opacity-40"
         >
-          {product.stock === 0 ? t("product.outOfStock") : added ? t("success.addedToCart") : t("product.addToCart")}
+          {soldOut ? t("product.outOfStock") : added ? t("success.addedToCart") : t("product.addToCart")}
         </button>
 
         <dl className="mt-10 space-y-3 border-t hairline pt-6 text-sm">

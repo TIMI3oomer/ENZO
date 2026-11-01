@@ -1,7 +1,14 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabaseAdmin.js";
 import { attachUser, requireAdmin } from "../middleware/auth.js";
-import { productSchema, orderStatusSchema, categorySchema, deliveryFeeSchema, parseOrThrow } from "../utils/validation.js";
+import {
+  productSchema,
+  orderStatusSchema,
+  categorySchema,
+  deliveryFeeSchema,
+  paymentStatusSchema,
+  parseOrThrow,
+} from "../utils/validation.js";
 import { sendOrderStatusEmail, sendOrderTotalEmail } from "../lib/email.js";
 
 const router = Router();
@@ -111,17 +118,29 @@ router.get("/orders/:id/items", async (req, res, next) => {
 router.patch("/orders/:id/status", async (req, res, next) => {
   try {
     const body = parseOrThrow(orderStatusSchema, req.body);
-    const { data, error } = await supabaseAdmin
-      .from("orders")
-      .update({ status: body.status, admin_note: body.note ?? null })
-      .eq("id", req.params.id)
-      .select()
-      .single();
-    if (error) throw error;
+    // Goes through the set_order_status() database function (not a plain
+    // UPDATE) so cancelling an order puts its items back in stock -- per
+    // size -- and re-opening a cancelled order takes them again. See
+    // supabase/migration_v14.sql.
+    const { data, error } = await supabaseAdmin.rpc("set_order_status", {
+      p_order_id: req.params.id,
+      p_status: body.status,
+      p_note: body.note ?? null,
+    });
+    if (error) {
+      // The function raises readable messages on purpose ("Cannot re-open
+      // this order: only 0 left of ... in size M", "Order not found").
+      const err = new Error(error.message);
+      err.status = error.code === "P0001" ? 400 : 500;
+      throw err;
+    }
 
-    // Fire-and-forget: a slow/failed email should never block the admin's
-    // status update from succeeding (see email.js — it never throws).
-    sendOrderStatusEmail({
+    // FIX: this used to be fire-and-forget (no await). On Vercel's
+    // serverless runtime the function can be frozen the moment the response
+    // is sent, so the email was often never delivered. It is awaited now;
+    // email.js never throws (failures are only logged), so a bad SMTP
+    // setup still cannot fail the status update itself.
+    await sendOrderStatusEmail({
       to: data.customer_email,
       orderNumber: data.order_number,
       status: data.status,
@@ -129,6 +148,28 @@ router.patch("/orders/:id/status", async (req, res, next) => {
       locale: data.locale,
     });
 
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Mark an order's payment as received (or not). Needed for Reflect
+// transfers and cash on delivery: nothing confirms those automatically, so
+// the store owner checks the money arrived (Reflect app / on delivery) and
+// flips the order to "paid" here. Card orders are marked paid by the
+// payment webhook itself and normally never need this.
+router.patch("/orders/:id/payment-status", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(paymentStatusSchema, req.body);
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .update({ payment_status: body.payment_status })
+      .eq("id", req.params.id)
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Order not found" });
     res.json(data);
   } catch (err) {
     next(err);
@@ -164,8 +205,8 @@ router.patch("/orders/:id/delivery-fee", async (req, res, next) => {
       .single();
     if (error) throw error;
 
-    // Fire-and-forget, same reasoning as the status-update email above.
-    sendOrderTotalEmail({
+    // Awaited for the same serverless reason as the status-update email above.
+    await sendOrderTotalEmail({
       to: order.customer_email,
       orderNumber: order.order_number,
       subtotal: order.subtotal,
@@ -293,7 +334,9 @@ router.get("/customers", async (_req, res, next) => {
       { data: profiles, error: profileError },
       { data: orders, error: ordersError },
     ] = await Promise.all([
-      supabaseAdmin.auth.admin.listUsers(),
+      // FIX: listUsers() returns only the first 50 users by default, so the
+      // customer list silently stopped at 50. 1000 is the API's maximum page.
+      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
       supabaseAdmin.from("profiles").select("*"),
       supabaseAdmin.from("orders").select("user_id"),
     ]);

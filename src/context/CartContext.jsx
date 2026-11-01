@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { getDiscountedPrice } from "../lib/formatPrice.js";
 
 const CartContext = createContext(null);
 const STORAGE_KEY = "enzo_cart_v1";
@@ -40,7 +41,7 @@ export function CartProvider({ children }) {
           productId: product.id,
           slug: product.slug,
           name: product.name, // { ar, en }
-          price: product.price,
+          price: getDiscountedPrice(product.price, product.discount_percent), // sale price, if on sale
           image: product.images?.[0] ?? null,
           size,
           color,

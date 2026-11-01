@@ -24,7 +24,10 @@
     "size": "Size",
     "quantity": "Quantity",
     "relatedProducts": "You might also like",
-    "color": "Color"
+    "color": "Color",
+    "soldOut": "Sold out",
+    "sale": "Sale",
+    "onSale": "On sale"
   },
   "cart": {
     "title": "Shopping cart",

@@ -95,7 +95,7 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
     const productIds = body.items.map((i) => i.product_id);
     const { data: products, error: productsError } = await supabaseAdmin
       .from("products")
-      .select("id, name, price, stock, is_active")
+      .select("id, name, price, stock, is_active, discount_percent, sold_out_sizes, sold_out_colors")
       .in("id", productIds);
     if (productsError) throw productsError;
 
@@ -121,11 +121,24 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
         err.status = 400;
         throw err;
       }
+      if (item.size && product.sold_out_sizes?.includes(item.size)) {
+        const err = new Error(`Size ${item.size} is sold out for ${product.name?.en || product.name?.ar}`);
+        err.status = 400;
+        throw err;
+      }
+      if (item.color && product.sold_out_colors?.includes(item.color)) {
+        const err = new Error(`${item.color} is sold out for ${product.name?.en || product.name?.ar}`);
+        err.status = 400;
+        throw err;
+      }
+      // Sale price, same math as the frontend/place_order() -- never
+      // charge full price for a product shown on sale.
+      const unitPrice = product.price * (1 - (product.discount_percent || 0) / 100);
       return {
         quantity: item.quantity,
         price_data: {
           currency,
-          unit_amount: Math.round(product.price * 100), // Stripe uses the smallest currency unit
+          unit_amount: Math.round(unitPrice * 100), // Stripe uses the smallest currency unit
           product_data: { name: product.name?.en || product.name?.ar || "Product" },
         },
       };

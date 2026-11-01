@@ -41,6 +41,9 @@ const empty = {
   colors: [],
   color_images: {},
   images: [],
+  sold_out_sizes: [],
+  sold_out_colors: [],
+  discount_percent: "",
 };
 
 // CHECKPOINT NOTE (admin/ProductForm.jsx):
@@ -97,6 +100,9 @@ export default function AdminProductForm() {
           colors: data.colors || [],
           color_images: data.color_images || {},
           images: data.images || [],
+          sold_out_sizes: data.sold_out_sizes || [],
+          sold_out_colors: data.sold_out_colors || [],
+          discount_percent: data.discount_percent || "",
         });
       })
       .catch(() => {});
@@ -109,6 +115,30 @@ export default function AdminProductForm() {
       ...f,
       [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value],
     }));
+  }
+
+  // Deselecting a size/color it's offered in no longer makes sense as
+  // "sold out" either -- keep the sold-out flags in sync so they can't
+  // silently reference an option the product doesn't even have anymore.
+  function toggleSize(size) {
+    setForm((f) => {
+      const nowOffered = !f.sizes.includes(size);
+      return {
+        ...f,
+        sizes: nowOffered ? [...f.sizes, size] : f.sizes.filter((s) => s !== size),
+        sold_out_sizes: nowOffered ? f.sold_out_sizes : f.sold_out_sizes.filter((s) => s !== size),
+      };
+    });
+  }
+  function toggleColor(color) {
+    setForm((f) => {
+      const nowOffered = !f.colors.includes(color);
+      return {
+        ...f,
+        colors: nowOffered ? [...f.colors, color] : f.colors.filter((c) => c !== color),
+        sold_out_colors: nowOffered ? f.sold_out_colors : f.sold_out_colors.filter((c) => c !== color),
+      };
+    });
   }
 
   async function handleFilesSelected(e) {
@@ -156,6 +186,9 @@ export default function AdminProductForm() {
       colors: form.colors,
       color_images: form.color_images,
       images: form.images,
+      sold_out_sizes: form.sold_out_sizes,
+      sold_out_colors: form.sold_out_colors,
+      discount_percent: Number(form.discount_percent) || 0,
     };
 
     try {
@@ -231,6 +264,20 @@ export default function AdminProductForm() {
           <input className="input" type="number" value={form.stock} onChange={update("stock")} />
         </div>
 
+        <div>
+          <Label>{t("products.discountPercent")}</Label>
+          <input
+            className="input"
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            placeholder="0"
+            value={form.discount_percent}
+            onChange={update("discount_percent")}
+          />
+        </div>
+
         <FullRow>
           <Label>{t("products.category")}</Label>
           <select className="input" value={form.category_id} onChange={update("category_id")}>
@@ -251,7 +298,7 @@ export default function AdminProductForm() {
               <button
                 key={s}
                 type="button"
-                onClick={() => toggleInArray("sizes", s)}
+                onClick={() => toggleSize(s)}
                 className={`rounded-md border px-3 py-1.5 text-sm ${
                   form.sizes.includes(s)
                     ? "border-enzo-goldBright bg-enzo-goldBright text-enzo-black"
@@ -264,6 +311,30 @@ export default function AdminProductForm() {
           </div>
         </FullRow>
 
+        {/* Mark any offered size as currently sold out -- the storefront
+            disables it and shows a red "Sold out" mark, see ProductDetail.jsx */}
+        {form.sizes.length > 0 && (
+          <FullRow>
+            <Label>{t("products.soldOutSizes")}</Label>
+            <div className="flex flex-wrap gap-2">
+              {form.sizes.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleInArray("sold_out_sizes", s)}
+                  className={`rounded-md border px-3 py-1.5 text-sm ${
+                    form.sold_out_sizes.includes(s)
+                      ? "border-enzo-error bg-enzo-error/20 text-enzo-error"
+                      : "border-enzo-line text-enzo-muted"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </FullRow>
+        )}
+
         {/* Colors menu */}
         <FullRow>
           <Label>{t("products.colors")}</Label>
@@ -274,7 +345,7 @@ export default function AdminProductForm() {
                 <button
                   key={c.name}
                   type="button"
-                  onClick={() => toggleInArray("colors", c.name)}
+                  onClick={() => toggleColor(c.name)}
                   title={c.name}
                   className={`flex flex-col items-center gap-1 rounded-md p-1.5 ${active ? "ring-2 ring-enzo-goldBright" : ""}`}
                 >
@@ -285,6 +356,30 @@ export default function AdminProductForm() {
             })}
           </div>
         </FullRow>
+
+        {/* Mark any offered color as currently sold out, independently of
+            sizes (e.g. "Black is sold out in every size") */}
+        {form.colors.length > 0 && (
+          <FullRow>
+            <Label>{t("products.soldOutColors")}</Label>
+            <div className="flex flex-wrap gap-2">
+              {form.colors.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => toggleInArray("sold_out_colors", c)}
+                  className={`rounded-md border px-3 py-1.5 text-sm ${
+                    form.sold_out_colors.includes(c)
+                      ? "border-enzo-error bg-enzo-error/20 text-enzo-error"
+                      : "border-enzo-line text-enzo-muted"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </FullRow>
+        )}
 
         {/* Image upload from gallery */}
         <FullRow>

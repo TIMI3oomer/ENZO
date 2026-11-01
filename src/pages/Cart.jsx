@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Minus, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
-import { formatPrice } from "../lib/formatPrice.js";
+import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
 import { api } from "../lib/api.js";
 
 // CHECKPOINT NOTE (Cart.jsx):
@@ -44,8 +44,17 @@ export default function Cart() {
             continue;
           }
 
+          const sizeSoldOut = item.size && live.sold_out_sizes?.includes(item.size);
+          const colorSoldOut = item.color && live.sold_out_colors?.includes(item.color);
+          if (sizeSoldOut || colorSoldOut) {
+            removeItem(item.key);
+            changes.push(t("cart.itemRemoved", { name: localize(item.name) }));
+            continue;
+          }
+
+          const livePrice = getDiscountedPrice(live.price, live.discount_percent);
           const updates = {};
-          if (live.price !== item.price) updates.price = live.price;
+          if (livePrice !== item.price) updates.price = livePrice;
           if (live.stock !== item.stock) updates.stock = live.stock;
 
           if (live.stock < item.quantity) {

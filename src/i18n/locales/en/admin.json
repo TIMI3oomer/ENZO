@@ -6,6 +6,7 @@
     "customers": "Customers",
     "analytics": "Analytics",
     "categories": "Categories",
+    "content": "Site content",
     "backToStore": "Back to store",
     "logout": "Log out"
   },
@@ -37,7 +38,10 @@
     "colorImages": "Assign a photo per color",
     "noImageAssigned": "No photo assigned",
     "photoNumber": "Photo #{{n}}",
-    "slugOptional": "Slug (optional — auto-generated if left blank)"
+    "slugOptional": "Slug (optional — auto-generated if left blank)",
+    "soldOutSizes": "Mark sizes as sold out",
+    "soldOutColors": "Mark colors as sold out",
+    "discountPercent": "Discount %"
   },
   "orders": {
     "title": "Orders",
@@ -87,5 +91,13 @@
     "cancel": "Cancel",
     "empty": "No categories yet",
     "confirmDelete": "Delete this category? Products using it will become uncategorized."
+  },
+  "content": {
+    "title": "Site content",
+    "intro": "Edit the text and images shown on the public site. Leave a field blank to use the default.",
+    "save": "Save",
+    "saved": "Saved",
+    "page_home": "Home page",
+    "page_site": "Site-wide"
   }
 }

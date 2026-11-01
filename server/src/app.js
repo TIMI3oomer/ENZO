@@ -11,6 +11,7 @@ import ordersRoutes from "./routes/orders.js";
 import adminRoutes from "./routes/admin.js";
 import accountRoutes from "./routes/account.js";
 import webhooksRoutes from "./routes/webhooks.js";
+import contentRoutes from "./routes/content.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -109,6 +110,7 @@ app.use("/api/categories", categoriesRoutes);
 app.use("/api/orders", orderLimiter, ordersRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/account", accountRoutes);
+app.use("/api/content", contentRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

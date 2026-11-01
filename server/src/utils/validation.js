@@ -50,6 +50,9 @@ export const productSchema = z.object({
   color_images: z.record(z.string().url()).optional().default({}),
   images: z.array(z.string().url()).default([]),
   is_active: z.boolean().optional(),
+  sold_out_sizes: z.array(z.string().max(10)).default([]),
+  sold_out_colors: z.array(z.string().max(30)).default([]),
+  discount_percent: z.number().min(0).max(100).default(0),
 });
 
 export const orderStatusSchema = z.object({
@@ -71,6 +74,27 @@ export const categorySchema = z.object({
 // PATCH /api/admin/orders/:id/delivery-fee) instead of one global rate.
 export const deliveryFeeSchema = z.object({
   delivery_fee: z.number().nonnegative(),
+});
+
+// Manifest-driven CMS (content_items / content_collections, see
+// supabase/migration_v12.sql). One page's worth of scalars + ordered
+// collection sections is saved together from the dashboard editor in a
+// single PUT, so this validates the whole payload at once.
+export const contentItemSchema = z.object({
+  section: z.string().trim().min(1).max(100),
+  key: z.string().trim().min(1).max(100),
+  value: z.string().max(5000).nullable().optional(),
+});
+
+export const contentCollectionItemSchema = z.object({
+  section: z.string().trim().min(1).max(100),
+  sort_order: z.number().int().nonnegative().optional(),
+  data: z.record(z.any()),
+});
+
+export const contentPageSchema = z.object({
+  items: z.array(contentItemSchema).max(200).default([]),
+  collections: z.array(contentCollectionItemSchema).max(200).default([]),
 });
 
 // Small helper used by every route: validates `req.body` against a zod

@@ -18,6 +18,7 @@ import AdminProductForm from "./pages/admin/ProductForm.jsx";
 import AdminOrders from "./pages/admin/Orders.jsx";
 import AdminCustomers from "./pages/admin/Customers.jsx";
 import AdminCategories from "./pages/admin/Categories.jsx";
+import AdminContent from "./pages/admin/Content.jsx";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute.jsx";
 import PageTransition from "./components/PageTransition.jsx";
 
@@ -114,6 +115,14 @@ export default function App() {
         element={
           <ProtectedAdminRoute>
             <AdminCategories />
+          </ProtectedAdminRoute>
+        }
+      />
+      <Route
+        path="/admin/content"
+        element={
+          <ProtectedAdminRoute>
+            <AdminContent />
           </ProtectedAdminRoute>
         }
       />

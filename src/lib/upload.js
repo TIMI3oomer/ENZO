@@ -37,7 +37,6 @@ import { supabase } from "./supabaseClient.js";
 // below run. The stored file is always a genuine, universally-viewable
 // JPEG regardless of what device/format the admin's photo came from —
 // this isn't a workaround, it's the correct fix.
-const BUCKET = "product-images";
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB — must match schema.sql's file_size_limit
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
@@ -97,7 +96,7 @@ async function convertHeicToJpeg(file) {
   return new File([blob], newName, { type: "image/jpeg" });
 }
 
-export async function uploadProductImage(originalFile) {
+async function uploadImageTo(bucket, originalFile) {
   const file = isHeic(originalFile) ? await convertHeicToJpeg(originalFile) : originalFile;
 
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
@@ -115,13 +114,24 @@ export async function uploadProductImage(originalFile) {
   const ext = file.name.split(".").pop();
   const path = `${crypto.randomUUID()}.${ext}`;
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+  const { error } = await supabase.storage.from(bucket).upload(path, file, {
     cacheControl: "3600",
     upsert: false,
     contentType: file.type,
   });
   if (error) throw error;
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
+}
+
+export function uploadProductImage(file) {
+  return uploadImageTo("product-images", file);
+}
+
+// Same security checks, uploaded to the CMS's own bucket (content-images,
+// see supabase/migration_v12.sql) instead of product-images — kept
+// separate so the two are managed/cleaned up independently.
+export function uploadContentImage(file) {
+  return uploadImageTo("content-images", file);
 }

@@ -43,12 +43,21 @@ create table if not exists products (
   color_images jsonb not null default '{}', -- { "Black": "https://...", "Gold": "https://..." }
   images text[] not null default '{}',
   stock int not null default 0 check (stock >= 0),
+  -- Which of this product's sizes/colors are currently unavailable,
+  -- independent of each other (not a per-combination stock grid) --
+  -- the storefront disables + red-marks these as "Sold out".
+  sold_out_sizes text[] not null default '{}',
+  sold_out_colors text[] not null default '{}',
+  -- 0 = not on sale. Sale price is computed as price * (1 -
+  -- discount_percent/100) wherever shown, never stored separately.
+  discount_percent numeric(5,2) not null default 0 check (discount_percent >= 0 and discount_percent <= 100),
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
 create index if not exists idx_products_category on products(category_id);
 create index if not exists idx_products_active on products(is_active);
+create index if not exists idx_products_discount on products(discount_percent) where discount_percent > 0;
 
 -- ---------- ORDERS ----------
 -- DELIVERY FEE: varies by city, so it's never charged/guessed at
@@ -241,6 +250,14 @@ begin
       raise exception 'Product is no longer available: %', v_product.slug;
     end if;
 
+    if (v_item->>'size') is not null and v_product.sold_out_sizes @> array[v_item->>'size'] then
+      raise exception 'Size % is sold out for %', v_item->>'size', v_product.slug;
+    end if;
+
+    if (v_item->>'color') is not null and v_product.sold_out_colors @> array[v_item->>'color'] then
+      raise exception 'Color % is sold out for %', v_item->>'color', v_product.slug;
+    end if;
+
     v_qty := (v_item->>'quantity')::int;
     if v_qty is null or v_qty <= 0 then
       raise exception 'Invalid quantity for product %', v_product.slug;
@@ -250,7 +267,9 @@ begin
       raise exception 'Insufficient stock for %: only % left', v_product.slug, v_product.stock;
     end if;
 
-    v_subtotal := v_subtotal + (v_product.price * v_qty);
+    -- Sale price, same math as the frontend (never a stored column) --
+    -- the subtotal/line item below MUST agree with what the customer saw.
+    v_subtotal := v_subtotal + (round(v_product.price * (1 - v_product.discount_percent / 100), 2) * v_qty);
   end loop;
 
   -- delivery_fee / delivery_fee_confirmed are left at their column
@@ -272,7 +291,10 @@ begin
     v_qty := (v_item->>'quantity')::int;
 
     insert into order_items (order_id, product_id, product_name, size, color, quantity, unit_price)
-    values (v_order_id, v_product.id, v_product.name, v_item->>'size', v_item->>'color', v_qty, v_product.price);
+    values (
+      v_order_id, v_product.id, v_product.name, v_item->>'size', v_item->>'color', v_qty,
+      round(v_product.price * (1 - v_product.discount_percent / 100), 2)
+    );
 
     update products set stock = stock - v_qty where id = v_product.id;
   end loop;
@@ -309,6 +331,69 @@ create policy "admin upload product images" on storage.objects
 
 create policy "admin delete product images" on storage.objects
   for delete using (bucket_id = 'product-images' and is_admin());
+
+-- =====================================================================
+-- MINI CMS: page text/images that don't have their own admin screen
+-- (products/categories/orders already do -- this is NOT for those).
+-- content_items: singleton scalars per (page, section, key) -- a
+-- heading, a button label, an image URL. content_collections: small
+-- ordered lists per (page, section) -- footer social links. Reuses the
+-- SAME is_admin() as every other admin table above, not a separate
+-- admin allow-list. See src/lib/contentManifest.js for the fields this
+-- actually drives and their fallback defaults.
+-- =====================================================================
+create table if not exists content_items (
+  id         uuid primary key default gen_random_uuid(),
+  page       text not null,
+  section    text not null,
+  key        text not null,
+  value      text,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id) on delete set null
+);
+create unique index if not exists content_items_page_section_key_idx
+  on content_items (page, section, key);
+create index if not exists content_items_page_idx on content_items (page);
+
+create table if not exists content_collections (
+  id         uuid primary key default gen_random_uuid(),
+  page       text not null,
+  section    text not null,
+  sort_order integer not null default 0,
+  data       jsonb not null default '{}',
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id) on delete set null
+);
+create index if not exists content_collections_page_section_idx
+  on content_collections (page, section, sort_order);
+
+alter table content_items enable row level security;
+alter table content_collections enable row level security;
+
+create policy "public read content_items" on content_items for select using (true);
+create policy "admin write content_items" on content_items for all using (is_admin()) with check (is_admin());
+
+create policy "public read content_collections" on content_collections for select using (true);
+create policy "admin write content_collections" on content_collections for all using (is_admin()) with check (is_admin());
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'content-images', 'content-images', true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp']
+  -- no image/svg+xml: an uploaded SVG can carry <script>, and this
+  -- bucket is served publicly -- a stored-XSS vector.
+)
+on conflict (id) do update set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "public read content images" on storage.objects
+  for select using (bucket_id = 'content-images');
+
+create policy "admin write content images" on storage.objects
+  for all using (bucket_id = 'content-images' and is_admin())
+  with check (bucket_id = 'content-images' and is_admin());
 
 -- =====================================================================
 -- SEED DATA (optional — remove or edit before going live)

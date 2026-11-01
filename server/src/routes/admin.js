@@ -1,7 +1,14 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabaseAdmin.js";
 import { attachUser, requireAdmin } from "../middleware/auth.js";
-import { productSchema, orderStatusSchema, categorySchema, deliveryFeeSchema, parseOrThrow } from "../utils/validation.js";
+import {
+  productSchema,
+  orderStatusSchema,
+  categorySchema,
+  deliveryFeeSchema,
+  contentPageSchema,
+  parseOrThrow,
+} from "../utils/validation.js";
 import { sendOrderStatusEmail, sendOrderTotalEmail } from "../lib/email.js";
 
 const router = Router();
@@ -321,6 +328,61 @@ router.get("/customers", async (_req, res, next) => {
     }));
 
     res.json(customers);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------- CMS content (manifest-driven page text/images) ----------
+// The dashboard editor loads current content from the public
+// GET /api/content/:page (same data, no admin-only fields to hide) and
+// saves everything for that page in one PUT here.
+router.put("/content/:page", async (req, res, next) => {
+  try {
+    const { page } = req.params;
+    const body = parseOrThrow(contentPageSchema, req.body);
+
+    if (body.items.length > 0) {
+      const rows = body.items.map((item) => ({
+        page,
+        section: item.section,
+        key: item.key,
+        value: item.value ?? null,
+        updated_by: req.user.id,
+      }));
+      const { error } = await supabaseAdmin
+        .from("content_items")
+        .upsert(rows, { onConflict: "page,section,key" });
+      if (error) throw error;
+    }
+
+    // Collections are replaced whole-section-at-a-time: every section
+    // present in this save gets its old rows deleted and the submitted
+    // ones inserted in order. A section left out of the payload entirely
+    // is untouched, so the dashboard editor must always submit the full
+    // current state of every section it's editing, including an emptied one.
+    const sections = [...new Set(body.collections.map((c) => c.section))];
+    for (const section of sections) {
+      const { error: delError } = await supabaseAdmin
+        .from("content_collections")
+        .delete()
+        .eq("page", page)
+        .eq("section", section);
+      if (delError) throw delError;
+    }
+    if (body.collections.length > 0) {
+      const rows = body.collections.map((c, idx) => ({
+        page,
+        section: c.section,
+        sort_order: c.sort_order ?? idx,
+        data: c.data,
+        updated_by: req.user.id,
+      }));
+      const { error: insError } = await supabaseAdmin.from("content_collections").insert(rows);
+      if (insError) throw insError;
+    }
+
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

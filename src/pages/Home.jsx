@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
 import { useContent } from "../hooks/useContent.js";
+import { ArrowRight } from "lucide-react";
 import AnimatedHero from "../components/AnimatedHero.jsx";
 import ScrollShowcase from "../components/ScrollShowcase.jsx";
 import TrustBadges from "../components/TrustBadges.jsx";
 import ProductCard from "../components/ProductCard.jsx";
+import Reveal from "../components/Reveal.jsx";
 
 // CHECKPOINT NOTE (Home.jsx):
 // AnimatedHero.jsx is the entry sequence (logo flips from background to
@@ -37,30 +39,61 @@ export default function Home() {
   return (
     <div>
       <AnimatedHero products={products} hero={content.hero} />
-      <TrustBadges />
 
-      {saleProducts.length > 0 && (
-        <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
-          <h2 className="text-start font-display text-2xl">{t("product.onSale")}</h2>
-          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {saleProducts.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
+      {/* Soft ambient gold glow behind the badges/sale/shop run below --
+          one subtle, blurred accent (not a repeated motif) so the page
+          doesn't feel like flat stacked boxes once the hero's done. */}
+      <div className="relative isolate overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 start-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-enzo-gold/15 blur-3xl sm:h-96 sm:w-96"
+        />
+
+        <TrustBadges />
+
+        {saleProducts.length > 0 && (
+          <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6">
+            <Reveal>
+              <SectionKicker />
+              <h2 className="text-start font-display text-2xl">{t("product.onSale")}</h2>
+            </Reveal>
+
+            {/* Mobile: horizontal snap-scroll strip (feels native on a
+                phone, no awkward 2-up grid squeeze). sm+: back to a grid. */}
+            <div className="-mx-4 mt-5 flex gap-4 overflow-x-auto px-4 pb-1 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4">
+              {saleProducts.map((p) => (
+                <div key={p.id} className="w-[44%] shrink-0 snap-start sm:w-auto">
+                  <ProductCard product={p} />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div>
-        <h2 className="mx-auto max-w-7xl px-4 pt-4 text-start font-display text-2xl sm:px-6">
-          {t("nav.shop")}
-        </h2>
-        <ScrollShowcase products={products} />
-        <div className="mx-auto max-w-7xl px-4 pb-20 text-center sm:px-6">
-          <Link to="/shop" className="text-sm font-medium text-enzo-gold underline underline-offset-4">
-            {content.hero.cta}
-          </Link>
+        <div className="pt-14">
+          <Reveal className="mx-auto max-w-7xl px-4 sm:px-6">
+            <SectionKicker />
+            <h2 className="text-start font-display text-2xl">{t("nav.shop")}</h2>
+          </Reveal>
+          <ScrollShowcase products={products} />
+          <div className="mx-auto max-w-7xl px-4 pb-20 text-center sm:px-6">
+            <Link
+              to="/shop"
+              className="group inline-flex items-center gap-1.5 text-sm font-medium text-enzo-gold underline underline-offset-4 transition-colors hover:text-enzo-goldBright"
+            >
+              {content.hero.cta}
+              <ArrowRight size={15} className="rtl:rotate-180 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>
   );
+}
+
+// Tiny gold accent bar above a section heading -- a common premium-brand
+// "kicker" touch, reused by both headings above so they feel like one
+// family instead of each page section inventing its own heading style.
+function SectionKicker() {
+  return <span className="mb-2 block h-[3px] w-8 rounded-full bg-enzo-gradient" />;
 }

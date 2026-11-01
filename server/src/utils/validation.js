@@ -53,6 +53,10 @@ export const productSchema = z.object({
   sold_out_sizes: z.array(z.string().max(10)).default([]),
   sold_out_colors: z.array(z.string().max(30)).default([]),
   discount_percent: z.number().min(0).max(100).default(0),
+  // Per size+color stock ("<color>__<size>" -> quantity), only for combos
+  // the admin has actually entered a number for -- see
+  // src/lib/variantStock.js for the fallback rule when a key is missing.
+  variant_stock: z.record(z.number().int().nonnegative()).optional().default({}),
 });
 
 export const orderStatusSchema = z.object({

@@ -95,7 +95,7 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
     const productIds = body.items.map((i) => i.product_id);
     const { data: products, error: productsError } = await supabaseAdmin
       .from("products")
-      .select("id, name, price, stock, is_active, discount_percent, sold_out_sizes, sold_out_colors")
+      .select("id, name, price, stock, is_active, discount_percent, sold_out_sizes, sold_out_colors, variant_stock")
       .in("id", productIds);
     if (productsError) throw productsError;
 
@@ -116,7 +116,15 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
         err.status = 400;
         throw err;
       }
-      if (product.stock < item.quantity) {
+      // Per size+color stock when tracked for this combo, else the plain
+      // aggregate -- same fallback rule as place_order() (schema.sql) and
+      // src/lib/variantStock.js, so all three checkout paths agree.
+      const variantKey = item.size && item.color ? `${item.color}__${item.size}` : null;
+      const availableStock =
+        variantKey && product.variant_stock && Object.prototype.hasOwnProperty.call(product.variant_stock, variantKey)
+          ? Number(product.variant_stock[variantKey]) || 0
+          : product.stock;
+      if (availableStock < item.quantity) {
         const err = new Error(`Insufficient stock for ${product.name?.en || product.name?.ar}`);
         err.status = 400;
         throw err;

@@ -51,6 +51,17 @@ create table if not exists products (
   -- 0 = not on sale. Sale price is computed as price * (1 -
   -- discount_percent/100) wherever shown, never stored separately.
   discount_percent numeric(5,2) not null default 0 check (discount_percent >= 0 and discount_percent <= 100),
+  -- Per size+color stock (e.g. grey/S = 10, blue/S = 5), keyed
+  -- "<color>__<size>" -> quantity. Only entries the admin has actually
+  -- filled in exist here -- a combo with no key falls back to the plain
+  -- `stock` aggregate above (see src/lib/variantStock.js and
+  -- place_order() below), so a product saved before this existed, or one
+  -- with only sizes or only colors, behaves exactly as it did before.
+  -- `stock` itself is always kept as the sum of this map once it's in
+  -- use (computed client-side in admin/ProductForm.jsx on save), so
+  -- every other screen that already reads the plain aggregate keeps
+  -- working unchanged.
+  variant_stock jsonb not null default '{}',
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -231,6 +242,8 @@ declare
   v_item jsonb;
   v_product products%rowtype;
   v_qty int;
+  v_variant_key text;
+  v_available int;
 begin
   if jsonb_array_length(p_items) = 0 then
     raise exception 'Cannot place an order with no items';
@@ -263,8 +276,25 @@ begin
       raise exception 'Invalid quantity for product %', v_product.slug;
     end if;
 
-    if v_product.stock < v_qty then
-      raise exception 'Insufficient stock for %: only % left', v_product.slug, v_product.stock;
+    -- Per size+color stock, when the admin has actually tracked that
+    -- combo (variant_stock has the key) -- otherwise fall back to the
+    -- plain aggregate `stock`, same rule src/lib/variantStock.js uses
+    -- client-side, so a product without a stock grid yet behaves exactly
+    -- as it did before this existed.
+    if (v_item->>'size') is not null and (v_item->>'color') is not null then
+      v_variant_key := (v_item->>'color') || '__' || (v_item->>'size');
+    else
+      v_variant_key := null;
+    end if;
+
+    if v_variant_key is not null and v_product.variant_stock ? v_variant_key then
+      v_available := (v_product.variant_stock ->> v_variant_key)::int;
+    else
+      v_available := v_product.stock;
+    end if;
+
+    if v_available < v_qty then
+      raise exception 'Insufficient stock for %: only % left', v_product.slug, v_available;
     end if;
 
     -- Sale price, same math as the frontend (never a stored column) --
@@ -296,7 +326,24 @@ begin
       round(v_product.price * (1 - v_product.discount_percent / 100), 2)
     );
 
-    update products set stock = stock - v_qty where id = v_product.id;
+    if (v_item->>'size') is not null and (v_item->>'color') is not null then
+      v_variant_key := (v_item->>'color') || '__' || (v_item->>'size');
+    else
+      v_variant_key := null;
+    end if;
+
+    -- The aggregate `stock` is ALWAYS decremented (every other screen --
+    -- ProductCard's "out of stock" ribbon, Cart.jsx -- reads only that),
+    -- and the specific variant cell on top of it when one is tracked, so
+    -- the two never drift apart.
+    update products set
+      stock = greatest(0, stock - v_qty),
+      variant_stock = case
+        when v_variant_key is not null and variant_stock ? v_variant_key
+          then jsonb_set(variant_stock, array[v_variant_key], to_jsonb(greatest(0, (variant_stock ->> v_variant_key)::int - v_qty)))
+        else variant_stock
+      end
+    where id = v_product.id;
   end loop;
 
   return query select v_order_id, v_order_number, v_subtotal;

@@ -4,7 +4,9 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
+import { useContent } from "../hooks/useContent.js";
 import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
+import { getAvailableStock } from "../lib/variantStock.js";
 import ErrorBanner from "../components/ErrorBanner.jsx";
 import { COLOR_HEX } from "../lib/colors.js";
 
@@ -20,6 +22,7 @@ export default function ProductDetail() {
   const { t } = useTranslation("common");
   const localize = useLocalizedField();
   const { addItem } = useCart();
+  const siteContent = useContent("site");
 
   const [product, setProduct] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -177,15 +180,21 @@ export default function ProductDetail() {
         {(() => {
           const sizeSoldOut = size && product.sold_out_sizes?.includes(size);
           const colorSoldOut = color && product.sold_out_colors?.includes(color);
-          const unavailable = product.stock === 0 || sizeSoldOut || colorSoldOut;
+          const available = getAvailableStock(product, size, color);
+          const unavailable = available <= 0 || sizeSoldOut || colorSoldOut;
           return (
-            <button
-              onClick={handleAdd}
-              disabled={unavailable}
-              className="mt-8 w-full rounded-md bg-enzo-gradient py-3 font-semibold text-enzo-black disabled:opacity-40"
-            >
-              {unavailable ? t("product.soldOut") : added ? t("success.addedToCart") : t("product.addToCart")}
-            </button>
+            <>
+              <button
+                onClick={handleAdd}
+                disabled={unavailable}
+                className="mt-8 w-full rounded-md bg-enzo-gradient py-3 font-semibold text-enzo-black disabled:opacity-40"
+              >
+                {unavailable ? t("product.soldOut") : added ? t("success.addedToCart") : t("product.addToCart")}
+              </button>
+              {!unavailable && available <= 5 && (
+                <p className="mt-2 text-xs text-enzo-error">{t("product.lowStock", { count: available })}</p>
+              )}
+            </>
           );
         })()}
 
@@ -202,12 +211,12 @@ export default function ProductDetail() {
               <dd>{localize(product.fit)}</dd>
             </div>
           )}
-          {localize(product.care_instructions) && (
-            <div className="flex justify-between">
-              <dt className="text-enzo-muted">{t("product.care")}</dt>
-              <dd>{localize(product.care_instructions)}</dd>
-            </div>
-          )}
+          {/* Static, store-wide text (not per-product) -- editable from
+              /admin/content, see src/lib/contentManifest.js */}
+          <div className="flex justify-between gap-6">
+            <dt className="shrink-0 text-enzo-muted">{t("product.care")}</dt>
+            <dd className="text-end">{siteContent.product.careInstructions}</dd>
+          </div>
         </dl>
       </div>
     </div>

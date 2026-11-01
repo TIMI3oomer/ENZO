@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { getDiscountedPrice } from "../lib/formatPrice.js";
+import { getAvailableStock } from "../lib/variantStock.js";
 
 const CartContext = createContext(null);
 const STORAGE_KEY = "enzo_cart_v1";
@@ -46,7 +47,10 @@ export function CartProvider({ children }) {
           size,
           color,
           quantity,
-          stock: product.stock, // snapshot, refreshed live on the Cart page -- see Cart.jsx
+          // The specific size+color combo's limit when tracked, else the
+          // product's aggregate -- snapshot, refreshed live on the Cart
+          // page (see Cart.jsx).
+          stock: getAvailableStock(product, size, color),
         },
       ];
     });

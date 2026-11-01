@@ -41,7 +41,10 @@
     "slugOptional": "الرابط المختصر (اختياري — يُنشأ تلقائياً إذا تُرك فارغاً)",
     "soldOutSizes": "تحديد المقاسات غير المتوفرة",
     "soldOutColors": "تحديد الألوان غير المتوفرة",
-    "discountPercent": "نسبة الخصم %"
+    "discountPercent": "نسبة الخصم %",
+    "addEnglish": "إضافة ترجمة إنجليزية (اختياري)",
+    "stockGrid": "الكمية لكل مقاس ولون",
+    "stockGridTotal": "إجمالي الكمية: {{total}}"
   },
   "orders": {
     "title": "الطلبات",

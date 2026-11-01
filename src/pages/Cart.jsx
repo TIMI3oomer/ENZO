@@ -5,6 +5,7 @@ import { Minus, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
+import { getAvailableStock } from "../lib/variantStock.js";
 import { api } from "../lib/api.js";
 
 // CHECKPOINT NOTE (Cart.jsx):
@@ -53,18 +54,23 @@ export default function Cart() {
           }
 
           const livePrice = getDiscountedPrice(live.price, live.discount_percent);
+          // The specific size+color combo's stock when tracked, else the
+          // aggregate -- same rule addItem() used when this line was
+          // first added (see CartContext.jsx), so this isn't comparing a
+          // per-combo snapshot against an unrelated store-wide total.
+          const liveStock = getAvailableStock(live, item.size, item.color);
           const updates = {};
           if (livePrice !== item.price) updates.price = livePrice;
-          if (live.stock !== item.stock) updates.stock = live.stock;
+          if (liveStock !== item.stock) updates.stock = liveStock;
 
-          if (live.stock < item.quantity) {
-            updateQuantity(item.key, Math.max(1, live.stock));
-            if (live.stock === 0) {
+          if (liveStock < item.quantity) {
+            updateQuantity(item.key, Math.max(1, liveStock));
+            if (liveStock === 0) {
               removeItem(item.key);
               changes.push(t("cart.itemRemoved", { name: localize(item.name) }));
               continue;
             }
-            changes.push(t("cart.quantityReduced", { name: localize(item.name), stock: live.stock }));
+            changes.push(t("cart.quantityReduced", { name: localize(item.name), stock: liveStock }));
           }
 
           if (Object.keys(updates).length > 0) syncItem(item.key, updates);

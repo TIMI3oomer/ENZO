@@ -55,6 +55,14 @@ export const SCALAR_FIELDS = [
     label: "Site logo (navbar, footer, home)",
     defaultT: () => "/logo.jpg",
   },
+  {
+    page: "site",
+    section: "product",
+    key: "careInstructions",
+    type: "text",
+    label: "Care instructions (shown on every product page)",
+    defaultT: () => "اغسل بماء بارد، لا تستخدم المبيض، جفف بالهواء، كوي على حرارة منخفضة.",
+  },
 ];
 
 // No ordered-list content exists in this codebase yet (e.g. footer social

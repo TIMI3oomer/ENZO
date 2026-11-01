@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { X, Upload } from "lucide-react";
+import { X, Upload, ChevronDown } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { uploadProductImage } from "../../lib/upload.js";
-import { PRESET_COLORS } from "../../lib/colors.js";
+import { PRESET_COLORS, COLOR_HEX } from "../../lib/colors.js";
+import { variantKey } from "../../lib/variantStock.js";
 import AdminLayout from "../../components/AdminLayout.jsx";
 
 const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
@@ -22,6 +23,12 @@ function generateSlug(base) {
   return cleaned ? `${cleaned}-${suffix}` : `product-${suffix}`;
 }
 
+// Drops every variant_stock entry whose key matches `shouldRemove` --
+// used when a size/color is deselected so stale grid cells can't linger.
+function pruneVariantStock(variantStock, shouldRemove) {
+  return Object.fromEntries(Object.entries(variantStock).filter(([key]) => !shouldRemove(key)));
+}
+
 const empty = {
   slug: "",
   name_ar: "",
@@ -32,8 +39,6 @@ const empty = {
   material_en: "",
   fit_ar: "",
   fit_en: "",
-  care_ar: "",
-  care_en: "",
   price: "",
   stock: "",
   category_id: "",
@@ -44,6 +49,7 @@ const empty = {
   sold_out_sizes: [],
   sold_out_colors: [],
   discount_percent: "",
+  variant_stock: {},
 };
 
 // CHECKPOINT NOTE (admin/ProductForm.jsx):
@@ -58,6 +64,24 @@ const empty = {
 //   files can be selected at once; each shows a thumbnail with a remove
 //   (x) button. Requires the "product-images" Storage bucket, created
 //   automatically by schema.sql / migration_v6.sql.
+// - English translations are now collapsed behind one "Add English"
+//   toggle instead of a field-for-field EN twin next to every Arabic
+//   field -- Arabic is this store's primary language, English is a nice-
+//   to-have, so the form now looks like that by default. Auto-expands
+//   when editing a product that already has English text, so existing
+//   translations are never hidden from view by surprise.
+// - Care instructions are no longer a per-product field at all -- it's
+//   one static, store-wide text now (see src/lib/contentManifest.js,
+//   editable from /admin/content), since it's realistically the same
+//   wording for every garment. One less thing to fill in per product.
+// - Stock: when a product has BOTH sizes and colors selected, a per-
+//   combo grid replaces the single stock number (a grey shirt might have
+//   10 in S while the same shirt in blue only has 5 in S) -- see
+//   src/lib/variantStock.js. The product's plain aggregate `stock` is
+//   computed automatically as the sum of the grid so every OTHER screen
+//   that already reads product.stock (ProductCard's "out of stock"
+//   ribbon, Cart.jsx) keeps working unchanged. A product with only sizes,
+//   only colors, or neither keeps the simple single stock field.
 export default function AdminProductForm() {
   const { t } = useTranslation("admin");
   const { t: tc } = useTranslation("common");
@@ -70,6 +94,7 @@ export default function AdminProductForm() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [showEnglish, setShowEnglish] = useState(false);
 
   useEffect(() => {
     api.get("/categories").then(setCategories).catch(() => {});
@@ -81,18 +106,20 @@ export default function AdminProductForm() {
       .get(`/admin/products/${id}`)
       .then((data) => {
         if (!data) return;
+        const name_en = data.name?.en || "";
+        const description_en = data.description?.en || "";
+        const material_en = data.material?.en || "";
+        const fit_en = data.fit?.en || "";
         setForm({
           slug: data.slug,
           name_ar: data.name?.ar || "",
-          name_en: data.name?.en || "",
+          name_en,
           description_ar: data.description?.ar || "",
-          description_en: data.description?.en || "",
+          description_en,
           material_ar: data.material?.ar || "",
-          material_en: data.material?.en || "",
+          material_en,
           fit_ar: data.fit?.ar || "",
-          fit_en: data.fit?.en || "",
-          care_ar: data.care_instructions?.ar || "",
-          care_en: data.care_instructions?.en || "",
+          fit_en,
           price: data.price,
           stock: data.stock,
           category_id: data.category_id || "",
@@ -103,7 +130,10 @@ export default function AdminProductForm() {
           sold_out_sizes: data.sold_out_sizes || [],
           sold_out_colors: data.sold_out_colors || [],
           discount_percent: data.discount_percent || "",
+          variant_stock: data.variant_stock || {},
         });
+        // Don't hide English content the product already has.
+        if (name_en || description_en || material_en || fit_en) setShowEnglish(true);
       })
       .catch(() => {});
   }, [id, isEdit]);
@@ -118,8 +148,9 @@ export default function AdminProductForm() {
   }
 
   // Deselecting a size/color it's offered in no longer makes sense as
-  // "sold out" either -- keep the sold-out flags in sync so they can't
-  // silently reference an option the product doesn't even have anymore.
+  // "sold out" either, and any stock-grid cells for it are meaningless --
+  // keep both in sync so they can't silently reference an option the
+  // product doesn't even have anymore.
   function toggleSize(size) {
     setForm((f) => {
       const nowOffered = !f.sizes.includes(size);
@@ -127,6 +158,9 @@ export default function AdminProductForm() {
         ...f,
         sizes: nowOffered ? [...f.sizes, size] : f.sizes.filter((s) => s !== size),
         sold_out_sizes: nowOffered ? f.sold_out_sizes : f.sold_out_sizes.filter((s) => s !== size),
+        variant_stock: nowOffered
+          ? f.variant_stock
+          : pruneVariantStock(f.variant_stock, (key) => key.endsWith(`__${size}`)),
       };
     });
   }
@@ -137,8 +171,16 @@ export default function AdminProductForm() {
         ...f,
         colors: nowOffered ? [...f.colors, color] : f.colors.filter((c) => c !== color),
         sold_out_colors: nowOffered ? f.sold_out_colors : f.sold_out_colors.filter((c) => c !== color),
+        variant_stock: nowOffered
+          ? f.variant_stock
+          : pruneVariantStock(f.variant_stock, (key) => key.startsWith(`${color}__`)),
       };
     });
+  }
+
+  function setVariantStock(color, size, rawValue) {
+    const qty = Math.max(0, Number(rawValue) || 0);
+    setForm((f) => ({ ...f, variant_stock: { ...f.variant_stock, [variantKey(color, size)]: qty } }));
   }
 
   async function handleFilesSelected(e) {
@@ -166,11 +208,18 @@ export default function AdminProductForm() {
     setForm((f) => ({ ...f, images: f.images.filter((i) => i !== url) }));
   }
 
+  const hasVariantGrid = form.sizes.length > 0 && form.colors.length > 0;
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
 
     setSaving(true);
+
+    // With a size x color grid, the aggregate stock other screens read
+    // (ProductCard's "out of stock" ribbon, Cart.jsx) is just the sum of
+    // every cell -- never hand-entered directly in that mode.
+    const variantStockTotal = Object.values(form.variant_stock).reduce((sum, n) => sum + (Number(n) || 0), 0);
 
     const payload = {
       slug: form.slug.trim() || generateSlug(form.name_en || form.name_ar),
@@ -178,9 +227,8 @@ export default function AdminProductForm() {
       description: { ar: form.description_ar, en: form.description_en },
       material: { ar: form.material_ar, en: form.material_en },
       fit: { ar: form.fit_ar, en: form.fit_en },
-      care_instructions: { ar: form.care_ar, en: form.care_en },
       price: Number(form.price) || 0,
-      stock: Number(form.stock) || 0,
+      stock: hasVariantGrid ? variantStockTotal : Number(form.stock) || 0,
       category_id: form.category_id || null,
       sizes: form.sizes,
       colors: form.colors,
@@ -189,6 +237,7 @@ export default function AdminProductForm() {
       sold_out_sizes: form.sold_out_sizes,
       sold_out_colors: form.sold_out_colors,
       discount_percent: Number(form.discount_percent) || 0,
+      variant_stock: hasVariantGrid ? form.variant_stock : {},
     };
 
     try {
@@ -210,59 +259,71 @@ export default function AdminProductForm() {
           <input className="input" value={form.slug} onChange={update("slug")} dir="ltr" />
         </FullRow>
 
-        <div>
+        <FullRow>
           <Label>{t("products.nameAr")}</Label>
           <input className="input" dir="rtl" value={form.name_ar} onChange={update("name_ar")} />
-        </div>
-        <div>
-          <Label>{t("products.nameEn")}</Label>
-          <input className="input" dir="ltr" value={form.name_en} onChange={update("name_en")} />
-        </div>
+        </FullRow>
 
-        <div>
+        <FullRow>
           <Label>{t("products.descAr")}</Label>
           <textarea className="input" dir="rtl" rows={3} value={form.description_ar} onChange={update("description_ar")} />
-        </div>
-        <div>
-          <Label>{t("products.descEn")}</Label>
-          <textarea className="input" dir="ltr" rows={3} value={form.description_en} onChange={update("description_en")} />
-        </div>
+        </FullRow>
 
-        <div>
-          <Label>{tc("product.material")} (AR)</Label>
+        <FullRow>
+          <Label>{tc("product.material")}</Label>
           <input className="input" dir="rtl" value={form.material_ar} onChange={update("material_ar")} />
-        </div>
-        <div>
-          <Label>{tc("product.material")} (EN)</Label>
-          <input className="input" dir="ltr" value={form.material_en} onChange={update("material_en")} />
-        </div>
+        </FullRow>
 
-        <div>
-          <Label>{tc("product.fit")} (AR)</Label>
+        <FullRow>
+          <Label>{tc("product.fit")}</Label>
           <input className="input" dir="rtl" value={form.fit_ar} onChange={update("fit_ar")} />
-        </div>
-        <div>
-          <Label>{tc("product.fit")} (EN)</Label>
-          <input className="input" dir="ltr" value={form.fit_en} onChange={update("fit_en")} />
-        </div>
+        </FullRow>
 
-        <div>
-          <Label>{tc("product.care")} (AR)</Label>
-          <input className="input" dir="rtl" value={form.care_ar} onChange={update("care_ar")} />
-        </div>
-        <div>
-          <Label>{tc("product.care")} (EN)</Label>
-          <input className="input" dir="ltr" value={form.care_en} onChange={update("care_en")} />
-        </div>
+        {/* English is optional -- collapsed by default so a quick add
+            only asks for Arabic. Auto-expands on edit when the product
+            already has English text (see the data-loading effect above). */}
+        <FullRow>
+          <button
+            type="button"
+            onClick={() => setShowEnglish((v) => !v)}
+            className="flex items-center gap-1.5 text-sm font-medium text-enzo-gold hover:text-enzo-goldBright"
+          >
+            <ChevronDown size={16} className={`transition-transform ${showEnglish ? "rotate-180" : ""}`} />
+            {t("products.addEnglish")}
+          </button>
+        </FullRow>
+
+        {showEnglish && (
+          <>
+            <FullRow>
+              <Label>{t("products.nameEn")}</Label>
+              <input className="input" dir="ltr" value={form.name_en} onChange={update("name_en")} />
+            </FullRow>
+            <FullRow>
+              <Label>{t("products.descEn")}</Label>
+              <textarea className="input" dir="ltr" rows={3} value={form.description_en} onChange={update("description_en")} />
+            </FullRow>
+            <FullRow>
+              <Label>{tc("product.material")} (EN)</Label>
+              <input className="input" dir="ltr" value={form.material_en} onChange={update("material_en")} />
+            </FullRow>
+            <FullRow>
+              <Label>{tc("product.fit")} (EN)</Label>
+              <input className="input" dir="ltr" value={form.fit_en} onChange={update("fit_en")} />
+            </FullRow>
+          </>
+        )}
 
         <div>
           <Label>{t("products.price")}</Label>
           <input className="input" type="number" step="0.01" value={form.price} onChange={update("price")} />
         </div>
-        <div>
-          <Label>{t("products.stock")}</Label>
-          <input className="input" type="number" value={form.stock} onChange={update("stock")} />
-        </div>
+        {!hasVariantGrid && (
+          <div>
+            <Label>{t("products.stock")}</Label>
+            <input className="input" type="number" value={form.stock} onChange={update("stock")} />
+          </div>
+        )}
 
         <div>
           <Label>{t("products.discountPercent")}</Label>
@@ -378,6 +439,54 @@ export default function AdminProductForm() {
                 </button>
               ))}
             </div>
+          </FullRow>
+        )}
+
+        {/* Per size+color stock grid -- only once both sizes and colors
+            are chosen (a grey shirt might have 10 in S while the same
+            shirt in blue only has 5 in S). The plain "stock" field above
+            is hidden in this mode; its value is computed from this grid
+            on save (see handleSubmit). */}
+        {hasVariantGrid && (
+          <FullRow>
+            <Label>{t("products.stockGrid")}</Label>
+            <div className="overflow-x-auto">
+              <div
+                className="inline-grid items-center gap-x-3 gap-y-2"
+                style={{ gridTemplateColumns: `110px repeat(${form.sizes.length}, 56px)` }}
+              >
+                <div />
+                {form.sizes.map((s) => (
+                  <div key={s} className="text-center text-xs font-medium text-enzo-muted">
+                    {s}
+                  </div>
+                ))}
+                {form.colors.map((c) => (
+                  <Fragment key={c}>
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="h-3 w-3 shrink-0 rounded-full border border-enzo-line" style={{ backgroundColor: COLOR_HEX[c] || "#333" }} />
+                      {c}
+                    </div>
+                    {form.sizes.map((s) => (
+                      <input
+                        key={`${c}-${s}`}
+                        type="number"
+                        min="0"
+                        className="input w-14 px-1 py-1 text-center text-sm"
+                        value={form.variant_stock[variantKey(c, s)] ?? ""}
+                        placeholder="0"
+                        onChange={(e) => setVariantStock(c, s, e.target.value)}
+                      />
+                    ))}
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-enzo-muted">
+              {t("products.stockGridTotal", {
+                total: Object.values(form.variant_stock).reduce((sum, n) => sum + (Number(n) || 0), 0),
+              })}
+            </p>
           </FullRow>
         )}
 

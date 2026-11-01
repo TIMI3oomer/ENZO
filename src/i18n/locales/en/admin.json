@@ -41,7 +41,10 @@
     "slugOptional": "Slug (optional — auto-generated if left blank)",
     "soldOutSizes": "Mark sizes as sold out",
     "soldOutColors": "Mark colors as sold out",
-    "discountPercent": "Discount %"
+    "discountPercent": "Discount %",
+    "addEnglish": "Add English translation (optional)",
+    "stockGrid": "Stock per size and color",
+    "stockGridTotal": "Total stock: {{total}}"
   },
   "orders": {
     "title": "Orders",

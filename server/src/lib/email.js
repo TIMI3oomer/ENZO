@@ -1,27 +1,20 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import "dotenv/config";
 
 // CHECKPOINT NOTE (server/src/lib/email.js):
-// Uses SMTP via nodemailer -- works with a real "enzo@yourdomain.com"
-// mailbox (ask your domain/host provider for its SMTP settings) or, for
-// testing, a Gmail account with an "App Password" (Google Account ->
-// Security -> 2-Step Verification -> App Passwords; a normal Gmail
-// password will NOT work here).
+// Uses the Resend API (resend.com) instead of raw SMTP -- a single API
+// key, no mailbox/app-password to configure, and no risk of a serverless
+// function's outbound SMTP connection (port 587/465) being slow or
+// blocked on Vercel, which plain nodemailer was exposed to. Sign up at
+// resend.com, create an API key, and verify a sending domain (Resend's
+// own onboarding walks through the DNS records) -- or use their
+// onboarding@resend.dev sender for testing with no domain at all, limited
+// to sending to your own Resend account email.
 //
-// If EMAIL_HOST/EMAIL_USER/EMAIL_PASS aren't set, sendOrderStatusEmail()
-// just logs to the console instead of throwing -- so the rest of the
-// order-status-update flow keeps working even before you've configured a
-// real mailbox.
-const hasEmailConfig = process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS;
-
-const transporter = hasEmailConfig
-  ? nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT || 587),
-      secure: Number(process.env.EMAIL_PORT) === 465,
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    })
-  : null;
+// If RESEND_API_KEY isn't set, sendOrderStatusEmail() just logs to the
+// console instead of throwing -- so the rest of the order-status-update
+// flow keeps working even before you've configured a real sender.
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Kept as a plain constant (not admin-editable) now that store_settings
 // is gone -- this is a single-currency store, so there's nothing to
@@ -141,22 +134,27 @@ export async function sendOrderTotalEmail({ to, orderNumber, subtotal, deliveryF
 }
 
 async function dispatch(to, subject, text, html) {
-  if (!transporter) {
-    console.log(`[ENZO email — NOT SENT, no SMTP configured] To: ${to} | ${subject}`);
+  if (!resend) {
+    console.log(`[ENZO email — NOT SENT, no RESEND_API_KEY configured] To: ${to} | ${subject}`);
     return;
   }
 
   try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || `ENZO <${process.env.EMAIL_USER}>`,
+    // EMAIL_FROM must be an address at a domain verified in Resend (or
+    // the "onboarding@resend.dev" test sender) -- an unverified from
+    // address is rejected by Resend itself, caught below same as any
+    // other send failure.
+    const { error } = await resend.emails.send({
+      from: process.env.EMAIL_FROM || "ENZO <onboarding@resend.dev>",
       to,
       subject,
       text,
       html,
     });
+    if (error) throw error;
   } catch (err) {
     // A failed email should never block the action that triggered it
     // (an order-status update, or the admin confirming a delivery fee).
-    console.error("[ENZO email] Failed to send:", err.message);
+    console.error("[ENZO email] Failed to send:", err.message || err);
   }
 }

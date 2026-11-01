@@ -252,7 +252,7 @@ wrapping issues that placeholder text doesn't.
 **Database:** all of this is already included if you're on the consolidated `supabase/schema.sql` (see section 1).
 
 **Install new packages:** `npm install` in both the project root (adds
-`recharts`) and `/server` (adds `nodemailer`).
+`recharts`) and `/server` (adds `resend`).
 
 **Checkpoint 17 — Dashboard charts**
 `GET /api/admin/analytics` (backend) aggregates 14-day sales, order-status
@@ -270,12 +270,14 @@ these with `recharts` — a line chart, a donut, and a bar chart, all
   and a note field.
 
 **Checkpoint 19 — Order-status emails**
-`server/src/lib/email.js` (nodemailer) sends a bilingual email whenever
+`server/src/lib/email.js` (Resend API) sends a bilingual email whenever
 an admin updates an order's status from `admin/Orders.jsx` — includes
-the new status and the admin's note. Configure real SMTP credentials in
-`server/.env` (see the comments in `.env.example`); until then it just
-logs to the console instead of failing. Guest checkouts without an email
-simply don't get one — everything else still works.
+the new status and the admin's note. Sign up at
+[resend.com](https://resend.com), create an API key, and set
+`RESEND_API_KEY` (and ideally `EMAIL_FROM` with a domain you've verified
+there) in `server/.env`; until then it just logs to the console instead
+of failing. Guest checkouts without an email simply don't get one —
+everything else still works.
 
 **Checkpoint 20 — WhatsApp contact button**
 `src/components/WhatsAppButton.jsx`, a floating button on every storefront
@@ -680,8 +682,8 @@ differently, so they can't be one project.
    - `FRONTEND_URL` — the URL your frontend project will end up at (you
      can update this after deploying the frontend and redeploy the
      backend once you know it — see step below)
-   - `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USER` / `EMAIL_PASS` /
-     `EMAIL_FROM` — optional, for order-status emails
+   - `RESEND_API_KEY` / `EMAIL_FROM` — optional, for order-status emails
+     (resend.com)
 4. Deploy. Vercel gives you a URL like `https://enzo-api.vercel.app`.
    Visit `https://enzo-api.vercel.app/api/health` — you should see
    `{"ok":true}`. If not, check the deployment's function logs.

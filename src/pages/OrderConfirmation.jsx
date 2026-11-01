@@ -2,6 +2,7 @@ import { useParams, useLocation, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
+import { usePaymentConfig } from "../lib/usePaymentConfig.js";
 
 // CHECKPOINT NOTE (OrderConfirmation.jsx):
 // Items/total are read from router state, passed by Checkout.jsx right
@@ -23,6 +24,12 @@ export default function OrderConfirmation() {
   const subtotal = location.state?.subtotal;
   const deliveryFee = location.state?.deliveryFee;
 
+  // Reflect orders: show where to send the money, right when the customer
+  // needs it. (Only available straight after checkout -- a page refresh
+  // drops router state, same limitation as the item list below.)
+  const payments = usePaymentConfig();
+  const showReflect = location.state?.paymentMethod === "reflect" && payments.reflect?.enabled;
+
   return (
     <div className="mx-auto max-w-lg px-4 py-20 text-center">
       <h1 className="font-display text-2xl">{t("confirmation.success")}</h1>
@@ -30,6 +37,27 @@ export default function OrderConfirmation() {
       <p className="text-2xl font-semibold">#{orderNumber}</p>
       <p className="mt-4 text-enzo-muted">{t("confirmation.status")}</p>
       <p className="font-medium">{t("confirmation.pending")}</p>
+
+      {showReflect && (
+        <div className="mt-8 rounded-lg border hairline p-5 text-start">
+          <p className="mb-2 font-medium">{t("reflectTitle")}</p>
+          <p className="mb-3 text-sm text-enzo-muted">
+            {t("reflectInstructions", { total: formatPrice(total ?? 0), orderNumber })}
+          </p>
+          <p className="text-sm">
+            <span className="text-enzo-muted">{t("reflectPhone")}: </span>
+            <span dir="ltr" className="font-semibold">
+              {payments.reflect.phone}
+            </span>
+          </p>
+          {payments.reflect.accountName && (
+            <p className="text-sm">
+              <span className="text-enzo-muted">{t("reflectName")}: </span>
+              <span className="font-semibold">{payments.reflect.accountName}</span>
+            </p>
+          )}
+        </div>
+      )}
 
       {items ? (
         <div className="mt-10 rounded-lg border hairline p-5 text-start">

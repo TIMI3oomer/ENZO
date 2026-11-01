@@ -802,3 +802,15 @@ need different values per environment.
 4. Check Function Logs on the new deployment for the
    `[ENZO server] CORS allowed origins:` line — confirms what the
    backend actually loaded.
+
+---
+
+## Payments (Palestine) — what is on by default
+
+- **Cash on delivery** — always available.
+- **Reflect (manual transfer)** — set `REFLECT_PHONE` (and `REFLECT_ACCOUNT_NAME`) in the backend env. The customer sees your Reflect details right after ordering; when the money arrives you open **Admin → Orders → the order → "Mark as paid"**. Leave `REFLECT_PHONE` empty to hide the option.
+- **Card (Visa/Mastercard)** — hidden unless `CARD_PROVIDER=stripe` **and** `STRIPE_SECRET_KEY` are set. Stripe does not currently support businesses located in Palestine, so this stays off until you have a card gateway that works for you. The store reads which methods to show from `GET /api/config`, so no frontend change is needed when you switch one on.
+
+All backend settings are documented in `server/.env.example`; frontend ones in `.env.example`.
+
+**Existing database?** Run `supabase/migration_v13.sql` once in the Supabase SQL editor (it makes `orders.stripe_session_id` unique so a repeated Stripe webhook can never create two orders).

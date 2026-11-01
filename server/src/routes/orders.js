@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../lib/supabaseAdmin.js";
 import { stripe } from "../lib/stripe.js";
 import { attachUser, requireAuth } from "../middleware/auth.js";
 import { createOrderSchema, parseOrThrow } from "../utils/validation.js";
+import { cardEnabled, reflectConfig } from "../lib/payments.js";
 
 const router = Router();
 
@@ -34,6 +35,14 @@ router.post("/", attachUser, async (req, res, next) => {
 
     if (body.paymentMethod === "visa") {
       const err = new Error("Card payments must go through /api/orders/stripe-session");
+      err.status = 400;
+      throw err;
+    }
+
+    // Reflect is a manual transfer: without payout details configured the
+    // customer would have nowhere to send the money, so don't accept it.
+    if (body.paymentMethod === "reflect" && !reflectConfig().enabled) {
+      const err = new Error("Reflect payment is not available right now -- please choose cash on delivery");
       err.status = 400;
       throw err;
     }
@@ -95,6 +104,15 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
       throw err;
     }
 
+    // Card checkout is only offered when a card provider is configured
+    // (see lib/payments.js) -- otherwise fail clearly instead of crashing
+    // at the Stripe call with a confusing error.
+    if (!cardEnabled()) {
+      const err = new Error("Card payment is not available right now -- please choose another payment method");
+      err.status = 400;
+      throw err;
+    }
+
     const productIds = body.items.map((i) => i.product_id);
     const { data: products, error: productsError } = await supabaseAdmin
       .from("products")
@@ -115,7 +133,11 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
       throw err;
     }
 
-    const currency = "ils"; // Stripe currency code -- change here if this store switches currency
+    // Stripe currency code. Defaults to ILS (the store's price currency);
+    // set STRIPE_CURRENCY only if your Stripe account must settle in another
+    // currency -- prices in the database are NOT converted, so changing this
+    // alone would charge the same number in a different currency.
+    const currency = (process.env.STRIPE_CURRENCY || "ils").toLowerCase();
 
     const lineItems = body.items.map((item) => {
       const product = products.find((p) => p.id === item.product_id);

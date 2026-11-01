@@ -38,5 +38,10 @@
   "chooseRegion": "Choose your region",
   "chooseRegionHint": "Choose your delivery region to see the final total.",
   "delivery": "Delivery",
-  "total": "Total"
+  "total": "Total",
+  "reflectTitle": "Pay with Reflect",
+  "reflectInstructions": "Send {{total}} to the Reflect account below and write your order number #{{orderNumber}} in the transfer note. We'll confirm your order as soon as the transfer arrives.",
+  "reflectPhone": "Reflect number",
+  "reflectName": "Account name",
+  "reflectCheckoutHint": "You'll see the transfer details right after placing your order."
 }

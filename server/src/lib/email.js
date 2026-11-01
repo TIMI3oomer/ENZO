@@ -31,6 +31,17 @@ function formatMoney(amount) {
   return `${(Number(amount) || 0).toLocaleString()} ${CURRENCY_SYMBOL}`;
 }
 
+// The admin's free-text note goes into the HTML email; escape it so stray
+// "<" or "&" characters can't break (or inject into) the markup.
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const STATUS_LABELS = {
   pending: { ar: "قيد المراجعة", en: "Pending" },
   confirmed: { ar: "مؤكد", en: "Confirmed" },
@@ -68,7 +79,7 @@ function buildEmail({ orderNumber, status, note, locale }) {
       <p>${greeting}</p>
       <p>${intro}</p>
       <p style="font-size:20px;font-weight:bold;color:#C9A227;">${statusLabel}</p>
-      ${note ? `<p style="margin-top:16px;color:#9A9A94;">${noteLabel}</p><p>${note}</p>` : ""}
+      ${note ? `<p style="margin-top:16px;color:#9A9A94;">${noteLabel}</p><p>${escapeHtml(note)}</p>` : ""}
       <p style="margin-top:32px;color:#9A9A94;">${signOff}</p>
     </div>
   `;

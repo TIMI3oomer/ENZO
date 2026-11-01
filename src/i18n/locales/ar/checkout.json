@@ -38,5 +38,10 @@
   "chooseRegion": "اختر منطقتك",
   "chooseRegionHint": "اختر منطقة التوصيل لحساب المجموع النهائي.",
   "delivery": "التوصيل",
-  "total": "المجموع الكلي"
+  "total": "المجموع الكلي",
+  "reflectTitle": "الدفع عبر Reflect",
+  "reflectInstructions": "حوّل مبلغ {{total}} إلى حساب Reflect أدناه واكتب رقم طلبك #{{orderNumber}} في ملاحظة التحويل. سنؤكد طلبك فور وصول التحويل.",
+  "reflectPhone": "رقم Reflect",
+  "reflectName": "اسم الحساب",
+  "reflectCheckoutHint": "ستظهر لك تفاصيل التحويل مباشرة بعد تأكيد الطلب."
 }

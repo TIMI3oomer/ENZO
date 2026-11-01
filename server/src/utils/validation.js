@@ -65,6 +65,12 @@ export const orderStatusSchema = z.object({
   note: z.string().trim().max(1000).optional().nullable(),
 });
 
+// Used by the admin to mark a manual-transfer (Reflect) or cash order as
+// paid once the money has actually arrived.
+export const paymentStatusSchema = z.object({
+  payment_status: z.enum(["pending", "paid", "failed"]),
+});
+
 export const categorySchema = z.object({
   slug: z
     .string()

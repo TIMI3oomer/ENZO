@@ -65,7 +65,10 @@
       "west_bank": "الضفة",
       "jerusalem": "القدس",
       "inside": "الداخل"
-    }
+    },
+    "markPaid": "تأكيد استلام الدفع",
+    "markUnpaid": "إلغاء تأكيد الدفع",
+    "paymentLabel": "الدفع"
   },
   "analytics": {
     "salesLast14Days": "المبيعات آخر ١٤ يوم",

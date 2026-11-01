@@ -81,7 +81,10 @@ create table if not exists orders (
   user_id uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now()
 );
-create index if not exists idx_orders_stripe_session on orders(stripe_session_id);
+-- UNIQUE (partial): two simultaneous deliveries of the same Stripe webhook
+-- could previously both pass place_order()'s "already exists?" check and
+-- create two orders for one payment. The database now refuses the second.
+create unique index if not exists uq_orders_stripe_session on orders(stripe_session_id) where stripe_session_id is not null;
 
 create index if not exists idx_orders_user on orders(user_id);
 

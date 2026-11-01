@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 import { api } from "../lib/api.js";
 import { DELIVERY_REGIONS, getDeliveryRegion } from "../lib/delivery.js";
+import { usePaymentConfig } from "../lib/usePaymentConfig.js";
 
 const initialForm = {
   fullName: "",
@@ -49,6 +50,19 @@ export default function Checkout() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  // Only offer payment methods the backend says are actually available
+  // (card is hidden unless a card provider is configured, Reflect unless
+  // its transfer details are set). See server/src/lib/payments.js.
+  const payments = usePaymentConfig();
+  const availableMethods = ["cod", payments.card && "visa", payments.reflect?.enabled && "reflect"].filter(Boolean);
+
+  useEffect(() => {
+    if (!availableMethods.includes(form.paymentMethod)) {
+      setForm((f) => ({ ...f, paymentMethod: "cod" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payments]);
 
   useEffect(() => {
     const name = session?.user?.user_metadata?.full_name;
@@ -137,6 +151,7 @@ export default function Checkout() {
           subtotal,
           deliveryFee: result.deliveryFee,
           total: result.total,
+          paymentMethod: form.paymentMethod,
         },
       });
     } catch (err) {
@@ -211,7 +226,7 @@ export default function Checkout() {
 
         <p className="mb-2 mt-4 text-sm font-medium">{t("paymentMethod")}</p>
         <div className="flex flex-col gap-2">
-          {["cod", "visa", "reflect"].map((method) => (
+          {availableMethods.map((method) => (
             <label key={method} className="flex items-center gap-2 text-sm">
               <input
                 type="radio"
@@ -223,6 +238,9 @@ export default function Checkout() {
             </label>
           ))}
         </div>
+        {form.paymentMethod === "reflect" && (
+          <p className="mt-2 text-xs text-enzo-muted">{t("reflectCheckoutHint")}</p>
+        )}
 
         {submitError && <p className="mt-4 text-sm text-enzo-error">{submitError}</p>}
 

@@ -32,6 +32,7 @@ export default function AdminOrders() {
   const [sending, setSending] = useState(null);
   const [feeDraft, setFeeDraft] = useState({}); // { [orderId]: string }
   const [savingFee, setSavingFee] = useState(null);
+  const [savingPayment, setSavingPayment] = useState(null);
 
   useEffect(() => {
     load();
@@ -65,6 +66,18 @@ export default function AdminOrders() {
     }
   }
 
+  // Reflect transfers (and cash) aren't confirmed automatically: the owner
+  // checks the money actually arrived, then flips the order to paid here.
+  async function setPaymentStatus(orderId, payment_status) {
+    setSavingPayment(orderId);
+    try {
+      await api.patch(`/admin/orders/${orderId}/payment-status`, { payment_status });
+      await load();
+    } finally {
+      setSavingPayment(null);
+    }
+  }
+
   async function saveDeliveryFee(orderId) {
     setSavingFee(orderId);
     try {
@@ -89,7 +102,7 @@ export default function AdminOrders() {
               <span className="font-medium">#{o.order_number}</span>
               <span>{o.customer_name}</span>
               <span className="text-enzo-muted">{new Date(o.created_at).toLocaleDateString()}</span>
-              {o.payment_method === "visa" && (
+              {(o.payment_method === "visa" || o.payment_method === "reflect") && (
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs ${
                     o.payment_status === "paid"
@@ -146,6 +159,22 @@ export default function AdminOrders() {
                     )}
                   </span>
                 </div>
+
+                {o.payment_method !== "visa" && (
+                  <div className="mb-4 flex items-center justify-between gap-3 border-b hairline pb-4">
+                    <span className="text-sm text-enzo-muted">
+                      {t("orders.paymentLabel")}: {o.payment_method} ·{" "}
+                      {o.payment_status === "paid" ? t("orders.paid") : t("orders.unpaid")}
+                    </span>
+                    <button
+                      onClick={() => setPaymentStatus(o.id, o.payment_status === "paid" ? "pending" : "paid")}
+                      disabled={savingPayment === o.id}
+                      className="rounded-md border hairline px-4 py-2 text-sm font-semibold disabled:opacity-40"
+                    >
+                      {o.payment_status === "paid" ? t("orders.markUnpaid") : t("orders.markPaid")}
+                    </button>
+                  </div>
+                )}
 
                 <div className="mb-4 flex flex-col gap-3 border-b hairline pb-4 sm:flex-row sm:items-end">
                   <div className="flex-1">

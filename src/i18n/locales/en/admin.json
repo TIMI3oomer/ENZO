@@ -65,7 +65,10 @@
       "west_bank": "West Bank",
       "jerusalem": "Jerusalem",
       "inside": "Inside (48)"
-    }
+    },
+    "markPaid": "Mark as paid",
+    "markUnpaid": "Mark as unpaid",
+    "paymentLabel": "Payment"
   },
   "analytics": {
     "salesLast14Days": "Sales — last 14 days",

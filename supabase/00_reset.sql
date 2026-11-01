@@ -30,6 +30,7 @@ drop function if exists place_order(text, text, text, text, text, text, text, uu
 drop function if exists place_order(text, text, text, text, text, text, text, uuid, jsonb, text);
 drop function if exists place_order(text, text, text, text, text, text, text, uuid, jsonb);
 drop function if exists set_order_status(uuid, text, text);
+drop function if exists record_in_store_sale(jsonb, text, text);
 drop function if exists delivery_fee_for_region(text);
 drop function if exists sync_product_stock();
 drop function if exists is_admin();

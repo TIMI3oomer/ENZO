@@ -869,3 +869,22 @@ only colors, or neither still uses a single stock number.
 - **Existing database?** Run `supabase/migration_v15.sql` (the same one
   as the stock-per-size-and-color section above — it covers all of this
   in one file) once in the Supabase SQL editor.
+
+---
+
+## Stock is taken on confirm, not at checkout — plus in-store sales and refunds
+
+- A new order **validates** stock is available but doesn't take it. Stock
+  is only actually taken when you move an order to **Confirmed**
+  (Admin → Orders). Declining a still-pending order (straight to
+  Cancelled) touches no stock, since none was taken. Cancelling a
+  confirmed order puts it back; re-confirming a cancelled one takes it
+  again (refused if it's since sold out).
+- **Admin → In-store sale** rings up a walk-in customer against the same
+  stock/products — taken immediately, no confirm step, since the item's
+  already left the shelf.
+- **Admin → Orders → Refund** (on a paid order): for a card payment this
+  actually returns the money via Stripe; for cash/transfer it just
+  records it. Either way it restocks the items the same way a decline
+  does, and marks the order refunded.
+- **Existing database?** `supabase/migration_v15.sql` covers this too.

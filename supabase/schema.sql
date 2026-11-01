@@ -85,7 +85,7 @@ create table if not exists orders (
   address text not null,
   notes text,
   admin_note text,
-  payment_method text not null check (payment_method in ('cod','visa','reflect')),
+  payment_method text not null check (payment_method in ('cod','visa','reflect','in_store')),
   status text not null default 'pending'
     check (status in ('pending','confirmed','shipped','delivered','cancelled')),
   subtotal numeric(10,2) not null,
@@ -93,8 +93,13 @@ create table if not exists orders (
   delivery_fee_confirmed boolean not null default false,
   delivery_region text check (delivery_region is null or delivery_region in ('west_bank', 'jerusalem', 'inside')),
   total numeric(10,2) not null,
-  payment_status text not null default 'pending' check (payment_status in ('pending', 'paid', 'failed')),
+  payment_status text not null default 'pending' check (payment_status in ('pending', 'paid', 'failed', 'refunded')),
   stripe_session_id text,
+  -- 'online' = placed by a customer on the site; 'in_store' = rung up by
+  -- the admin for a walk-in customer (Admin -> In-store sale). Same
+  -- products/stock pool either way -- this is just for telling the two
+  -- apart in the orders list and analytics.
+  channel text not null default 'online' check (channel in ('online', 'in_store')),
   locale text not null default 'ar' check (locale in ('ar','en')),
   user_id uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now()
@@ -408,36 +413,13 @@ begin
     );
   end loop;
 
-  -- 3) TAKE the stock, grouped by (product, size, color). When a product
-  --    is using the grid, variant_stock is decremented and the
-  --    sync_product_stock trigger refreshes `stock` to the new total;
-  --    otherwise `stock` is decremented directly.
-  for v_line in
-    select (i ->> 'product_id')::uuid as product_id,
-           nullif(i ->> 'size', '') as size,
-           nullif(i ->> 'color', '') as color,
-           sum((i ->> 'quantity')::int) as qty
-    from jsonb_array_elements(p_items) as i
-    group by 1, 2, 3
-    order by 1, 2, 3
-  loop
-    select * into v_product from products where id = v_line.product_id;
-    v_uses_variants := v_product.variant_stock <> '{}'::jsonb;
-
-    if v_uses_variants and v_line.size is not null and v_line.color is not null then
-      v_variant_key := v_line.color || '__' || v_line.size;
-      update products
-        set variant_stock = jsonb_set(
-          variant_stock,
-          array[v_variant_key],
-          to_jsonb(greatest(0, coalesce((variant_stock ->> v_variant_key)::int, 0) - v_line.qty))
-        )
-        where id = v_product.id;
-    else
-      update products set stock = greatest(0, stock - v_line.qty) where id = v_product.id;
-    end if;
-  end loop;
-
+  -- NOTE: stock is NOT taken here. A new order only VALIDATES that stock
+  -- is available right now -- it's actually taken when the admin moves
+  -- the order to 'confirmed' (see set_order_status() below), so a
+  -- pending order that's never confirmed never ties up stock. Between
+  -- placing and confirming, stock can still be sold out from under a
+  -- pending order by something else; confirming then fails with a clear
+  -- "insufficient stock" error instead of silently overselling.
   return query select v_order_id, v_order_number, v_subtotal + v_delivery_fee, v_delivery_fee;
 end;
 $$;
@@ -445,9 +427,15 @@ $$;
 revoke execute on function place_order(text, text, text, text, text, text, text, uuid, jsonb, text, text, text, text) from public, anon, authenticated;
 grant execute on function place_order(text, text, text, text, text, text, text, uuid, jsonb, text, text, text, text) to service_role;
 
--- set_order_status(): changing an order to 'cancelled' returns its items to
--- stock (per size+color combo when the product uses the grid, otherwise
--- the plain aggregate); moving it out of 'cancelled' takes them again.
+-- set_order_status(): stock is taken ONLY once an order is CONFIRMED (not
+-- at creation -- see place_order()), and given back the moment it leaves
+-- a "stock committed" status. 'confirmed'/'shipped'/'delivered' all count
+-- as committed (moving between those three never touches stock); moving
+-- IN from 'pending' takes it, moving OUT to 'pending' or 'cancelled'
+-- gives it back. This one rule also covers "declining" an order (send it
+-- straight from 'pending' to 'cancelled' -- nothing was ever taken, so
+-- nothing to restock) and re-confirming a previously cancelled order
+-- (validated and taken again, refused if it's since sold out).
 create or replace function set_order_status(p_order_id uuid, p_status text, p_note text default null)
 returns orders
 language plpgsql
@@ -460,6 +448,8 @@ declare
   v_have int;
   v_variant_key text;
   v_uses_variants boolean;
+  v_was_committed boolean;
+  v_will_be_committed boolean;
 begin
   if p_status not in ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled') then
     raise exception 'Invalid order status: %', p_status;
@@ -470,8 +460,76 @@ begin
     raise exception 'Order not found';
   end if;
 
-  if p_status = 'cancelled' and v_order.status <> 'cancelled' then
-    -- Put the items back on the shelf.
+  v_was_committed := v_order.status in ('confirmed', 'shipped', 'delivered');
+  v_will_be_committed := p_status in ('confirmed', 'shipped', 'delivered');
+
+  if v_will_be_committed and not v_was_committed then
+    -- Taking stock for the first time: validate every line has enough
+    -- left (it may have sold out since this order was placed), THEN take
+    -- it -- two passes, so a failure partway through never leaves some
+    -- lines decremented and others not.
+    for v_line in
+      select product_id, size, color, sum(quantity)::int as qty
+      from order_items
+      where order_id = p_order_id and product_id is not null
+      group by 1, 2, 3
+      order by 1, 2, 3
+    loop
+      select * into v_product from products where id = v_line.product_id for update;
+      if not found then
+        raise exception 'Cannot confirm this order: a product in it was deleted';
+      end if;
+
+      if coalesce(array_length(v_product.sizes, 1), 0) > 0 then
+        if v_line.size is null or not (v_line.size = any (v_product.sizes)) then
+          raise exception 'Cannot confirm this order: size % of % is no longer offered', coalesce(v_line.size, '?'), v_product.slug;
+        end if;
+      end if;
+
+      v_uses_variants := v_product.variant_stock <> '{}'::jsonb;
+      if v_uses_variants then
+        if v_line.size is not null and v_line.color is not null then
+          v_variant_key := v_line.color || '__' || v_line.size;
+          v_have := coalesce((v_product.variant_stock ->> v_variant_key)::int, 0);
+        else
+          v_have := 0;
+        end if;
+      else
+        v_have := v_product.stock;
+      end if;
+
+      if v_have < v_line.qty then
+        raise exception 'Cannot confirm this order: only % left of %', v_have, v_product.slug;
+      end if;
+    end loop;
+
+    for v_line in
+      select product_id, size, color, sum(quantity)::int as qty
+      from order_items
+      where order_id = p_order_id and product_id is not null
+      group by 1, 2, 3
+      order by 1, 2, 3
+    loop
+      select * into v_product from products where id = v_line.product_id for update;
+      v_uses_variants := v_product.variant_stock <> '{}'::jsonb;
+
+      if v_uses_variants and v_line.size is not null and v_line.color is not null then
+        v_variant_key := v_line.color || '__' || v_line.size;
+        update products
+          set variant_stock = jsonb_set(
+            variant_stock,
+            array[v_variant_key],
+            to_jsonb(greatest(0, coalesce((variant_stock ->> v_variant_key)::int, 0) - v_line.qty))
+          )
+          where id = v_product.id;
+      else
+        update products set stock = greatest(0, stock - v_line.qty) where id = v_product.id;
+      end if;
+    end loop;
+
+  elsif v_was_committed and not v_will_be_committed then
+    -- Put the items back on the shelf (declining a confirmed order,
+    -- cancelling, or sending it back to pending).
     for v_line in
       select product_id, size, color, sum(quantity)::int as qty
       from order_items
@@ -500,49 +558,11 @@ begin
       -- else: product uses the grid but this line has no size+color on
       -- record (shouldn't happen) -- nothing sane to restock, skip it.
     end loop;
-
-  elsif p_status <> 'cancelled' and v_order.status = 'cancelled' then
-    -- Re-opening a cancelled order: take the items again, if still there.
-    for v_line in
-      select product_id, size, color, sum(quantity)::int as qty
-      from order_items
-      where order_id = p_order_id and product_id is not null
-      group by 1, 2, 3
-      order by 1, 2, 3
-    loop
-      select * into v_product from products where id = v_line.product_id for update;
-      if not found then
-        continue;
-      end if;
-
-      if coalesce(array_length(v_product.sizes, 1), 0) > 0 then
-        if v_line.size is null or not (v_line.size = any (v_product.sizes)) then
-          raise exception 'Cannot re-open this order: size % of % is no longer offered', coalesce(v_line.size, '?'), v_product.slug;
-        end if;
-      end if;
-
-      v_uses_variants := v_product.variant_stock <> '{}'::jsonb;
-      if v_uses_variants then
-        if v_line.size is not null and v_line.color is not null then
-          v_variant_key := v_line.color || '__' || v_line.size;
-          v_have := coalesce((v_product.variant_stock ->> v_variant_key)::int, 0);
-        else
-          v_have := 0;
-        end if;
-        if v_have < v_line.qty then
-          raise exception 'Cannot re-open this order: only % left of %', v_have, v_product.slug;
-        end if;
-        update products
-          set variant_stock = jsonb_set(variant_stock, array[v_variant_key], to_jsonb(v_have - v_line.qty))
-          where id = v_product.id;
-      else
-        if v_product.stock < v_line.qty then
-          raise exception 'Cannot re-open this order: only % left of %', v_product.stock, v_product.slug;
-        end if;
-        update products set stock = stock - v_line.qty where id = v_product.id;
-      end if;
-    end loop;
   end if;
+  -- else: moving between two committed statuses (confirmed -> shipped ->
+  -- delivered) or two uncommitted ones (pending -> cancelled, "declining"
+  -- an order that was never confirmed) -- stock already reflects reality,
+  -- nothing to change.
 
   update orders set status = p_status, admin_note = p_note where id = p_order_id returning * into v_order;
   return v_order;
@@ -551,6 +571,121 @@ $$;
 
 revoke execute on function set_order_status(uuid, text, text) from public, anon, authenticated;
 grant execute on function set_order_status(uuid, text, text) to service_role;
+
+-- record_in_store_sale(): a walk-in, rung-up-by-the-admin sale -- this is
+-- a real shop, not just a website. Same products/stock pool as online
+-- orders, but immediate: stock is taken right away (no pending step,
+-- there's nothing to confirm -- the item already left the shelf) and the
+-- order is recorded already paid/delivered, tagged channel='in_store' so
+-- it's easy to tell apart in the orders list and analytics.
+create or replace function record_in_store_sale(
+  p_items jsonb,
+  p_customer_name text default 'Walk-in customer',
+  p_note text default null
+) returns table(order_id uuid, order_number bigint, total numeric)
+language plpgsql
+security definer
+as $$
+declare
+  v_order_id uuid;
+  v_order_number bigint;
+  v_subtotal numeric := 0;
+  v_item jsonb;
+  v_line record;
+  v_product products%rowtype;
+  v_qty int;
+  v_have int;
+  v_variant_key text;
+  v_unit_price numeric;
+  v_uses_variants boolean;
+begin
+  if p_items is null or jsonb_array_length(p_items) = 0 then
+    raise exception 'Cannot record a sale with no items';
+  end if;
+
+  -- VALIDATE + TAKE in one pass -- unlike online orders, an in-store sale
+  -- has already happened by the time it's entered, so stock is taken
+  -- immediately rather than waiting for a separate confirm step.
+  for v_line in
+    select (i ->> 'product_id')::uuid as product_id,
+           nullif(i ->> 'size', '') as size,
+           nullif(i ->> 'color', '') as color,
+           sum((i ->> 'quantity')::int) as qty
+    from jsonb_array_elements(p_items) as i
+    group by 1, 2, 3
+    order by 1, 2, 3
+  loop
+    select * into v_product from products where id = v_line.product_id for update;
+
+    if not found then
+      raise exception 'Product not found: %', v_line.product_id;
+    end if;
+
+    if v_line.qty is null or v_line.qty <= 0 then
+      raise exception 'Invalid quantity for product %', v_product.slug;
+    end if;
+
+    v_uses_variants := v_product.variant_stock <> '{}'::jsonb;
+    if v_uses_variants then
+      if v_line.size is not null and v_line.color is not null then
+        v_variant_key := v_line.color || '__' || v_line.size;
+        v_have := coalesce((v_product.variant_stock ->> v_variant_key)::int, 0);
+      else
+        v_have := 0;
+      end if;
+    else
+      v_have := v_product.stock;
+    end if;
+
+    if v_have < v_line.qty then
+      raise exception 'Insufficient stock for %: only % left', v_product.slug, v_have;
+    end if;
+
+    v_subtotal := v_subtotal + (round(v_product.price * (1 - v_product.discount_percent / 100), 2) * v_line.qty);
+
+    if v_uses_variants and v_line.size is not null and v_line.color is not null then
+      update products
+        set variant_stock = jsonb_set(
+          variant_stock,
+          array[v_variant_key],
+          to_jsonb(v_have - v_line.qty)
+        )
+        where id = v_product.id;
+    else
+      update products set stock = v_have - v_line.qty where id = v_product.id;
+    end if;
+  end loop;
+
+  insert into orders (
+    customer_name, phone, city, address, notes, admin_note,
+    payment_method, subtotal, delivery_fee, delivery_fee_confirmed, total,
+    locale, payment_status, status, channel
+  ) values (
+    p_customer_name, '-', 'In-store', '-', null, p_note,
+    'in_store', v_subtotal, 0, true, v_subtotal,
+    'ar', 'paid', 'delivered', 'in_store'
+  )
+  returning id, orders.order_number into v_order_id, v_order_number;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    select * into v_product from products where id = (v_item ->> 'product_id')::uuid;
+    v_qty := (v_item ->> 'quantity')::int;
+    v_unit_price := round(v_product.price * (1 - v_product.discount_percent / 100), 2);
+
+    insert into order_items (order_id, product_id, product_name, size, color, quantity, unit_price)
+    values (
+      v_order_id, v_product.id, v_product.name,
+      nullif(v_item ->> 'size', ''), nullif(v_item ->> 'color', ''), v_qty, v_unit_price
+    );
+  end loop;
+
+  return query select v_order_id, v_order_number, v_subtotal;
+end;
+$$;
+
+revoke execute on function record_in_store_sale(jsonb, text, text) from public, anon, authenticated;
+grant execute on function record_in_store_sale(jsonb, text, text) to service_role;
 
 -- =====================================================================
 -- CMS: manifest-driven content for page text/images that don't already

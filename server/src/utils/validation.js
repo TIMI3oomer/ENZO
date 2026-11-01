@@ -75,7 +75,19 @@ export const orderStatusSchema = z.object({
 // Used by the admin to mark a manual-transfer (Reflect) or cash order as
 // paid once the money has actually arrived.
 export const paymentStatusSchema = z.object({
-  payment_status: z.enum(["pending", "paid", "failed"]),
+  payment_status: z.enum(["pending", "paid", "failed", "refunded"]),
+});
+
+// A walk-in sale the admin rings up in person (see
+// POST /api/admin/in-store-sales / record_in_store_sale() in schema.sql).
+export const inStoreSaleSchema = z.object({
+  customerName: z.string().trim().max(200).optional(),
+  note: z.string().trim().max(1000).optional().nullable(),
+  items: z.array(orderItemSchema).min(1).max(50),
+});
+
+export const refundSchema = z.object({
+  note: z.string().trim().max(1000).optional().nullable(),
 });
 
 export const categorySchema = z.object({

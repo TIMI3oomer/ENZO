@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabaseAdmin.js";
+import { stripe } from "../lib/stripe.js";
 import { attachUser, requireAdmin } from "../middleware/auth.js";
 import {
   productSchema,
@@ -8,6 +9,8 @@ import {
   deliveryFeeSchema,
   paymentStatusSchema,
   contentPageSchema,
+  inStoreSaleSchema,
+  refundSchema,
   parseOrThrow,
 } from "../utils/validation.js";
 import { sendOrderStatusEmail, sendOrderTotalEmail } from "../lib/email.js";
@@ -177,6 +180,61 @@ router.patch("/orders/:id/payment-status", async (req, res, next) => {
   }
 });
 
+// Refund an order: issues the actual money-back (Stripe, for card
+// payments) FIRST -- only once that succeeds do we touch the database --
+// then puts it through set_order_status('cancelled') so stock is given
+// back exactly the same way a decline/cancel already does (nothing
+// restocked if it was never confirmed in the first place), and finally
+// marks payment_status 'refunded'. cod/reflect orders have no Stripe
+// charge to reverse -- the money was handed back by hand/bank transfer,
+// so this just records that it happened and restocks.
+router.patch("/orders/:id/refund", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(refundSchema, req.body);
+
+    const { data: order, error: fetchError } = await supabaseAdmin
+      .from("orders")
+      .select("id, payment_method, payment_status, stripe_session_id, status")
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.payment_status === "refunded") {
+      return res.status(400).json({ error: "This order has already been refunded" });
+    }
+
+    if (order.payment_method === "visa" && order.stripe_session_id) {
+      const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+      if (!session.payment_intent) throw new Error("Stripe session has no payment_intent to refund");
+      await stripe.refunds.create(
+        { payment_intent: session.payment_intent },
+        { idempotencyKey: `enzo_admin_refund_${order.id}` }
+      );
+    }
+
+    if (order.status !== "cancelled") {
+      const { error: statusError } = await supabaseAdmin.rpc("set_order_status", {
+        p_order_id: order.id,
+        p_status: "cancelled",
+        p_note: body.note ?? null,
+      });
+      if (statusError) throw statusError;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .update({ payment_status: "refunded" })
+      .eq("id", order.id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // CHECKPOINT NOTE: delivery is charged upfront from the region the
 // customer picked (delivery_fee_for_region() in schema.sql) -- this route
 // is the admin's manual OVERRIDE for a specific order, for when the real
@@ -216,6 +274,36 @@ router.patch("/orders/:id/delivery-fee", async (req, res, next) => {
     });
 
     res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------- In-store sales (real shop, not just the website) ----------
+// Records a walk-in sale the admin rings up in person: same products/
+// stock pool as the site, taken immediately (see record_in_store_sale()
+// in schema.sql) rather than on a separate confirm step, since the item
+// has already left the shelf by the time this is entered.
+router.post("/in-store-sales", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(inStoreSaleSchema, req.body);
+    const { data, error } = await supabaseAdmin.rpc("record_in_store_sale", {
+      p_items: body.items.map((i) => ({
+        product_id: i.product_id,
+        size: i.size ?? null,
+        color: i.color ?? null,
+        quantity: i.quantity,
+      })),
+      p_customer_name: body.customerName || "Walk-in customer",
+      p_note: body.note || null,
+    });
+    if (error) {
+      const err = new Error(error.message);
+      err.status = 400;
+      throw err;
+    }
+    const result = data?.[0];
+    res.status(201).json({ orderNumber: result.order_number, total: result.total });
   } catch (err) {
     next(err);
   }

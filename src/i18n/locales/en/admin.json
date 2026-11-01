@@ -7,6 +7,7 @@
     "analytics": "Analytics",
     "categories": "Categories",
     "content": "Site content",
+    "inStoreSale": "In-store sale",
     "backToStore": "Back to store",
     "logout": "Log out"
   },
@@ -75,7 +76,10 @@
     },
     "markPaid": "Mark as paid",
     "markUnpaid": "Mark as unpaid",
-    "paymentLabel": "Payment"
+    "paymentLabel": "Payment",
+    "refund": "Refund",
+    "refunded": "Refunded",
+    "confirmRefund": "Refund this order? For a card payment this returns the money via Stripe; for cash/transfer it just records the refund. Items are put back in stock."
   },
   "analytics": {
     "salesLast14Days": "Sales — last 14 days",
@@ -110,5 +114,19 @@
     "saved": "Saved",
     "page_home": "Home page",
     "page_site": "Site-wide"
+  },
+  "inStoreSale": {
+    "title": "In-store sale",
+    "product": "Product",
+    "size": "Size",
+    "color": "Color",
+    "quantity": "Quantity",
+    "inStock": "{{count}} in stock",
+    "addToTicket": "Add to ticket",
+    "total": "Total",
+    "customerName": "Customer name (optional)",
+    "note": "Note (optional)",
+    "ringUp": "Ring up sale",
+    "recorded": "Sale #{{orderNumber}} recorded — {{total}}"
   }
 }

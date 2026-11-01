@@ -33,6 +33,7 @@ export default function AdminOrders() {
   const [feeDraft, setFeeDraft] = useState({}); // { [orderId]: string }
   const [savingFee, setSavingFee] = useState(null);
   const [savingPayment, setSavingPayment] = useState(null);
+  const [refunding, setRefunding] = useState(null);
 
   useEffect(() => {
     load();
@@ -75,6 +76,19 @@ export default function AdminOrders() {
       await load();
     } finally {
       setSavingPayment(null);
+    }
+  }
+
+  async function refundOrder(orderId) {
+    if (!confirm(t("orders.confirmRefund"))) return;
+    setRefunding(orderId);
+    try {
+      await api.patch(`/admin/orders/${orderId}/refund`, {});
+      await load();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setRefunding(null);
     }
   }
 
@@ -160,20 +174,36 @@ export default function AdminOrders() {
                   </span>
                 </div>
 
-                {o.payment_method !== "visa" && (
+                {o.payment_status !== "refunded" && (
                   <div className="mb-4 flex items-center justify-between gap-3 border-b hairline pb-4">
                     <span className="text-sm text-enzo-muted">
                       {t("orders.paymentLabel")}: {o.payment_method} ·{" "}
                       {o.payment_status === "paid" ? t("orders.paid") : t("orders.unpaid")}
                     </span>
-                    <button
-                      onClick={() => setPaymentStatus(o.id, o.payment_status === "paid" ? "pending" : "paid")}
-                      disabled={savingPayment === o.id}
-                      className="rounded-md border hairline px-4 py-2 text-sm font-semibold disabled:opacity-40"
-                    >
-                      {o.payment_status === "paid" ? t("orders.markUnpaid") : t("orders.markPaid")}
-                    </button>
+                    <div className="flex gap-2">
+                      {o.payment_method !== "visa" && (
+                        <button
+                          onClick={() => setPaymentStatus(o.id, o.payment_status === "paid" ? "pending" : "paid")}
+                          disabled={savingPayment === o.id}
+                          className="rounded-md border hairline px-4 py-2 text-sm font-semibold disabled:opacity-40"
+                        >
+                          {o.payment_status === "paid" ? t("orders.markUnpaid") : t("orders.markPaid")}
+                        </button>
+                      )}
+                      {o.payment_status === "paid" && (
+                        <button
+                          onClick={() => refundOrder(o.id)}
+                          disabled={refunding === o.id}
+                          className="rounded-md border border-enzo-error px-4 py-2 text-sm font-semibold text-enzo-error disabled:opacity-40"
+                        >
+                          {t("orders.refund")}
+                        </button>
+                      )}
+                    </div>
                   </div>
+                )}
+                {o.payment_status === "refunded" && (
+                  <div className="mb-4 border-b hairline pb-4 text-sm text-enzo-error">{t("orders.refunded")}</div>
                 )}
 
                 <div className="mb-4 flex flex-col gap-3 border-b hairline pb-4 sm:flex-row sm:items-end">

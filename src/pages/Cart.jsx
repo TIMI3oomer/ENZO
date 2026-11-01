@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 import { Minus, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
-import { formatPrice } from "../lib/formatPrice.js";
+import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
+import { getAvailableStock } from "../lib/variantStock.js";
 import { api } from "../lib/api.js";
-import { stockFor } from "../lib/stock.js";
 
 // CHECKPOINT NOTE (Cart.jsx):
 // Full-page cart (in addition to the CartDrawer) for people who land on
@@ -16,10 +16,11 @@ import { stockFor } from "../lib/stock.js";
 // from whenever they were added, which goes stale if the admin changes a
 // price or the product sells out later. On mount, this page fetches the
 // CURRENT state of every product still in the cart (GET /api/products?ids=)
-// and reconciles: prices are updated to match reality, quantities are
-// clamped down if stock dropped, and anything now inactive/deleted is
-// removed entirely -- with a visible notice explaining what changed,
-// rather than silently surprising the customer at checkout.
+// and reconciles: prices (including any discount) are updated to match
+// reality, quantities are clamped down if stock dropped, and anything now
+// inactive/deleted/sold-out is removed entirely -- with a visible notice
+// explaining what changed, rather than silently surprising the customer
+// at checkout.
 export default function Cart() {
   const { t } = useTranslation("common");
   const { items, removeItem, updateQuantity, syncItem, subtotal } = useCart();
@@ -45,11 +46,21 @@ export default function Cart() {
             continue;
           }
 
-          // Stock is per SIZE: compare against the size this line holds.
-          const liveStock = stockFor(live, item.size);
+          const sizeSoldOut = item.size && live.sold_out_sizes?.includes(item.size);
+          const colorSoldOut = item.color && live.sold_out_colors?.includes(item.color);
+          if (sizeSoldOut || colorSoldOut) {
+            removeItem(item.key);
+            changes.push(t("cart.itemRemoved", { name: localize(item.name) }));
+            continue;
+          }
+
+          // Stock is per size+color combo when the product uses the grid
+          // (see src/lib/variantStock.js), else the aggregate.
+          const liveStock = getAvailableStock(live, item.size, item.color);
+          const livePrice = getDiscountedPrice(live.price, live.discount_percent);
 
           const updates = {};
-          if (live.price !== item.price) updates.price = live.price;
+          if (livePrice !== item.price) updates.price = livePrice;
           if (liveStock !== item.stock) updates.stock = liveStock;
 
           if (liveStock < item.quantity) {

@@ -116,7 +116,9 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
     const productIds = body.items.map((i) => i.product_id);
     const { data: products, error: productsError } = await supabaseAdmin
       .from("products")
-      .select("id, name, price, stock, sizes, size_stock, is_active")
+      .select(
+        "id, name, price, stock, sizes, colors, is_active, discount_percent, sold_out_sizes, sold_out_colors, variant_stock"
+      )
       .in("id", productIds);
     if (productsError) throw productsError;
 
@@ -139,11 +141,13 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
     // alone would charge the same number in a different currency.
     const currency = (process.env.STRIPE_CURRENCY || "ils").toLowerCase();
 
-    // STOCK PER SIZE: total wanted per (product, size) across all cart
-    // lines, so the same shirt+size in two colours is checked as one number.
+    // Per size+color stock: total wanted per (product, size, color) across
+    // all cart lines, so the exact same combo split across two lines is
+    // checked as one number -- same grouping place_order() (schema.sql)
+    // uses server-side.
     const wanted = new Map();
     for (const item of body.items) {
-      const key = `${item.product_id}__${item.size ?? ""}`;
+      const key = `${item.product_id}__${item.size ?? ""}__${item.color ?? ""}`;
       wanted.set(key, (wanted.get(key) || 0) + item.quantity);
     }
 
@@ -167,8 +171,29 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
         err.status = 400;
         throw err;
       }
-      const available = hasSizes ? Number(product.size_stock?.[item.size] ?? 0) : product.stock;
-      if (available < wanted.get(`${item.product_id}__${item.size ?? ""}`)) {
+      if (item.size && product.sold_out_sizes?.includes(item.size)) {
+        const err = new Error(`Size ${item.size} is sold out for ${label}`);
+        err.status = 400;
+        throw err;
+      }
+      if (item.color && product.sold_out_colors?.includes(item.color)) {
+        const err = new Error(`${item.color} is sold out for ${label}`);
+        err.status = 400;
+        throw err;
+      }
+
+      // Two states, not a per-combo fallback (mirrors src/lib/variantStock.js
+      // and place_order()): a product with ANY variant_stock entries is
+      // using the grid, and a combo with no key there is 0, not the
+      // aggregate; a product with none yet just uses the aggregate.
+      const usesVariantStock = product.variant_stock && Object.keys(product.variant_stock).length > 0;
+      const available = usesVariantStock
+        ? item.size && item.color
+          ? Number(product.variant_stock[`${item.color}__${item.size}`]) || 0
+          : 0
+        : product.stock;
+      const wantedKey = `${item.product_id}__${item.size ?? ""}__${item.color ?? ""}`;
+      if (available < wanted.get(wantedKey)) {
         const err = new Error(
           hasSizes
             ? `Insufficient stock for ${label} (size ${item.size}): only ${available} left`
@@ -177,11 +202,15 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
         err.status = 400;
         throw err;
       }
+
+      // Sale price, same math as the frontend/place_order() -- never
+      // charge full price for a product shown on sale.
+      const unitPrice = product.price * (1 - (product.discount_percent || 0) / 100);
       return {
         quantity: item.quantity,
         price_data: {
           currency,
-          unit_amount: Math.round(product.price * 100), // Stripe uses the smallest currency unit
+          unit_amount: Math.round(unitPrice * 100), // Stripe uses the smallest currency unit
           product_data: { name: product.name?.en || product.name?.ar || "Product" },
         },
       };

@@ -7,6 +7,7 @@ import {
   categorySchema,
   deliveryFeeSchema,
   paymentStatusSchema,
+  contentPageSchema,
   parseOrThrow,
 } from "../utils/validation.js";
 import { sendOrderStatusEmail, sendOrderTotalEmail } from "../lib/email.js";
@@ -121,7 +122,7 @@ router.patch("/orders/:id/status", async (req, res, next) => {
     // Goes through the set_order_status() database function (not a plain
     // UPDATE) so cancelling an order puts its items back in stock -- per
     // size -- and re-opening a cancelled order takes them again. See
-    // supabase/migration_v14.sql.
+    // supabase/schema.sql.
     const { data, error } = await supabaseAdmin.rpc("set_order_status", {
       p_order_id: req.params.id,
       p_status: body.status,
@@ -176,13 +177,12 @@ router.patch("/orders/:id/payment-status", async (req, res, next) => {
   }
 });
 
-// CHECKPOINT NOTE: delivery cost varies by city, so it's never charged
-// or guessed at checkout (see place_order() in schema.sql) -- every
-// order starts with delivery_fee = 0 / delivery_fee_confirmed = false.
-// This is where the admin fills in the real fee once they know it. It
-// recalculates the order's total (subtotal + fee) AND is what actually
-// triggers sendOrderTotalEmail below -- this is the "full price" email
-// the customer is waiting for after checkout.
+// CHECKPOINT NOTE: delivery is charged upfront from the region the
+// customer picked (delivery_fee_for_region() in schema.sql) -- this route
+// is the admin's manual OVERRIDE for a specific order, for when the real
+// cost differs from the flat region rate. It recalculates the order's
+// total (subtotal + fee) AND triggers sendOrderTotalEmail below so the
+// customer is told about the corrected total.
 router.patch("/orders/:id/delivery-fee", async (req, res, next) => {
   try {
     const body = parseOrThrow(deliveryFeeSchema, req.body);
@@ -364,6 +364,61 @@ router.get("/customers", async (_req, res, next) => {
     }));
 
     res.json(customers);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------- CMS content (manifest-driven page text/images) ----------
+// The dashboard editor loads current content from the public
+// GET /api/content/:page (same data, no admin-only fields to hide) and
+// saves everything for that page in one PUT here.
+router.put("/content/:page", async (req, res, next) => {
+  try {
+    const { page } = req.params;
+    const body = parseOrThrow(contentPageSchema, req.body);
+
+    if (body.items.length > 0) {
+      const rows = body.items.map((item) => ({
+        page,
+        section: item.section,
+        key: item.key,
+        value: item.value ?? null,
+        updated_by: req.user.id,
+      }));
+      const { error } = await supabaseAdmin
+        .from("content_items")
+        .upsert(rows, { onConflict: "page,section,key" });
+      if (error) throw error;
+    }
+
+    // Collections are replaced whole-section-at-a-time: every section
+    // present in this save gets its old rows deleted and the submitted
+    // ones inserted in order. A section left out of the payload entirely
+    // is untouched, so the dashboard editor must always submit the full
+    // current state of every section it's editing, including an emptied one.
+    const sections = [...new Set(body.collections.map((c) => c.section))];
+    for (const section of sections) {
+      const { error: delError } = await supabaseAdmin
+        .from("content_collections")
+        .delete()
+        .eq("page", page)
+        .eq("section", section);
+      if (delError) throw delError;
+    }
+    if (body.collections.length > 0) {
+      const rows = body.collections.map((c, idx) => ({
+        page,
+        section: c.section,
+        sort_order: c.sort_order ?? idx,
+        data: c.data,
+        updated_by: req.user.id,
+      }));
+      const { error: insError } = await supabaseAdmin.from("content_collections").insert(rows);
+      if (insError) throw insError;
+    }
+
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

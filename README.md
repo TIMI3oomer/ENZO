@@ -252,7 +252,7 @@ wrapping issues that placeholder text doesn't.
 **Database:** all of this is already included if you're on the consolidated `supabase/schema.sql` (see section 1).
 
 **Install new packages:** `npm install` in both the project root (adds
-`recharts`) and `/server` (adds `nodemailer`).
+`recharts`) and `/server` (adds `resend`).
 
 **Checkpoint 17 — Dashboard charts**
 `GET /api/admin/analytics` (backend) aggregates 14-day sales, order-status
@@ -270,12 +270,14 @@ these with `recharts` — a line chart, a donut, and a bar chart, all
   and a note field.
 
 **Checkpoint 19 — Order-status emails**
-`server/src/lib/email.js` (nodemailer) sends a bilingual email whenever
+`server/src/lib/email.js` (Resend API) sends a bilingual email whenever
 an admin updates an order's status from `admin/Orders.jsx` — includes
-the new status and the admin's note. Configure real SMTP credentials in
-`server/.env` (see the comments in `.env.example`); until then it just
-logs to the console instead of failing. Guest checkouts without an email
-simply don't get one — everything else still works.
+the new status and the admin's note. Sign up at
+[resend.com](https://resend.com), create an API key, and set
+`RESEND_API_KEY` (and ideally `EMAIL_FROM` with a domain you've verified
+there) in `server/.env`; until then it just logs to the console instead
+of failing. Guest checkouts without an email simply don't get one —
+everything else still works.
 
 **Checkpoint 20 — WhatsApp contact button**
 `src/components/WhatsAppButton.jsx`, a floating button on every storefront
@@ -680,8 +682,8 @@ differently, so they can't be one project.
    - `FRONTEND_URL` — the URL your frontend project will end up at (you
      can update this after deploying the frontend and redeploy the
      backend once you know it — see step below)
-   - `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USER` / `EMAIL_PASS` /
-     `EMAIL_FROM` — optional, for order-status emails
+   - `RESEND_API_KEY` / `EMAIL_FROM` — optional, for order-status emails
+     (resend.com)
 4. Deploy. Vercel gives you a URL like `https://enzo-api.vercel.app`.
    Visit `https://enzo-api.vercel.app/api/health` — you should see
    `{"ok":true}`. If not, check the deployment's function logs.
@@ -817,10 +819,53 @@ All backend settings are documented in `server/.env.example`; frontend ones in `
 
 ---
 
-## Stock per size
+## Stock per size AND color
 
-Each product with sizes now keeps its own stock **per size** (e.g. a shirt with 15 pieces = 2 S + 3 M + 5 L + ...). In **Admin → Products → edit**, pick the sizes, then type how many you have of each; the product's total is added up automatically. Products with no sizes (a cap, a bag) still use a single stock number.
+Each product can keep its own stock **per size+color combo**, not just per
+size — a grey shirt might have 10 in S while the same shirt in blue only
+has 5 in S. In **Admin → Products → edit**, once both sizes and colors are
+picked, a grid replaces the single stock number: one box per size×color,
+the product's total is added up automatically. A product with only sizes,
+only colors, or neither still uses a single stock number.
 
-- Customers can only buy a size that is in stock; sold-out sizes are crossed out, and "Only N left" shows at 3 or fewer.
-- **Cancelling an order puts its items back in stock** (per size). Re-opening a cancelled order takes them again, and is refused if they have since sold out.
-- **Existing database?** Run `supabase/migration_v14.sql` once in the Supabase SQL editor. Your current stock is split evenly across each product's sizes (10 over S/M/L becomes 4/3/3, total still 10) — open each product afterwards and enter the real numbers.
+- Customers can only buy a size+color combo that's in stock; sold-out
+  combos are crossed out, and "Only N left" shows at 5 or fewer.
+- A product can ALSO have specific sizes/colors manually marked "sold
+  out" regardless of stock numbers (e.g. you're done selling a color for
+  the season) — a separate toggle in the same edit screen.
+- **Cancelling an order puts its items back in stock** (per combo).
+  Re-opening a cancelled order takes them again, and is refused if they've
+  since sold out.
+- **Backward compatible, no data migration needed:** a product that has
+  never had its grid filled in (every product that existed before this)
+  just keeps using its plain total stock number exactly like before —
+  nothing to redistribute or re-enter unless you actually want per-combo
+  tracking for that product.
+- **Existing database?** Run `supabase/migration_v15.sql` once in the
+  Supabase SQL editor.
+
+---
+
+## Site content CMS, discounts, and a few product-form changes
+
+- **Site content editor** — **Admin → Site content** lets you edit the
+  home hero heading/subtitle/button, the site logo, the footer contact
+  handle, and the product-page care instructions text, without touching
+  code. Backed by `content_items`/`content_collections` (manifest-driven,
+  see `src/lib/contentManifest.js`); every field falls back to the
+  existing default if nothing's been set, so an empty table never breaks
+  the site.
+- **Product discounts** — a discount % field per product. The storefront
+  shows a struck-through price + badge, and a home-page "On sale" section
+  surfaces discounted products. The discounted price is what's actually
+  charged at checkout (every payment path), not just shown.
+- **Care instructions** are no longer typed per product — it's one
+  static, store-wide text now (edit it from the Site content page above),
+  since it's realistically the same wording for every garment.
+- **English is optional when adding a product** — Arabic fields are
+  always shown; English name/description/material/fit are behind a
+  collapsed "Add English translation" toggle (auto-expands when editing a
+  product that already has English text).
+- **Existing database?** Run `supabase/migration_v15.sql` (the same one
+  as the stock-per-size-and-color section above — it covers all of this
+  in one file) once in the Supabase SQL editor.

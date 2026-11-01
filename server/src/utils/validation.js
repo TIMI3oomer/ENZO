@@ -51,17 +51,20 @@ export const productSchema = z.object({
   fit: localizedText.optional(),
   care_instructions: localizedText.optional(),
   price: z.number().nonnegative(),
-  // Total stock for products WITHOUT sizes. For products with sizes the
-  // database ignores this and uses the sum of size_stock instead.
   stock: z.number().int().nonnegative().default(0),
-  // Stock per size, e.g. { "S": 2, "M": 3, "L": 5 }.
-  size_stock: z.record(z.string().max(10), z.number().int().nonnegative().max(100000)).default({}),
   category_id: z.string().uuid().nullable().optional(),
   sizes: z.array(z.string().max(10)).default([]),
   colors: z.array(z.string().max(30)).default([]),
   color_images: z.record(z.string().url()).optional().default({}),
   images: z.array(z.string().url()).default([]),
   is_active: z.boolean().optional(),
+  sold_out_sizes: z.array(z.string().max(10)).default([]),
+  sold_out_colors: z.array(z.string().max(30)).default([]),
+  discount_percent: z.number().min(0).max(100).default(0),
+  // Per size+color stock ("<color>__<size>" -> quantity). Empty object =
+  // this product doesn't use the grid yet (see src/lib/variantStock.js
+  // for the exact two-state rule this mirrors).
+  variant_stock: z.record(z.number().int().nonnegative()).optional().default({}),
 });
 
 export const orderStatusSchema = z.object({
@@ -85,10 +88,32 @@ export const categorySchema = z.object({
   name: localizedText,
 });
 
-// Delivery cost varies by city, so it's set per order by the admin (see
-// PATCH /api/admin/orders/:id/delivery-fee) instead of one global rate.
+// Delivery cost is normally computed from the region (see
+// createOrderSchema above / delivery_fee_for_region() in schema.sql);
+// this is only for the admin's manual override of a specific order's fee.
 export const deliveryFeeSchema = z.object({
   delivery_fee: z.number().nonnegative(),
+});
+
+// Manifest-driven CMS (content_items / content_collections, see
+// supabase/schema.sql). One page's worth of scalars + ordered collection
+// sections is saved together from the dashboard editor in a single PUT,
+// so this validates the whole payload at once.
+export const contentItemSchema = z.object({
+  section: z.string().trim().min(1).max(100),
+  key: z.string().trim().min(1).max(100),
+  value: z.string().max(5000).nullable().optional(),
+});
+
+export const contentCollectionItemSchema = z.object({
+  section: z.string().trim().min(1).max(100),
+  sort_order: z.number().int().nonnegative().optional(),
+  data: z.record(z.any()),
+});
+
+export const contentPageSchema = z.object({
+  items: z.array(contentItemSchema).max(200).default([]),
+  collections: z.array(contentCollectionItemSchema).max(200).default([]),
 });
 
 // Small helper used by every route: validates `req.body` against a zod

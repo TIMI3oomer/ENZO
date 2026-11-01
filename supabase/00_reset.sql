@@ -14,6 +14,7 @@
 -- =====================================================================
 
 drop trigger if exists on_auth_user_created on auth.users;
+drop trigger if exists trg_sync_product_stock on products;
 
 drop table if exists order_items cascade;
 drop table if exists orders cascade;
@@ -22,8 +23,14 @@ drop table if exists categories cascade;
 drop table if exists admin_users cascade;
 drop table if exists profiles cascade;
 drop table if exists store_settings cascade;
+drop table if exists content_items cascade;
+drop table if exists content_collections cascade;
 
+drop function if exists place_order(text, text, text, text, text, text, text, uuid, jsonb, text, text, text, text);
 drop function if exists place_order(text, text, text, text, text, text, text, uuid, jsonb, text);
 drop function if exists place_order(text, text, text, text, text, text, text, uuid, jsonb);
+drop function if exists set_order_status(uuid, text, text);
+drop function if exists delivery_fee_for_region(text);
+drop function if exists sync_product_stock();
 drop function if exists is_admin();
 drop function if exists handle_new_user();

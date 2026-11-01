@@ -25,7 +25,10 @@
     "quantity": "Quantity",
     "relatedProducts": "You might also like",
     "color": "Color",
-    "onlyLeft": "Only {{count}} left in this size"
+    "soldOut": "Sold out",
+    "sale": "Sale",
+    "onSale": "On sale",
+    "lowStock": "Only {{count}} left in stock"
   },
   "cart": {
     "title": "Shopping cart",

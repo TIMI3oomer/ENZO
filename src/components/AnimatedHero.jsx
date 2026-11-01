@@ -1,9 +1,9 @@
 import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import ClothesMarquee from "./ClothesMarquee.jsx";
 import OrbitingGarments from "./OrbitingGarments.jsx";
+import { useContent } from "../hooks/useContent.js";
 
 // CHECKPOINT NOTE (components/AnimatedHero.jsx):
 // The hover-spotlight effect (blur everything except the hovered logo/
@@ -23,8 +23,8 @@ import OrbitingGarments from "./OrbitingGarments.jsx";
 // Everything here only animates transform/opacity/filter (all
 // GPU-composited). useReducedMotion() flattens the flip/scatter to a
 // plain fade for anyone with that OS preference.
-export default function AnimatedHero({ products }) {
-  const { t } = useTranslation("common");
+export default function AnimatedHero({ products, hero }) {
+  const siteContent = useContent("site");
   const wrapperRef = useRef(null);
   const reduceMotion = useReducedMotion();
 
@@ -50,7 +50,7 @@ export default function AnimatedHero({ products }) {
         <motion.div style={{ opacity: heroFadeOut }} className="relative flex flex-col items-center">
           <div className="relative flex items-center justify-center">
             <motion.img
-              src="/logo.jpg"
+              src={siteContent.images.logo}
               alt="ENZO"
               style={{ rotateY, scale: logoScale, opacity: logoOpacity, filter: logoFilter, transformStyle: "preserve-3d" }}
               className="relative z-10 h-32 w-32 rounded-full shadow-2xl sm:h-44 sm:w-44"
@@ -61,14 +61,14 @@ export default function AnimatedHero({ products }) {
           <motion.div style={{ opacity: textOpacity, y: textY }} className="relative z-10 mt-10">
             <div className="relative">
               <ClothesMarquee products={products} />
-              <h1 className="relative z-10 font-display text-4xl leading-tight enzo-gradient-text sm:text-6xl">{t("hero.title")}</h1>
-              <p className="relative z-10 mx-auto mt-4 max-w-xl text-enzo-muted sm:text-lg">{t("hero.subtitle")}</p>
+              <h1 className="relative z-10 font-display text-4xl leading-tight enzo-gradient-text sm:text-6xl">{hero.title}</h1>
+              <p className="relative z-10 mx-auto mt-4 max-w-xl text-enzo-muted sm:text-lg">{hero.subtitle}</p>
             </div>
             <Link
               to="/shop"
               className="enzo-shine relative z-10 mt-8 inline-block rounded-md bg-enzo-gradient px-8 py-3 font-semibold text-enzo-black"
             >
-              {t("hero.cta")}
+              {hero.cta}
             </Link>
           </motion.div>
         </motion.div>

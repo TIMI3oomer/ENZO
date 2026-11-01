@@ -6,6 +6,7 @@ import LanguageSwitcher from "./LanguageSwitcher.jsx";
 import CartDrawer from "./CartDrawer.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useContent } from "../hooks/useContent.js";
 
 // CHECKPOINT NOTE (Navbar.jsx):
 // Uses margin-inline-start/end (via Tailwind's `ms-*`/`me-*` utilities) and
@@ -24,6 +25,7 @@ export default function Navbar() {
   const [cartOpen, setCartOpen] = useState(false);
   const { count } = useCart();
   const { session, isAdmin } = useAuth();
+  const content = useContent("site");
 
   const links = [
     { to: "/", label: t("nav.home") },
@@ -35,7 +37,7 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
         {/* Logo */}
         <Link to="/" className="flex items-center">
-          <img src="/logo.jpg" alt="ENZO" className="h-9 w-9 rounded-full sm:h-10 sm:w-10" />
+          <img src={content.images.logo} alt="ENZO" className="h-9 w-9 rounded-full sm:h-10 sm:w-10" />
         </Link>
 
         {/* Desktop nav */}

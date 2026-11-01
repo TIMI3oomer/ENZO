@@ -25,7 +25,10 @@
     "quantity": "الكمية",
     "relatedProducts": "قد يعجبك أيضاً",
     "color": "اللون",
-    "onlyLeft": "بقي {{count}} فقط من هذا المقاس"
+    "soldOut": "نفذت الكمية",
+    "sale": "تخفيض",
+    "onSale": "عروض وتخفيضات",
+    "lowStock": "تبقى {{count}} فقط في المخزون"
   },
   "cart": {
     "title": "سلة التسوق",

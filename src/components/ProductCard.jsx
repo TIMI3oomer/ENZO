@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
-import { formatPrice } from "../lib/formatPrice.js";
+import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
 import { COLOR_HEX } from "../lib/colors.js";
 
 // CHECKPOINT NOTE (ProductCard.jsx):
@@ -65,6 +65,12 @@ export default function ProductCard({ product }) {
             </span>
           )}
 
+          {product.discount_percent > 0 && (
+            <span className="absolute top-2.5 end-2.5 rounded-full bg-enzo-error px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-enzo-white">
+              -{product.discount_percent}%
+            </span>
+          )}
+
           {hasColorPreviews && (
             <div className="absolute inset-x-0 bottom-0 flex justify-center pb-2.5">
               <div className="flex items-center gap-1.5 rounded-full bg-enzo-black/45 px-2 py-1.5 backdrop-blur-sm">
@@ -96,7 +102,14 @@ export default function ProductCard({ product }) {
 
         <div className="flex flex-1 flex-col gap-1 px-3 py-3 text-start">
           <p className="line-clamp-1 text-sm font-medium">{name}</p>
-          <p className="mt-auto text-sm font-semibold text-enzo-goldBright">{formatPrice(product.price)}</p>
+          {product.discount_percent > 0 ? (
+            <p className="mt-auto flex items-center gap-2 text-sm font-semibold">
+              <span className="text-enzo-goldBright">{formatPrice(getDiscountedPrice(product.price, product.discount_percent))}</span>
+              <span className="text-xs text-enzo-muted line-through">{formatPrice(product.price)}</span>
+            </p>
+          ) : (
+            <p className="mt-auto text-sm font-semibold text-enzo-goldBright">{formatPrice(product.price)}</p>
+          )}
         </div>
       </div>
     </Link>

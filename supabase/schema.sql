@@ -42,14 +42,31 @@ create table if not exists products (
   colors text[] not null default '{}',
   color_images jsonb not null default '{}', -- { "Black": "https://...", "Gold": "https://..." }
   images text[] not null default '{}',
-  stock int not null default 0 check (stock >= 0), -- for products WITH sizes this is the auto-total of size_stock (see trigger below)
-  size_stock jsonb not null default '{}'::jsonb check (jsonb_typeof(size_stock) = 'object'), -- stock per size, e.g. {"S":2,"M":3,"L":5}
+  -- Which of this product's sizes/colors are currently unavailable,
+  -- independent of each other and of the stock numbers below -- the
+  -- storefront disables + red-marks these as "Sold out" regardless of
+  -- what variant_stock says, for a quick manual override.
+  sold_out_sizes text[] not null default '{}',
+  sold_out_colors text[] not null default '{}',
+  -- 0 = not on sale. Sale price is computed as price * (1 -
+  -- discount_percent/100) wherever shown, never stored separately.
+  discount_percent numeric(5,2) not null default 0 check (discount_percent >= 0 and discount_percent <= 100),
+  stock int not null default 0 check (stock >= 0), -- auto-total of variant_stock once it's in use (see trigger below)
+  -- Per size+color stock, e.g. {"Grey__S": 10, "Blue__S": 5} -- a grey
+  -- shirt might have 10 in S while the same shirt in blue only has 5 in
+  -- S. Empty object = this product doesn't use the grid (every product
+  -- saved before this existed, or one with only sizes, only colors, or
+  -- neither) -- `stock` above is then the plain total, edited directly.
+  -- See src/lib/variantStock.js for the exact two-state rule this and
+  -- the trigger below both follow.
+  variant_stock jsonb not null default '{}'::jsonb check (jsonb_typeof(variant_stock) = 'object'),
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
 create index if not exists idx_products_category on products(category_id);
 create index if not exists idx_products_active on products(is_active);
+create index if not exists idx_products_discount on products(discount_percent) where discount_percent > 0;
 
 -- ---------- ORDERS ----------
 -- DELIVERY FEE: charged at checkout from the region the customer picks
@@ -214,28 +231,28 @@ as $$
   end;
 $$;
 
--- STOCK PER SIZE: products.size_stock holds stock per size and the trigger
--- below keeps products.stock equal to their total. Products without sizes
--- just use products.stock. (Added by migration_v14.sql on existing DBs.)
+-- STOCK PER SIZE+COLOR: products.variant_stock holds stock per combo and
+-- this trigger keeps products.stock equal to their total, but ONLY once
+-- variant_stock actually has entries -- a product that has never used the
+-- grid keeps `stock` as a plain, directly-edited number (see the two-state
+-- rule in src/lib/variantStock.js). This is what lets an admin edit, say,
+-- just a product's name without the trigger silently zeroing out its
+-- stock because the grid was never filled in.
 create or replace function sync_product_stock()
 returns trigger
 language plpgsql
 as $$
 begin
   -- Refuse malformed data instead of silently turning it into zeros.
-  if jsonb_typeof(new.size_stock) is distinct from 'object' then
-    raise exception 'size_stock must be a JSON object like {"S":2,"M":3}';
+  if jsonb_typeof(new.variant_stock) is distinct from 'object' then
+    raise exception 'variant_stock must be a JSON object like {"Grey__S": 10}';
   end if;
 
-  if coalesce(array_length(new.sizes, 1), 0) > 0 then
-    new.size_stock := coalesce(
-      (
-        select jsonb_object_agg(s, greatest(coalesce((new.size_stock ->> s)::int, 0), 0))
-        from unnest(new.sizes) as s
-      ),
-      '{}'::jsonb
+  if new.variant_stock <> '{}'::jsonb then
+    new.stock := coalesce(
+      (select sum(greatest(value::int, 0)) from jsonb_each_text(new.variant_stock)),
+      0
     );
-    new.stock := coalesce((select sum(value::int) from jsonb_each_text(new.size_stock)), 0);
   end if;
   return new;
 end;
@@ -275,6 +292,9 @@ declare
   v_qty int;
   v_have int;
   v_existing orders%rowtype;
+  v_variant_key text;
+  v_unit_price numeric;
+  v_uses_variants boolean;
 begin
   -- Stripe webhook retry: same session already turned into an order.
   if p_stripe_session_id is not null then
@@ -294,17 +314,18 @@ begin
     raise exception 'Cannot place an order with no items';
   end if;
 
-  -- 1) VALIDATE. Lines are grouped by (product, size) so the same shirt in
-  --    the same size ordered twice (e.g. two colours) is checked as one
-  --    total. Rows are locked in a fixed order, so two simultaneous
-  --    orders can never deadlock or both take the last piece.
+  -- 1) VALIDATE. Lines are grouped by (product, size, color) so the exact
+  --    same combo split across two cart lines is checked as one total.
+  --    Rows are locked in a fixed order, so two simultaneous orders can
+  --    never deadlock or both take the last piece.
   for v_line in
     select (i ->> 'product_id')::uuid as product_id,
            nullif(i ->> 'size', '') as size,
+           nullif(i ->> 'color', '') as color,
            sum((i ->> 'quantity')::int) as qty
     from jsonb_array_elements(p_items) as i
-    group by 1, 2
-    order by 1, 2
+    group by 1, 2, 3
+    order by 1, 2, 3
   loop
     select * into v_product from products where id = v_line.product_id for update;
 
@@ -324,17 +345,40 @@ begin
       if v_line.size is null or not (v_line.size = any (v_product.sizes)) then
         raise exception 'Please choose a size for %', v_product.slug;
       end if;
-      v_have := coalesce((v_product.size_stock ->> v_line.size)::int, 0);
-      if v_have < v_line.qty then
-        raise exception 'Insufficient stock for % (size %): only % left', v_product.slug, v_line.size, v_have;
-      end if;
-    else
-      if v_product.stock < v_line.qty then
-        raise exception 'Insufficient stock for %: only % left', v_product.slug, v_product.stock;
-      end if;
     end if;
 
-    v_subtotal := v_subtotal + (v_product.price * v_line.qty);
+    if v_line.size is not null and v_product.sold_out_sizes @> array[v_line.size] then
+      raise exception 'Size % is sold out for %', v_line.size, v_product.slug;
+    end if;
+
+    if v_line.color is not null and v_product.sold_out_colors @> array[v_line.color] then
+      raise exception 'Color % is sold out for %', v_line.color, v_product.slug;
+    end if;
+
+    -- Two states, not a per-combo fallback: a product with ANY
+    -- variant_stock entries is using the grid, and a combo with no key
+    -- there is 0, not the aggregate; a product with none yet (or one
+    -- without both sizes and colors) just uses the plain aggregate. See
+    -- src/lib/variantStock.js for the identical client-side rule.
+    v_uses_variants := v_product.variant_stock <> '{}'::jsonb;
+    if v_uses_variants then
+      if v_line.size is not null and v_line.color is not null then
+        v_variant_key := v_line.color || '__' || v_line.size;
+        v_have := coalesce((v_product.variant_stock ->> v_variant_key)::int, 0);
+      else
+        v_have := 0;
+      end if;
+    else
+      v_have := v_product.stock;
+    end if;
+
+    if v_have < v_line.qty then
+      raise exception 'Insufficient stock for %: only % left', v_product.slug, v_have;
+    end if;
+
+    -- Sale price, same math as the frontend (never a stored column) --
+    -- the subtotal/line item below MUST agree with what the customer saw.
+    v_subtotal := v_subtotal + (round(v_product.price * (1 - v_product.discount_percent / 100), 2) * v_line.qty);
   end loop;
 
   -- 2) CREATE the order and its line items.
@@ -355,32 +399,42 @@ begin
   loop
     select * into v_product from products where id = (v_item ->> 'product_id')::uuid;
     v_qty := (v_item ->> 'quantity')::int;
+    v_unit_price := round(v_product.price * (1 - v_product.discount_percent / 100), 2);
 
     insert into order_items (order_id, product_id, product_name, size, color, quantity, unit_price)
-    values (v_order_id, v_product.id, v_product.name, nullif(v_item ->> 'size', ''), v_item ->> 'color', v_qty, v_product.price);
+    values (
+      v_order_id, v_product.id, v_product.name,
+      nullif(v_item ->> 'size', ''), nullif(v_item ->> 'color', ''), v_qty, v_unit_price
+    );
   end loop;
 
-  -- 3) TAKE the stock (per size for sized products; the trigger then
-  --    refreshes products.stock to the new total).
+  -- 3) TAKE the stock, grouped by (product, size, color). When a product
+  --    is using the grid, variant_stock is decremented and the
+  --    sync_product_stock trigger refreshes `stock` to the new total;
+  --    otherwise `stock` is decremented directly.
   for v_line in
     select (i ->> 'product_id')::uuid as product_id,
            nullif(i ->> 'size', '') as size,
+           nullif(i ->> 'color', '') as color,
            sum((i ->> 'quantity')::int) as qty
     from jsonb_array_elements(p_items) as i
-    group by 1, 2
-    order by 1, 2
+    group by 1, 2, 3
+    order by 1, 2, 3
   loop
     select * into v_product from products where id = v_line.product_id;
-    if coalesce(array_length(v_product.sizes, 1), 0) > 0 then
+    v_uses_variants := v_product.variant_stock <> '{}'::jsonb;
+
+    if v_uses_variants and v_line.size is not null and v_line.color is not null then
+      v_variant_key := v_line.color || '__' || v_line.size;
       update products
-        set size_stock = jsonb_set(
-          size_stock,
-          array[v_line.size],
-          to_jsonb(coalesce((size_stock ->> v_line.size)::int, 0) - v_line.qty)
+        set variant_stock = jsonb_set(
+          variant_stock,
+          array[v_variant_key],
+          to_jsonb(greatest(0, coalesce((variant_stock ->> v_variant_key)::int, 0) - v_line.qty))
         )
         where id = v_product.id;
     else
-      update products set stock = stock - v_line.qty where id = v_product.id;
+      update products set stock = greatest(0, stock - v_line.qty) where id = v_product.id;
     end if;
   end loop;
 
@@ -392,7 +446,8 @@ revoke execute on function place_order(text, text, text, text, text, text, text,
 grant execute on function place_order(text, text, text, text, text, text, text, uuid, jsonb, text, text, text, text) to service_role;
 
 -- set_order_status(): changing an order to 'cancelled' returns its items to
--- stock (per size); moving it out of 'cancelled' takes them again.
+-- stock (per size+color combo when the product uses the grid, otherwise
+-- the plain aggregate); moving it out of 'cancelled' takes them again.
 create or replace function set_order_status(p_order_id uuid, p_status text, p_note text default null)
 returns orders
 language plpgsql
@@ -403,6 +458,8 @@ declare
   v_line record;
   v_product products%rowtype;
   v_have int;
+  v_variant_key text;
+  v_uses_variants boolean;
 begin
   if p_status not in ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled') then
     raise exception 'Invalid order status: %', p_status;
@@ -416,40 +473,42 @@ begin
   if p_status = 'cancelled' and v_order.status <> 'cancelled' then
     -- Put the items back on the shelf.
     for v_line in
-      select product_id, size, sum(quantity)::int as qty
+      select product_id, size, color, sum(quantity)::int as qty
       from order_items
       where order_id = p_order_id and product_id is not null
-      group by 1, 2
-      order by 1, 2
+      group by 1, 2, 3
+      order by 1, 2, 3
     loop
       select * into v_product from products where id = v_line.product_id for update;
       if not found then
         continue; -- product was deleted since; nothing to restock
       end if;
 
-      if coalesce(array_length(v_product.sizes, 1), 0) > 0 then
-        if v_line.size is not null and v_line.size = any (v_product.sizes) then
-          update products
-            set size_stock = jsonb_set(
-              size_stock,
-              array[v_line.size],
-              to_jsonb(coalesce((size_stock ->> v_line.size)::int, 0) + v_line.qty)
-            )
-            where id = v_product.id;
-        end if;
-      else
+      v_uses_variants := v_product.variant_stock <> '{}'::jsonb;
+      if v_uses_variants and v_line.size is not null and v_line.color is not null then
+        v_variant_key := v_line.color || '__' || v_line.size;
+        update products
+          set variant_stock = jsonb_set(
+            variant_stock,
+            array[v_variant_key],
+            to_jsonb(coalesce((variant_stock ->> v_variant_key)::int, 0) + v_line.qty)
+          )
+          where id = v_product.id;
+      elsif not v_uses_variants then
         update products set stock = stock + v_line.qty where id = v_product.id;
       end if;
+      -- else: product uses the grid but this line has no size+color on
+      -- record (shouldn't happen) -- nothing sane to restock, skip it.
     end loop;
 
   elsif p_status <> 'cancelled' and v_order.status = 'cancelled' then
     -- Re-opening a cancelled order: take the items again, if still there.
     for v_line in
-      select product_id, size, sum(quantity)::int as qty
+      select product_id, size, color, sum(quantity)::int as qty
       from order_items
       where order_id = p_order_id and product_id is not null
-      group by 1, 2
-      order by 1, 2
+      group by 1, 2, 3
+      order by 1, 2, 3
     loop
       select * into v_product from products where id = v_line.product_id for update;
       if not found then
@@ -460,12 +519,21 @@ begin
         if v_line.size is null or not (v_line.size = any (v_product.sizes)) then
           raise exception 'Cannot re-open this order: size % of % is no longer offered', coalesce(v_line.size, '?'), v_product.slug;
         end if;
-        v_have := coalesce((v_product.size_stock ->> v_line.size)::int, 0);
+      end if;
+
+      v_uses_variants := v_product.variant_stock <> '{}'::jsonb;
+      if v_uses_variants then
+        if v_line.size is not null and v_line.color is not null then
+          v_variant_key := v_line.color || '__' || v_line.size;
+          v_have := coalesce((v_product.variant_stock ->> v_variant_key)::int, 0);
+        else
+          v_have := 0;
+        end if;
         if v_have < v_line.qty then
-          raise exception 'Cannot re-open this order: only % left of % in size %', v_have, v_product.slug, v_line.size;
+          raise exception 'Cannot re-open this order: only % left of %', v_have, v_product.slug;
         end if;
         update products
-          set size_stock = jsonb_set(size_stock, array[v_line.size], to_jsonb(v_have - v_line.qty))
+          set variant_stock = jsonb_set(variant_stock, array[v_variant_key], to_jsonb(v_have - v_line.qty))
           where id = v_product.id;
       else
         if v_product.stock < v_line.qty then
@@ -484,6 +552,52 @@ $$;
 revoke execute on function set_order_status(uuid, text, text) from public, anon, authenticated;
 grant execute on function set_order_status(uuid, text, text) to service_role;
 
+-- =====================================================================
+-- CMS: manifest-driven content for page text/images that don't already
+-- have their own admin screen (products/categories/orders already do --
+-- this is NOT for those). See src/lib/contentManifest.js.
+--
+-- content_items: (page, section, key) -> value, for singleton scalars (a
+-- heading, a button label, an image URL). content_collections: (page,
+-- section, sort_order) -> jsonb, for small ordered lists. Reuses the
+-- SAME is_admin() every other admin write in this file already checks --
+-- one admin allow-list, not a second one that could drift out of sync.
+-- =====================================================================
+create table if not exists content_items (
+  id         uuid primary key default gen_random_uuid(),
+  page       text not null,
+  section    text not null,
+  key        text not null,
+  value      text,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id) on delete set null
+);
+
+create unique index if not exists content_items_page_section_key_idx
+  on content_items (page, section, key);
+create index if not exists content_items_page_idx on content_items (page);
+
+create table if not exists content_collections (
+  id         uuid primary key default gen_random_uuid(),
+  page       text not null,
+  section    text not null,
+  sort_order integer not null default 0,
+  data       jsonb not null default '{}',
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id) on delete set null
+);
+
+create index if not exists content_collections_page_section_idx
+  on content_collections (page, section, sort_order);
+
+alter table content_items enable row level security;
+alter table content_collections enable row level security;
+
+create policy "public read content_items" on content_items for select using (true);
+create policy "admin write content_items" on content_items for all using (is_admin()) with check (is_admin());
+
+create policy "public read content_collections" on content_collections for select using (true);
+create policy "admin write content_collections" on content_collections for all using (is_admin()) with check (is_admin());
 
 -- =====================================================================
 -- STORAGE: product image uploads (admin panel "upload from gallery")
@@ -513,6 +627,27 @@ create policy "admin upload product images" on storage.objects
 
 create policy "admin delete product images" on storage.objects
   for delete using (bucket_id = 'product-images' and is_admin());
+
+-- Separate bucket for CMS-uploaded images (hero/logo/etc), managed
+-- independently of product-images. SVG is deliberately excluded -- an
+-- uploaded SVG can carry <script>, and this bucket is served publicly
+-- (stored-XSS vector).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'content-images', 'content-images', true,
+  5242880, -- 5 MB
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "public read content images" on storage.objects
+  for select using (bucket_id = 'content-images');
+
+create policy "admin write content images" on storage.objects
+  for all using (bucket_id = 'content-images' and is_admin())
+  with check (bucket_id = 'content-images' and is_admin());
 
 -- =====================================================================
 -- SEED DATA (optional — remove or edit before going live)

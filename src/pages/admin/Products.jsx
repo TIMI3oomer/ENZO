@@ -59,9 +59,11 @@ export default function AdminProducts() {
                 <td className="px-4 py-3">{p.price}</td>
                 <td className="px-4 py-3">
                   {p.stock}
-                  {(p.sizes || []).length > 0 && (
+                  {p.variant_stock && Object.keys(p.variant_stock).length > 0 && (
                     <span className="ms-2 text-xs text-enzo-muted" dir="ltr">
-                      ({p.sizes.map((s) => `${s}:${p.size_stock?.[s] ?? 0}`).join(" ")})
+                      ({Object.entries(p.variant_stock)
+                        .map(([key, qty]) => `${key.replace("__", " ")}:${qty}`)
+                        .join(" ")})
                     </span>
                   )}
                 </td>

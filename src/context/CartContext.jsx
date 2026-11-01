@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { stockFor } from "../lib/stock.js";
+import { getDiscountedPrice } from "../lib/formatPrice.js";
+import { getAvailableStock } from "../lib/variantStock.js";
 
 const CartContext = createContext(null);
 const STORAGE_KEY = "enzo_cart_v1";
@@ -31,8 +32,9 @@ export function CartProvider({ children }) {
       const existing = prev.find((i) => i.key === key);
       if (existing) {
         // Never let repeated "add to cart" clicks go past the stock of
-        // this size (the "+" button already respected it; this didn't).
-        const cap = stockFor(product, size);
+        // this size+color combo (the "+" button already respected it;
+        // this didn't).
+        const cap = getAvailableStock(product, size, color);
         return prev.map((i) =>
           i.key === key
             ? { ...i, stock: cap, quantity: Math.min(i.quantity + quantity, Math.max(cap, 1)) }
@@ -46,12 +48,15 @@ export function CartProvider({ children }) {
           productId: product.id,
           slug: product.slug,
           name: product.name, // { ar, en }
-          price: product.price,
+          price: getDiscountedPrice(product.price, product.discount_percent), // sale price, if on sale
           image: product.images?.[0] ?? null,
           size,
           color,
           quantity,
-          stock: stockFor(product, size), // stock of THIS size; snapshot, refreshed live on the Cart page -- see Cart.jsx
+          // The specific size+color combo's limit when tracked, else the
+          // product's aggregate -- snapshot, refreshed live on the Cart
+          // page (see Cart.jsx).
+          stock: getAvailableStock(product, size, color),
         },
       ];
     });

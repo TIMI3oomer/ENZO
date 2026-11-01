@@ -10,8 +10,10 @@ const router = Router();
 // on a policy it just bypassed.
 router.get("/", async (req, res, next) => {
   try {
-    const { category, size, sort, ids } = req.query;
+    const { category, size, sort, ids, on_sale } = req.query;
     let query = supabaseAdmin.from("products").select("*").eq("is_active", true);
+
+    if (on_sale === "true") query = query.gt("discount_percent", 0);
 
     // CHECKPOINT NOTE: `ids` (comma-separated) is what Cart.jsx uses to
     // refresh the live price/stock of whatever's already sitting in

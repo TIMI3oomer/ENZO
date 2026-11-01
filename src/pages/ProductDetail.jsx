@@ -4,10 +4,11 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
-import { formatPrice } from "../lib/formatPrice.js";
+import { useContent } from "../hooks/useContent.js";
+import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
+import { getAvailableStock } from "../lib/variantStock.js";
 import ErrorBanner from "../components/ErrorBanner.jsx";
 import { COLOR_HEX } from "../lib/colors.js";
-import { stockFor, firstAvailableSize } from "../lib/stock.js";
 
 // CHECKPOINT NOTE (ProductDetail.jsx):
 // Fetches from GET /api/products/:slug (backend). The product stays the
@@ -21,6 +22,7 @@ export default function ProductDetail() {
   const { t } = useTranslation("common");
   const localize = useLocalizedField();
   const { addItem } = useCart();
+  const siteContent = useContent("site");
 
   const [product, setProduct] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -36,8 +38,11 @@ export default function ProductDetail() {
       .get(`/products/${slug}`)
       .then((data) => {
         setProduct(data);
-        setSize(firstAvailableSize(data)); // a size that is actually in stock, not just the first one
-        setColor(data?.colors?.[0] ?? null);
+        const availableSize = data?.sizes?.find((s) => !data.sold_out_sizes?.includes(s)) ?? data?.sizes?.[0] ?? null;
+        const availableColor =
+          data?.colors?.find((c) => !data.sold_out_colors?.includes(c)) ?? data?.colors?.[0] ?? null;
+        setSize(availableSize);
+        setColor(availableColor);
       })
       .catch((err) => (err.status === 404 ? setNotFound(true) : setError(err.message)));
   }
@@ -57,12 +62,7 @@ export default function ProductDetail() {
   if (notFound) return <div className="p-10 text-center text-enzo-muted">{t("errors.notFound")}</div>;
   if (!product) return <div className="p-10 text-center text-enzo-muted">…</div>;
 
-  // Stock of the size currently selected (or the whole product if it has no sizes).
-  const sizeStock = stockFor(product, size);
-  const soldOut = sizeStock <= 0;
-
   const handleAdd = () => {
-    if (soldOut) return;
     addItem(product, size, color, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -97,22 +97,54 @@ export default function ProductDetail() {
       {/* Info */}
       <div className="text-start">
         <h1 className="font-display text-3xl">{localize(product.name)}</h1>
-        <p className="mt-2 text-xl text-enzo-muted">{formatPrice(product.price)}</p>
+        {product.discount_percent > 0 ? (
+          <div className="mt-2 flex items-center gap-3">
+            <p className="text-xl font-semibold text-enzo-gold">
+              {formatPrice(getDiscountedPrice(product.price, product.discount_percent))}
+            </p>
+            <p className="text-base text-enzo-muted line-through">{formatPrice(product.price)}</p>
+            <span className="rounded-full bg-enzo-error px-2.5 py-0.5 text-xs font-semibold text-enzo-white">
+              -{product.discount_percent}%
+            </span>
+          </div>
+        ) : (
+          <p className="mt-2 text-xl text-enzo-muted">{formatPrice(product.price)}</p>
+        )}
         <p className="mt-6 leading-relaxed text-enzo-muted">{localize(product.description)}</p>
 
         {product.colors?.length > 0 && (
           <div className="mt-6">
             <p className="mb-2 text-sm font-medium">{t("product.color")}</p>
-            <div className="flex gap-2">
-              {product.colors.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => handleColorSelect(c)}
-                  title={c}
-                  className={`h-9 w-9 rounded-full border-2 ${color === c ? "border-enzo-goldBright" : "border-enzo-line"}`}
-                  style={{ backgroundColor: COLOR_HEX[c] || "#333" }}
-                />
-              ))}
+            <div className="flex flex-wrap gap-3">
+              {product.colors.map((c) => {
+                const soldOut = product.sold_out_colors?.includes(c);
+                return (
+                  <button
+                    key={c}
+                    onClick={() => !soldOut && handleColorSelect(c)}
+                    disabled={soldOut}
+                    title={soldOut ? `${c} — ${t("product.soldOut")}` : c}
+                    className="relative flex flex-col items-center gap-1"
+                  >
+                    <span
+                      className={`h-9 w-9 rounded-full border-2 ${
+                        soldOut
+                          ? "border-enzo-error opacity-40"
+                          : color === c
+                            ? "border-enzo-goldBright"
+                            : "border-enzo-line"
+                      }`}
+                      style={{ backgroundColor: COLOR_HEX[c] || "#333" }}
+                    />
+                    {soldOut && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="h-[2px] w-10 rotate-45 bg-enzo-error" />
+                      </span>
+                    )}
+                    {soldOut && <span className="text-[10px] font-medium text-enzo-error">{t("product.soldOut")}</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -122,35 +154,49 @@ export default function ProductDetail() {
             <p className="mb-2 text-sm font-medium">{t("product.size")}</p>
             <div className="flex flex-wrap gap-2">
               {product.sizes.map((s) => {
-                const out = stockFor(product, s) <= 0;
+                const soldOut = product.sold_out_sizes?.includes(s);
                 return (
                   <button
                     key={s}
-                    onClick={() => setSize(s)}
-                    aria-disabled={out}
-                    title={out ? t("product.outOfStock") : undefined}
-                    className={`rounded border px-4 py-2 text-sm ${
-                      size === s ? "border-enzo-white bg-enzo-white text-enzo-black" : "border-enzo-line text-enzo-muted"
-                    } ${out ? "line-through opacity-40" : ""}`}
+                    onClick={() => !soldOut && setSize(s)}
+                    disabled={soldOut}
+                    className={`relative rounded border px-4 py-2 text-sm ${
+                      soldOut
+                        ? "border-enzo-error text-enzo-error opacity-60"
+                        : size === s
+                          ? "border-enzo-white bg-enzo-white text-enzo-black"
+                          : "border-enzo-line text-enzo-muted"
+                    }`}
                   >
                     {s}
+                    {soldOut && <span className="ms-1.5 text-[10px]">({t("product.soldOut")})</span>}
                   </button>
                 );
               })}
             </div>
-            {!soldOut && sizeStock <= 3 && (
-              <p className="mt-2 text-xs text-enzo-goldBright">{t("product.onlyLeft", { count: sizeStock })}</p>
-            )}
           </div>
         )}
 
-        <button
-          onClick={handleAdd}
-          disabled={soldOut}
-          className="mt-8 w-full rounded-md bg-enzo-gradient py-3 font-semibold text-enzo-black disabled:opacity-40"
-        >
-          {soldOut ? t("product.outOfStock") : added ? t("success.addedToCart") : t("product.addToCart")}
-        </button>
+        {(() => {
+          const sizeSoldOut = size && product.sold_out_sizes?.includes(size);
+          const colorSoldOut = color && product.sold_out_colors?.includes(color);
+          const available = getAvailableStock(product, size, color);
+          const unavailable = available <= 0 || sizeSoldOut || colorSoldOut;
+          return (
+            <>
+              <button
+                onClick={handleAdd}
+                disabled={unavailable}
+                className="mt-8 w-full rounded-md bg-enzo-gradient py-3 font-semibold text-enzo-black disabled:opacity-40"
+              >
+                {unavailable ? t("product.soldOut") : added ? t("success.addedToCart") : t("product.addToCart")}
+              </button>
+              {!unavailable && available <= 5 && (
+                <p className="mt-2 text-xs text-enzo-error">{t("product.lowStock", { count: available })}</p>
+              )}
+            </>
+          );
+        })()}
 
         <dl className="mt-10 space-y-3 border-t hairline pt-6 text-sm">
           {localize(product.material) && (
@@ -165,12 +211,12 @@ export default function ProductDetail() {
               <dd>{localize(product.fit)}</dd>
             </div>
           )}
-          {localize(product.care_instructions) && (
-            <div className="flex justify-between">
-              <dt className="text-enzo-muted">{t("product.care")}</dt>
-              <dd>{localize(product.care_instructions)}</dd>
-            </div>
-          )}
+          {/* Static, store-wide text (not per-product) -- editable from
+              /admin/content, see src/lib/contentManifest.js */}
+          <div className="flex justify-between gap-6">
+            <dt className="shrink-0 text-enzo-muted">{t("product.care")}</dt>
+            <dd className="text-end">{siteContent.product.careInstructions}</dd>
+          </div>
         </dl>
       </div>
     </div>

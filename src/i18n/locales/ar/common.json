@@ -28,7 +28,8 @@
     "soldOut": "نفذت الكمية",
     "sale": "تخفيض",
     "onSale": "عروض وتخفيضات",
-    "lowStock": "تبقى {{count}} فقط في المخزون"
+    "lowStock": "تبقى {{count}} فقط في المخزون",
+    "sizesForColor": "المتوفر باللون {{color}}"
   },
   "cart": {
     "title": "سلة التسوق",

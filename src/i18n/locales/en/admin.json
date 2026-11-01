@@ -44,8 +44,9 @@
     "soldOutColors": "Mark colors as sold out",
     "discountPercent": "Discount %",
     "addEnglish": "Add English translation (optional)",
-    "stockGrid": "Stock per size and color",
-    "stockGridTotal": "Total stock: {{total}}"
+    "stockGrid": "Sizes for each color (stock per size)",
+    "stockGridTotal": "Total stock: {{total}}",
+    "stockGridHint": "Enter how many you have of each size in each color. Leave 0 for a size that color doesn't come in — customers won't be able to pick it."
   },
   "orders": {
     "title": "Orders",
@@ -79,7 +80,9 @@
     "paymentLabel": "Payment",
     "refund": "Refund",
     "refunded": "Refunded",
-    "confirmRefund": "Refund this order? For a card payment this returns the money via Stripe; for cash/transfer it just records the refund. Items are put back in stock."
+    "confirmRefund": "Refund this order? For a card payment this returns the money via Stripe; for cash/transfer it just records the refund. Items are put back in stock.",
+    "colorLabel": "Color",
+    "sizeLabel": "Size"
   },
   "analytics": {
     "salesLast14Days": "Sales — last 14 days",
@@ -92,7 +95,13 @@
     "name": "Name",
     "email": "Email",
     "phone": "Phone",
-    "orders": "Orders"
+    "orders": "Orders",
+    "totalSpent": "Total spent",
+    "pieces": "Pieces bought",
+    "memberSince": "Customer since",
+    "noOrders": "No orders yet",
+    "inStore": "In store",
+    "historyError": "Couldn't load this customer's history."
   },
   "categoriesPage": {
     "title": "Categories",

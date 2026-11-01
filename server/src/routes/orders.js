@@ -16,8 +16,7 @@ const router = Router();
 // last item can't both succeed. DELIVERY FEE: the customer picks a region
 // (west_bank / jerusalem / inside) and place_order() turns it into the fee
 // itself (delivery_fee_for_region() in schema.sql) -- the client never
-// sends a fee amount. The admin can still override it per order
-// (PATCH /api/admin/orders/:id/delivery-fee).
+// sends a fee amount. There is no manual fee entry for the admin.
 //
 // PAYMENT SPLIT: "cod" (cash on delivery) and "reflect" (manual transfer
 // app) create the order immediately, same as before — no money has

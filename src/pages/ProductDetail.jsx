@@ -6,7 +6,7 @@ import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useContent } from "../hooks/useContent.js";
 import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
-import { getAvailableStock } from "../lib/variantStock.js";
+import { getAvailableStock, usesVariantStock } from "../lib/variantStock.js";
 import ErrorBanner from "../components/ErrorBanner.jsx";
 import { COLOR_HEX } from "../lib/colors.js";
 
@@ -38,11 +38,16 @@ export default function ProductDetail() {
       .get(`/products/${slug}`)
       .then((data) => {
         setProduct(data);
-        const availableSize = data?.sizes?.find((s) => !data.sold_out_sizes?.includes(s)) ?? data?.sizes?.[0] ?? null;
+        // Start on a color that actually has a size in stock, and a size
+        // that exists in that color.
+        const colors = data?.colors || [];
         const availableColor =
-          data?.colors?.find((c) => !data.sold_out_colors?.includes(c)) ?? data?.colors?.[0] ?? null;
-        setSize(availableSize);
+          colors.find((c) => !data.sold_out_colors?.includes(c) && firstSizeFor(data, c)) ??
+          colors.find((c) => !data.sold_out_colors?.includes(c)) ??
+          colors[0] ??
+          null;
         setColor(availableColor);
+        setSize(firstSizeFor(data, availableColor) ?? data?.sizes?.[0] ?? null);
       })
       .catch((err) => (err.status === 404 ? setNotFound(true) : setError(err.message)));
   }
@@ -51,6 +56,9 @@ export default function ProductDetail() {
 
   function handleColorSelect(c) {
     setColor(c);
+    // Each color has its own sizes: if the chosen size doesn't exist in
+    // the new color, jump to one that does.
+    if (size && isSizeOut(product, size, c)) setSize(firstSizeFor(product, c) ?? size);
     const assignedUrl = product.color_images?.[c];
     if (assignedUrl) {
       const idx = product.images.indexOf(assignedUrl);
@@ -151,10 +159,17 @@ export default function ProductDetail() {
 
         {product.sizes?.length > 0 && (
           <div className="mt-6">
-            <p className="mb-2 text-sm font-medium">{t("product.size")}</p>
+            <p className="mb-2 text-sm font-medium">
+              {t("product.size")}
+              {color && usesVariantStock(product) && (
+                <span className="ms-2 text-xs font-normal text-enzo-muted">
+                  {t("product.sizesForColor", { color })}
+                </span>
+              )}
+            </p>
             <div className="flex flex-wrap gap-2">
               {product.sizes.map((s) => {
-                const soldOut = product.sold_out_sizes?.includes(s);
+                const soldOut = isSizeOut(product, s, color);
                 return (
                   <button
                     key={s}
@@ -221,4 +236,15 @@ export default function ProductDetail() {
       </div>
     </div>
   );
+}
+
+// A size is unavailable if the admin marked it sold out, or -- when the
+// product tracks stock per color+size -- the selected color has none of it.
+function isSizeOut(product, size, color) {
+  if (product?.sold_out_sizes?.includes(size)) return true;
+  return usesVariantStock(product) && getAvailableStock(product, size, color) <= 0;
+}
+
+function firstSizeFor(product, color) {
+  return product?.sizes?.find((s) => !isSizeOut(product, s, color)) ?? null;
 }

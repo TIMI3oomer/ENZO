@@ -458,6 +458,7 @@ export default function AdminProductForm() {
         {hasVariantGrid && (
           <FullRow>
             <Label>{t("products.stockGrid")}</Label>
+            <p className="mb-3 text-xs text-enzo-muted">{t("products.stockGridHint")}</p>
             <div className="overflow-x-auto">
               <div
                 className="inline-grid items-center gap-x-3 gap-y-2"

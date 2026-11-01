@@ -100,13 +100,6 @@ export const categorySchema = z.object({
   name: localizedText,
 });
 
-// Delivery cost is normally computed from the region (see
-// createOrderSchema above / delivery_fee_for_region() in schema.sql);
-// this is only for the admin's manual override of a specific order's fee.
-export const deliveryFeeSchema = z.object({
-  delivery_fee: z.number().nonnegative(),
-});
-
 // Manifest-driven CMS (content_items / content_collections, see
 // supabase/schema.sql). One page's worth of scalars + ordered collection
 // sections is saved together from the dashboard editor in a single PUT,

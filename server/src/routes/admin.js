@@ -6,7 +6,6 @@ import {
   productSchema,
   orderStatusSchema,
   categorySchema,
-  deliveryFeeSchema,
   paymentStatusSchema,
   contentPageSchema,
   inStoreSaleSchema,
@@ -122,6 +121,13 @@ router.get("/orders/:id/items", async (req, res, next) => {
 router.patch("/orders/:id/status", async (req, res, next) => {
   try {
     const body = parseOrThrow(orderStatusSchema, req.body);
+
+    // DELIVERY FEE IS AUTOMATIC: new orders are charged their region's fee
+    // at checkout (place_order). An older order still missing it gets the
+    // same region fee the moment it's confirmed -- there's no manual fee
+    // entry anymore.
+    if (body.status === "confirmed") await applyRegionDeliveryFee(req.params.id);
+
     // Goes through the set_order_status() database function (not a plain
     // UPDATE) so cancelling an order puts its items back in stock -- per
     // size -- and re-opening a cancelled order takes them again. See
@@ -157,6 +163,42 @@ router.patch("/orders/:id/status", async (req, res, next) => {
     next(err);
   }
 });
+
+// Sets an order's delivery fee from its delivery region (the same
+// delivery_fee_for_region() the checkout uses) if it isn't set yet, and
+// emails the customer the final total. No-op for orders that already have
+// their fee, in-store sales, and old orders with no region recorded.
+async function applyRegionDeliveryFee(orderId) {
+  const { data: order, error } = await supabaseAdmin
+    .from("orders")
+    .select("subtotal, delivery_fee_confirmed, delivery_region, channel, customer_email, order_number, locale")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!order || order.delivery_fee_confirmed || order.channel === "in_store" || !order.delivery_region) return;
+
+  const { data: fee, error: feeError } = await supabaseAdmin.rpc("delivery_fee_for_region", {
+    p_region: order.delivery_region,
+  });
+  if (feeError) throw feeError;
+  if (fee == null) return;
+
+  const total = Number(order.subtotal) + Number(fee);
+  const { error: updateError } = await supabaseAdmin
+    .from("orders")
+    .update({ delivery_fee: fee, delivery_fee_confirmed: true, total })
+    .eq("id", orderId);
+  if (updateError) throw updateError;
+
+  await sendOrderTotalEmail({
+    to: order.customer_email,
+    orderNumber: order.order_number,
+    subtotal: order.subtotal,
+    deliveryFee: fee,
+    total,
+    locale: order.locale,
+  });
+}
 
 // Mark an order's payment as received (or not). Needed for Reflect
 // transfers and cash on delivery: nothing confirms those automatically, so
@@ -228,50 +270,6 @@ router.patch("/orders/:id/refund", async (req, res, next) => {
       .select()
       .single();
     if (error) throw error;
-
-    res.json(data);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// CHECKPOINT NOTE: delivery is charged upfront from the region the
-// customer picked (delivery_fee_for_region() in schema.sql) -- this route
-// is the admin's manual OVERRIDE for a specific order, for when the real
-// cost differs from the flat region rate. It recalculates the order's
-// total (subtotal + fee) AND triggers sendOrderTotalEmail below so the
-// customer is told about the corrected total.
-router.patch("/orders/:id/delivery-fee", async (req, res, next) => {
-  try {
-    const body = parseOrThrow(deliveryFeeSchema, req.body);
-
-    const { data: order, error: fetchError } = await supabaseAdmin
-      .from("orders")
-      .select("subtotal, customer_email, order_number, locale")
-      .eq("id", req.params.id)
-      .maybeSingle();
-    if (fetchError) throw fetchError;
-    if (!order) return res.status(404).json({ error: "Order not found" });
-
-    const total = Number(order.subtotal) + body.delivery_fee;
-
-    const { data, error } = await supabaseAdmin
-      .from("orders")
-      .update({ delivery_fee: body.delivery_fee, delivery_fee_confirmed: true, total })
-      .eq("id", req.params.id)
-      .select()
-      .single();
-    if (error) throw error;
-
-    // Awaited for the same serverless reason as the status-update email above.
-    await sendOrderTotalEmail({
-      to: order.customer_email,
-      orderNumber: order.order_number,
-      subtotal: order.subtotal,
-      deliveryFee: body.delivery_fee,
-      total,
-      locale: order.locale,
-    });
 
     res.json(data);
   } catch (err) {
@@ -452,6 +450,40 @@ router.get("/customers", async (_req, res, next) => {
     }));
 
     res.json(customers);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// One customer's full order history (newest first) with each order's
+// items. Matches orders placed while signed in (user_id) AND guest orders
+// placed with the same email, so a customer who sometimes checks out
+// without logging in still sees everything in one place.
+router.get("/customers/:id/orders", async (req, res, next) => {
+  try {
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(req.params.id);
+    if (userError) throw userError;
+    const email = userData?.user?.email?.toLowerCase() || null;
+
+    const [byUser, byEmail] = await Promise.all([
+      supabaseAdmin.from("orders").select("*").eq("user_id", req.params.id),
+      email
+        ? supabaseAdmin.from("orders").select("*").is("user_id", null).ilike("customer_email", email)
+        : Promise.resolve({ data: [] }),
+    ]);
+    if (byUser.error) throw byUser.error;
+    if (byEmail.error) throw byEmail.error;
+
+    const orders = [...byUser.data, ...byEmail.data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    if (orders.length === 0) return res.json([]);
+
+    const { data: items, error: itemsError } = await supabaseAdmin
+      .from("order_items")
+      .select("*")
+      .in("order_id", orders.map((o) => o.id));
+    if (itemsError) throw itemsError;
+
+    res.json(orders.map((o) => ({ ...o, items: items.filter((i) => i.order_id === o.id) })));
   } catch (err) {
     next(err);
   }

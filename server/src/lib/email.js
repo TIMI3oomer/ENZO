@@ -86,11 +86,10 @@ export async function sendOrderStatusEmail({ to, orderNumber, status, note, loca
 }
 
 // CHECKPOINT NOTE (sendOrderTotalEmail):
-// Delivery fee varies by city, so it's never charged/guessed at
-// checkout -- the customer's total isn't actually final until the admin
-// sets the real delivery fee for their order (see PATCH
-// /api/admin/orders/:id/delivery-fee in routes/admin.js). THIS is the
-// email that goes out at that moment: subtotal + the now-confirmed
+// New orders are charged their region's delivery fee at checkout. An
+// older order that was placed without one gets it automatically when the
+// admin confirms it (applyRegionDeliveryFee in routes/admin.js). THIS is
+// the email that goes out at that moment: subtotal + the now-confirmed
 // delivery fee + the resulting final total, so the customer knows
 // exactly what to have ready (this store is mostly cash-on-delivery).
 function buildTotalEmail({ orderNumber, subtotal, deliveryFee, total, locale }) {

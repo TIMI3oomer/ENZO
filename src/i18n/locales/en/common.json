@@ -28,7 +28,8 @@
     "soldOut": "Sold out",
     "sale": "Sale",
     "onSale": "On sale",
-    "lowStock": "Only {{count}} left in stock"
+    "lowStock": "Only {{count}} left in stock",
+    "sizesForColor": "available in {{color}}"
   },
   "cart": {
     "title": "Shopping cart",

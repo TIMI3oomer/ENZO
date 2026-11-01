@@ -18,6 +18,11 @@ export const orderItemSchema = z.object({
   quantity: z.number().int().positive().max(50),
 });
 
+// Where the customer is, for delivery pricing. The fee itself is NOT sent
+// by the client -- it's computed in the database from this value (see
+// delivery_fee_for_region() in supabase/schema.sql).
+export const DELIVERY_REGIONS = ["west_bank", "jerusalem", "inside"];
+
 export const createOrderSchema = z.object({
   fullName: z.string().trim().min(1).max(200),
   email: z.string().trim().email().optional().or(z.literal("")).nullable(),
@@ -26,6 +31,9 @@ export const createOrderSchema = z.object({
   address: z.string().trim().min(1).max(500),
   notes: z.string().trim().max(1000).optional().nullable(),
   paymentMethod: z.enum(["cod", "visa", "reflect"]),
+  deliveryRegion: z.enum(DELIVERY_REGIONS, {
+    errorMap: () => ({ message: "Please choose your delivery region" }),
+  }),
   locale: z.enum(["ar", "en"]).default("ar"),
   items: z.array(orderItemSchema).min(1).max(50),
 });

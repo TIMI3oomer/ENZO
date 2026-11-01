@@ -59,7 +59,12 @@
     "deliveryFeeLabel": "رسوم التوصيل لهذا الطلب",
     "deliveryFeeUnset": "لم تُحدد بعد",
     "confirmDeliveryFee": "تأكيد وإرسال للعميل",
-    "deliveryPending": "(رسوم التوصيل قيد التحديد)"
+    "deliveryPending": "(رسوم التوصيل قيد التحديد)",
+    "region": {
+      "west_bank": "الضفة",
+      "jerusalem": "القدس",
+      "inside": "الداخل"
+    }
   },
   "analytics": {
     "salesLast14Days": "المبيعات آخر ١٤ يوم",

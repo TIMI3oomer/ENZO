@@ -112,7 +112,8 @@ export default function AdminOrders() {
             {expanded === o.id && (
               <div className="border-t hairline p-4 text-sm">
                 <p className="mb-3 text-enzo-muted">
-                  {o.phone} · {o.city} · {o.address}
+                  {o.phone}
+                  {o.delivery_region && <> · {t(`orders.region.${o.delivery_region}`)}</>} · {o.city} · {o.address}
                   {o.customer_email && <> · {o.customer_email}</>}
                 </p>
 

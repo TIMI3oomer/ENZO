@@ -38,7 +38,7 @@ router.post("/stripe", express.raw({ type: "application/json" }), async (req, re
     const session = event.data.object;
 
     try {
-      const payload = JSON.parse(session.metadata.orderPayload);
+      const payload = readOrderPayload(session.metadata);
 
       const { data, error } = await supabaseAdmin.rpc("place_order", {
         p_customer_name: payload.fullName,
@@ -50,6 +50,10 @@ router.post("/stripe", express.raw({ type: "application/json" }), async (req, re
         p_locale: payload.locale,
         p_user_id: payload.userId,
         p_email: payload.email,
+        // Sessions created before regions existed have no deliveryRegion;
+        // west_bank (the cheapest) matches what those customers were
+        // shown, and the admin can correct the fee from the Orders page.
+        p_delivery_region: payload.deliveryRegion || "west_bank",
         p_items: payload.items.map((i) => ({
           product_id: i.product_id,
           size: i.size ?? null,
@@ -80,5 +84,19 @@ router.post("/stripe", express.raw({ type: "application/json" }), async (req, re
 
   res.json({ received: true });
 });
+
+// The order payload is split across orderPayload_0..N metadata keys
+// (Stripe caps each value at 500 chars -- see toChunkedMetadata in
+// orders.js). Sessions created before that change used a single
+// "orderPayload" key, still supported here.
+function readOrderPayload(metadata = {}) {
+  if (metadata.orderPayloadChunks) {
+    const count = Number(metadata.orderPayloadChunks);
+    let json = "";
+    for (let i = 0; i < count; i++) json += metadata[`orderPayload_${i}`] || "";
+    return JSON.parse(json);
+  }
+  return JSON.parse(metadata.orderPayload);
+}
 
 export default router;

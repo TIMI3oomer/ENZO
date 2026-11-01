@@ -20,6 +20,8 @@ export default function OrderConfirmation() {
 
   const items = location.state?.items;
   const total = location.state?.total;
+  const subtotal = location.state?.subtotal;
+  const deliveryFee = location.state?.deliveryFee;
 
   return (
     <div className="mx-auto max-w-lg px-4 py-20 text-center">
@@ -42,11 +44,22 @@ export default function OrderConfirmation() {
               </li>
             ))}
           </ul>
-          <div className="mt-4 flex justify-between font-semibold">
-            <span>{t("subtotal")}</span>
+          {subtotal != null && (
+            <div className="mt-4 flex justify-between text-sm">
+              <span className="text-enzo-muted">{t("subtotal")}</span>
+              <span>{formatPrice(subtotal)}</span>
+            </div>
+          )}
+          {deliveryFee != null && (
+            <div className="mt-2 flex justify-between text-sm">
+              <span className="text-enzo-muted">{t("delivery")}</span>
+              <span>{formatPrice(deliveryFee)}</span>
+            </div>
+          )}
+          <div className="mt-3 flex justify-between font-semibold">
+            <span>{t("total")}</span>
             <span>{formatPrice(total)}</span>
           </div>
-          <p className="mt-2 text-xs text-enzo-muted">{t("confirmation.deliveryNote")}</p>
         </div>
       ) : (
         <p className="mt-10 text-sm text-enzo-muted">

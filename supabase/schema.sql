@@ -51,12 +51,12 @@ create index if not exists idx_products_category on products(category_id);
 create index if not exists idx_products_active on products(is_active);
 
 -- ---------- ORDERS ----------
--- DELIVERY FEE: varies by city, so it's never charged/guessed at
--- checkout -- every order is created with delivery_fee = 0 and
--- delivery_fee_confirmed = false, and the admin fills in the real fee
--- for that specific order from the Orders page once they know it (see
--- PATCH /api/admin/orders/:id/delivery-fee in server/src/routes/admin.js),
--- which is what emails the customer their confirmed final total.
+-- DELIVERY FEE: charged at checkout from the region the customer picks
+-- (delivery_region: west_bank 20 / jerusalem 30 / inside 70 ILS -- see
+-- delivery_fee_for_region() below). New orders are created with
+-- delivery_fee_confirmed = true. The admin can still override the fee
+-- per order (PATCH /api/admin/orders/:id/delivery-fee in
+-- server/src/routes/admin.js), which re-emails the final total.
 create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
   order_number bigserial unique,
@@ -73,6 +73,7 @@ create table if not exists orders (
   subtotal numeric(10,2) not null,
   delivery_fee numeric(10,2) not null default 0,
   delivery_fee_confirmed boolean not null default false,
+  delivery_region text check (delivery_region is null or delivery_region in ('west_bank', 'jerusalem', 'inside')),
   total numeric(10,2) not null,
   payment_status text not null default 'pending' check (payment_status in ('pending', 'paid', 'failed')),
   stripe_session_id text,
@@ -140,13 +141,13 @@ create policy "public read active products" on products for select using (is_act
 create policy "admin write categories" on categories for all using (is_admin()) with check (is_admin());
 create policy "admin write products" on products for all using (is_admin()) with check (is_admin());
 
-create policy "create own or guest orders" on orders
-  for insert with check (user_id is null or user_id = auth.uid());
+-- No INSERT policies on orders/order_items on purpose: every order is
+-- created by place_order() from the Node backend (service_role), never
+-- directly from the browser with the anon key.
 create policy "customer read own orders" on orders for select using (user_id = auth.uid());
 create policy "admin read orders" on orders for select using (is_admin());
 create policy "admin update orders" on orders for update using (is_admin()) with check (is_admin());
 
-create policy "anyone can create order items" on order_items for insert with check (true);
 create policy "customer read own order items" on order_items
   for select using (order_id in (select id from orders where user_id = auth.uid()));
 create policy "admin read order items" on order_items for select using (is_admin());
@@ -182,22 +183,33 @@ create trigger on_auth_user_created
 -- =====================================================================
 -- place_order() — atomic, price-safe checkout.
 -- Called ONLY from the Node backend (server/), using the service_role
--- key. Looks up real prices/stock itself (never trusts the client),
--- locks rows to prevent overselling, and writes the order + line items +
--- stock decrement as one transaction.
+-- key (execute is revoked from anon/authenticated below). Looks up real
+-- prices/stock itself (never trusts the client), locks rows to prevent
+-- overselling, and writes the order + line items + stock decrement as
+-- one transaction.
 --
--- DELIVERY FEE: not charged here at all -- it varies by city, so every
--- order is created with delivery_fee = 0 / delivery_fee_confirmed =
--- false (total = subtotal only), and the admin fills in the real fee
--- for this specific order afterward from the Orders page (see
--- PATCH /api/admin/orders/:id/delivery-fee), which recalculates total
--- and emails the customer their confirmed final price.
+-- DELIVERY FEE: computed from p_delivery_region via
+-- delivery_fee_for_region() -- never sent by the client.
 --
--- PAYMENT STATUS: p_payment_status lets card payments (created only
--- AFTER Stripe confirms payment, via the webhook) be recorded as 'paid'
--- immediately, while cash-on-delivery/manual-transfer orders default to
--- 'pending' (money hasn't actually been collected yet).
+-- PAYMENT STATUS: card orders are created only AFTER Stripe confirms
+-- payment (webhook) and recorded as 'paid'; cod/reflect stay 'pending'.
+-- A repeated stripe_session_id (Stripe webhook retry) returns the
+-- existing order instead of creating a duplicate.
 -- =====================================================================
+-- Single source of truth for delivery prices (ILS).
+create or replace function delivery_fee_for_region(p_region text)
+returns numeric
+language sql
+immutable
+as $$
+  select case p_region
+    when 'west_bank' then 20::numeric
+    when 'jerusalem' then 30::numeric
+    when 'inside'    then 70::numeric
+    else null
+  end;
+$$;
+
 create or replace function place_order(
   p_customer_name text,
   p_phone text,
@@ -210,8 +222,9 @@ create or replace function place_order(
   p_items jsonb,
   p_email text default null,
   p_payment_status text default 'pending',
-  p_stripe_session_id text default null
-) returns table(order_id uuid, order_number bigint, total numeric)
+  p_stripe_session_id text default null,
+  p_delivery_region text default null
+) returns table(order_id uuid, order_number bigint, total numeric, delivery_fee numeric)
 language plpgsql
 security definer
 as $$
@@ -219,11 +232,27 @@ declare
   v_order_id uuid;
   v_order_number bigint;
   v_subtotal numeric := 0;
+  v_delivery_fee numeric;
   v_item jsonb;
   v_product products%rowtype;
   v_qty int;
+  v_existing orders%rowtype;
 begin
-  if jsonb_array_length(p_items) = 0 then
+  -- Stripe webhook retry: same session already turned into an order.
+  if p_stripe_session_id is not null then
+    select * into v_existing from orders o where o.stripe_session_id = p_stripe_session_id limit 1;
+    if found then
+      return query select v_existing.id, v_existing.order_number, v_existing.total, v_existing.delivery_fee;
+      return;
+    end if;
+  end if;
+
+  v_delivery_fee := delivery_fee_for_region(p_delivery_region);
+  if v_delivery_fee is null then
+    raise exception 'Please choose your delivery region';
+  end if;
+
+  if p_items is null or jsonb_array_length(p_items) = 0 then
     raise exception 'Cannot place an order with no items';
   end if;
 
@@ -253,16 +282,16 @@ begin
     v_subtotal := v_subtotal + (v_product.price * v_qty);
   end loop;
 
-  -- delivery_fee / delivery_fee_confirmed are left at their column
-  -- defaults (0 / false) -- not known yet, see the note above.
   insert into orders (
     customer_name, phone, city, address, notes,
-    payment_method, subtotal, total, locale, user_id, customer_email,
-    payment_status, stripe_session_id
+    payment_method, subtotal, delivery_fee, delivery_fee_confirmed, total,
+    locale, user_id, customer_email,
+    payment_status, stripe_session_id, delivery_region
   ) values (
     p_customer_name, p_phone, p_city, p_address, p_notes,
-    p_payment_method, v_subtotal, v_subtotal, p_locale, p_user_id, p_email,
-    p_payment_status, p_stripe_session_id
+    p_payment_method, v_subtotal, v_delivery_fee, true, v_subtotal + v_delivery_fee,
+    p_locale, p_user_id, p_email,
+    p_payment_status, p_stripe_session_id, p_delivery_region
   )
   returning id, orders.order_number into v_order_id, v_order_number;
 
@@ -277,9 +306,12 @@ begin
     update products set stock = stock - v_qty where id = v_product.id;
   end loop;
 
-  return query select v_order_id, v_order_number, v_subtotal;
+  return query select v_order_id, v_order_number, v_subtotal + v_delivery_fee, v_delivery_fee;
 end;
 $$;
+
+revoke execute on function place_order(text, text, text, text, text, text, text, uuid, jsonb, text, text, text, text) from public, anon, authenticated;
+grant execute on function place_order(text, text, text, text, text, text, text, uuid, jsonb, text, text, text, text) to service_role;
 
 -- =====================================================================
 -- STORAGE: product image uploads (admin panel "upload from gallery")

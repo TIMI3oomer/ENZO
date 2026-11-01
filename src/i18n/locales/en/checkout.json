@@ -24,7 +24,8 @@
   "validation": {
     "required": "This field is required",
     "invalidPhone": "Invalid phone number",
-    "invalidEmail": "Invalid email"
+    "invalidEmail": "Invalid email",
+    "chooseRegion": "Please choose your delivery region"
   },
   "email": "Email (optional)",
   "emailPlaceholder": "To send you order updates",
@@ -32,5 +33,10 @@
   "confirmingPayment": "Confirming your payment...",
   "paymentTakingLong": "This is taking longer than usual",
   "paymentTakingLongHint": "If you were charged, your order confirmation will arrive shortly. Contact us if this continues.",
-  "paymentSessionMissing": "No payment information was found."
+  "paymentSessionMissing": "No payment information was found.",
+  "deliveryRegion": "Delivery region",
+  "chooseRegion": "Choose your region",
+  "chooseRegionHint": "Choose your delivery region to see the final total.",
+  "delivery": "Delivery",
+  "total": "Total"
 }

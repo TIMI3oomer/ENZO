@@ -59,7 +59,12 @@
     "deliveryFeeLabel": "Delivery fee for this order",
     "deliveryFeeUnset": "Not set yet",
     "confirmDeliveryFee": "Confirm & email customer",
-    "deliveryPending": "(delivery fee pending)"
+    "deliveryPending": "(delivery fee pending)",
+    "region": {
+      "west_bank": "West Bank",
+      "jerusalem": "Jerusalem",
+      "inside": "Inside (48)"
+    }
   },
   "analytics": {
     "salesLast14Days": "Sales — last 14 days",

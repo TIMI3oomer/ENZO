@@ -26,11 +26,17 @@
   "validation": {
     "required": "هذا الحقل مطلوب",
     "invalidPhone": "رقم الهاتف غير صالح",
-    "invalidEmail": "بريد إلكتروني غير صالح"
+    "invalidEmail": "بريد إلكتروني غير صالح",
+    "chooseRegion": "اختر منطقة التوصيل"
   },
   "continueToPay": "المتابعة للدفع",
   "confirmingPayment": "جارٍ تأكيد الدفع...",
   "paymentTakingLong": "الدفع يستغرق وقتاً أطول من المعتاد",
   "paymentTakingLongHint": "إذا تم خصم المبلغ، سيصلك تأكيد الطلب قريباً. إذا استمرت المشكلة، تواصل معنا.",
-  "paymentSessionMissing": "لم يتم العثور على معلومات الدفع."
+  "paymentSessionMissing": "لم يتم العثور على معلومات الدفع.",
+  "deliveryRegion": "منطقة التوصيل",
+  "chooseRegion": "اختر منطقتك",
+  "chooseRegionHint": "اختر منطقة التوصيل لحساب المجموع النهائي.",
+  "delivery": "التوصيل",
+  "total": "المجموع الكلي"
 }

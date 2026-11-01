@@ -12,10 +12,11 @@ const router = Router();
 // sizes, and quantities — never a price. All money math happens inside
 // the `place_order` Postgres function, which looks up real prices and
 // checks real stock, locking rows so two simultaneous purchases of the
-// last item can't both succeed. Delivery fee is NOT added here -- it
-// varies by city, so the admin sets it per order afterward (see
-// PATCH /api/admin/orders/:id/delivery-fee), which is what emails the
-// customer their confirmed final total.
+// last item can't both succeed. DELIVERY FEE: the customer picks a region
+// (west_bank / jerusalem / inside) and place_order() turns it into the fee
+// itself (delivery_fee_for_region() in schema.sql) -- the client never
+// sends a fee amount. The admin can still override it per order
+// (PATCH /api/admin/orders/:id/delivery-fee).
 //
 // PAYMENT SPLIT: "cod" (cash on delivery) and "reflect" (manual transfer
 // app) create the order immediately, same as before — no money has
@@ -47,6 +48,7 @@ router.post("/", attachUser, async (req, res, next) => {
       p_locale: body.locale,
       p_user_id: req.user?.id ?? null,
       p_email: body.email || req.user?.email || null,
+      p_delivery_region: body.deliveryRegion,
       p_items: body.items.map((i) => ({
         product_id: i.product_id,
         size: i.size ?? null,
@@ -69,6 +71,7 @@ router.post("/", attachUser, async (req, res, next) => {
     res.status(201).json({
       orderNumber: result.order_number,
       total: result.total,
+      deliveryFee: result.delivery_fee,
     });
   } catch (err) {
     next(err);
@@ -99,9 +102,19 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
       .in("id", productIds);
     if (productsError) throw productsError;
 
-    // Delivery fee is NOT charged here -- it varies by city and isn't
-    // known yet at checkout, same as the cod/reflect path in place_order()
-    // (see schema.sql). The admin fills it in per order afterward.
+    // Delivery fee comes from the SAME database function place_order()
+    // uses, so the amount Stripe charges always matches the order total
+    // the webhook records afterward. Never taken from the request body.
+    const { data: deliveryFee, error: feeError } = await supabaseAdmin.rpc("delivery_fee_for_region", {
+      p_region: body.deliveryRegion,
+    });
+    if (feeError) throw feeError;
+    if (deliveryFee == null) {
+      const err = new Error("Please choose your delivery region");
+      err.status = 400;
+      throw err;
+    }
+
     const currency = "ils"; // Stripe currency code -- change here if this store switches currency
 
     const lineItems = body.items.map((item) => {
@@ -131,6 +144,17 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
       };
     });
 
+    if (Number(deliveryFee) > 0) {
+      lineItems.push({
+        quantity: 1,
+        price_data: {
+          currency,
+          unit_amount: Math.round(Number(deliveryFee) * 100),
+          product_data: { name: body.locale === "ar" ? "رسوم التوصيل" : "Delivery" },
+        },
+      });
+    }
+
     const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").split(",")[0].trim();
 
     const session = await stripe.checkout.sessions.create({
@@ -139,10 +163,14 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
       success_url: `${frontendUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontendUrl}/checkout`,
       customer_email: body.email || req.user?.email || undefined,
-      metadata: {
-        // Stripe metadata values must be strings, so the cart + customer
-        // info is JSON-encoded here and decoded again in the webhook.
-        orderPayload: JSON.stringify({
+      // Stripe metadata values must be strings AND are capped at 500
+      // characters each. The JSON payload easily passes 500 chars with a
+      // few cart items + an address (every product id alone is 36 chars),
+      // which made Stripe reject the session -- card checkout broke for
+      // bigger carts. It's split across numbered keys here and joined back
+      // together in webhooks.js (readOrderPayload).
+      metadata: toChunkedMetadata(
+        JSON.stringify({
           fullName: body.fullName,
           email: body.email || req.user?.email || null,
           phone: body.phone,
@@ -150,10 +178,11 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
           address: body.address,
           notes: body.notes || null,
           locale: body.locale,
+          deliveryRegion: body.deliveryRegion,
           userId: req.user?.id ?? null,
           items: body.items,
-        }),
-      },
+        })
+      ),
     });
 
     res.json({ url: session.url });
@@ -174,7 +203,7 @@ router.get("/by-session/:sessionId", async (req, res, next) => {
   try {
     const { data, error } = await supabaseAdmin
       .from("orders")
-      .select("order_number, total, status")
+      .select("order_number, subtotal, delivery_fee, total, status")
       .eq("stripe_session_id", req.params.sessionId)
       .maybeSingle();
     if (error) throw error;
@@ -231,5 +260,23 @@ router.get("/:id/items", attachUser, requireAuth, async (req, res, next) => {
     next(err);
   }
 });
+
+// Stripe metadata: max 50 keys, 500 chars per value. 450-char chunks
+// leave headroom; 40 chunks (~18KB) is far more than any real cart.
+const METADATA_CHUNK = 450;
+function toChunkedMetadata(json) {
+  const chunks = [];
+  for (let i = 0; i < json.length; i += METADATA_CHUNK) chunks.push(json.slice(i, i + METADATA_CHUNK));
+  if (chunks.length > 40) {
+    const err = new Error("Your order is too large for card payment -- please split it or choose cash on delivery");
+    err.status = 400;
+    throw err;
+  }
+  const metadata = { orderPayloadChunks: String(chunks.length) };
+  chunks.forEach((c, i) => {
+    metadata[`orderPayload_${i}`] = c;
+  });
+  return metadata;
+}
 
 export default router;

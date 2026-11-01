@@ -50,7 +50,12 @@ export default function PaymentSuccess() {
         }));
         clearCart();
         navigate(`/order-confirmation/${order.order_number}`, {
-          state: { items: confirmedItems, total: order.total },
+          state: {
+            items: confirmedItems,
+            subtotal: order.subtotal,
+            deliveryFee: order.delivery_fee,
+            total: order.total,
+          },
           replace: true,
         });
       } catch (err) {

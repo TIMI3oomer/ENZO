@@ -101,6 +101,10 @@ export default function AdminContent() {
     }
   }
 
+  // Arabic labels for the manifest's (English) field labels; falls back to
+  // the manifest label when there's no translation.
+  const fieldLabels = t("content.fields", { returnObjects: true, defaultValue: {} }) || {};
+
   const isDirty = (page) => JSON.stringify(values[page]) !== JSON.stringify(savedValues[page]);
 
   if (loading) {
@@ -138,8 +142,13 @@ export default function AdminContent() {
                       const value = values[page]?.[section]?.[field.key] ?? "";
                       const fieldKey = `${page}.${section}.${field.key}`;
                       return (
-                        <div key={fieldKey}>
-                          <label className="mb-1 block text-sm font-medium text-enzo-muted">{field.label}</label>
+                        <div
+                          key={fieldKey}
+                          className={field.type === "toggle" ? "flex items-center justify-between gap-3" : undefined}
+                        >
+                          <label className={`block text-sm font-medium text-enzo-muted ${field.type === "toggle" ? "" : "mb-1"}`}>
+                            {fieldLabels[`${section}.${field.key}`] || field.label}
+                          </label>
                           {field.type === "image" ? (
                             <div className="flex flex-wrap items-center gap-3">
                               {value && (
@@ -170,10 +179,26 @@ export default function AdminContent() {
                                 </button>
                               )}
                             </div>
+                          ) : field.type === "toggle" ? (
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={value !== "off"}
+                              onClick={() => setFieldValue(page, section, field.key, value === "off" ? "on" : "off")}
+                              className={`relative h-6 w-11 rounded-full transition-colors ${
+                                value === "off" ? "bg-enzo-line" : "bg-enzo-gold"
+                              }`}
+                            >
+                              <span
+                                className={`absolute top-0.5 h-5 w-5 rounded-full bg-enzo-white transition-all ${
+                                  value === "off" ? "start-0.5" : "start-[1.375rem]"
+                                }`}
+                              />
+                            </button>
                           ) : (
                             <textarea
                               className="input"
-                              rows={2}
+                              rows={field.key === "invoiceNote" || field.key === "address" ? 2 : 1}
                               value={value}
                               onChange={(e) => setFieldValue(page, section, field.key, e.target.value)}
                             />

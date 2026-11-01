@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { useContent } from "../hooks/useContent.js";
 
 // CHECKPOINT NOTE (components/WhatsAppButton.jsx):
 // ACTION REQUIRED — replace the placeholder number below with your real
@@ -14,9 +15,11 @@ const WHATSAPP_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER || "970000000000";
 export default function WhatsAppButton() {
   const { t } = useTranslation("common");
   const { lang } = useLanguage();
+  // The number set in the CMS (site.store.whatsapp) wins over the build-time one.
+  const number = (useContent("site").store?.whatsapp || "").replace(/\D/g, "") || WHATSAPP_NUMBER;
 
   const message = lang === "ar" ? "مرحباً ENZO، عندي سؤال بخصوص طلب" : "Hi ENZO, I have a question about an order";
-  const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  const href = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 
   return (
     <a

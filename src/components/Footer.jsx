@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Phone, MapPin, Instagram } from "lucide-react";
 import { useContent } from "../hooks/useContent.js";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { api } from "../lib/api.js";
@@ -36,6 +37,35 @@ export default function Footer() {
           <p className="mt-3 text-sm text-enzo-muted">
             {t("footer.contact")}: <span className="text-enzo-white">{content.footer.contactHandle}</span>
           </p>
+          {/* Store details from the CMS (site.store.*) -- each line only shows once it's filled in. */}
+          <ul className="mt-3 flex flex-col gap-2 text-sm text-enzo-muted">
+            {content.store?.phone && (
+              <li className="flex items-center gap-2">
+                <Phone size={14} className="text-enzo-gold" />
+                <a href={`tel:${content.store.phone}`} dir="ltr" className="hover:text-enzo-white">{content.store.phone}</a>
+              </li>
+            )}
+            {content.store?.instagram && (
+              <li className="flex items-center gap-2">
+                <Instagram size={14} className="text-enzo-gold" />
+                <a
+                  href={`https://instagram.com/${content.store.instagram.replace(/^@/, "")}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  dir="ltr"
+                  className="hover:text-enzo-white"
+                >
+                  @{content.store.instagram.replace(/^@/, "")}
+                </a>
+              </li>
+            )}
+            {content.store?.address && (
+              <li className="flex items-center gap-2">
+                <MapPin size={14} className="text-enzo-gold" />
+                {content.store.address}
+              </li>
+            )}
+          </ul>
         </div>
 
         <div>

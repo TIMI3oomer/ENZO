@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Trash2 } from "lucide-react";
+import { Trash2, Printer } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { useLocalizedField } from "../../context/LanguageContext.jsx";
 import { formatPrice, getDiscountedPrice } from "../../lib/formatPrice.js";
 import { getAvailableStock } from "../../lib/variantStock.js";
 import AdminLayout from "../../components/AdminLayout.jsx";
+import InvoiceModal from "../../components/Invoice.jsx";
 
 // CHECKPOINT NOTE (admin/InStoreSale.jsx):
 // For walk-in customers -- this is a real shop, not just a website. Pick
@@ -14,6 +15,9 @@ import AdminLayout from "../../components/AdminLayout.jsx";
 // Stock is taken immediately on submit (record_in_store_sale() in
 // schema.sql) -- there's no "pending" step like online orders, since the
 // item has already left the shelf by the time this is entered.
+//
+// INVOICE: ringing up opens the printable invoice (فاتورة) for that sale
+// right away (components/Invoice.jsx); "Print invoice" reopens it.
 export default function AdminInStoreSale() {
   const { t } = useTranslation("admin");
   const localize = useLocalizedField();
@@ -28,6 +32,7 @@ export default function AdminInStoreSale() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
+  const [showInvoice, setShowInvoice] = useState(false);
 
   useEffect(() => {
     api.get("/admin/products").then((data) => setProducts((data || []).filter((p) => p.is_active))).catch(() => {});
@@ -77,6 +82,7 @@ export default function AdminInStoreSale() {
         })),
       });
       setDone(result);
+      setShowInvoice(true);
       setLines([]);
       setCustomerName("");
       setNote("");
@@ -93,9 +99,22 @@ export default function AdminInStoreSale() {
     <AdminLayout title={t("inStoreSale.title")}>
       <div className="max-w-2xl">
         {done && (
-          <div className="mb-6 rounded-lg border border-enzo-gold/40 bg-enzo-gold/10 p-4 text-sm">
-            {t("inStoreSale.recorded", { orderNumber: done.orderNumber, total: formatPrice(done.total) })}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-enzo-gold/40 bg-enzo-gold/10 p-4 text-sm">
+            <span>{t("inStoreSale.recorded", { orderNumber: done.orderNumber, total: formatPrice(done.total) })}</span>
+            {done.order && (
+              <button
+                type="button"
+                onClick={() => setShowInvoice(true)}
+                className="flex items-center gap-2 rounded-md border border-enzo-gold px-3 py-1.5 font-semibold text-enzo-goldBright"
+              >
+                <Printer size={15} />
+                {t("invoice.printInvoice")}
+              </button>
+            )}
           </div>
+        )}
+        {showInvoice && done?.order && (
+          <InvoiceModal order={done.order} items={done.items} onClose={() => setShowInvoice(false)} />
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -125,7 +144,11 @@ export default function AdminInStoreSale() {
               <select className="input" value={size} onChange={(e) => setSize(e.target.value)}>
                 <option value="">—</option>
                 {product.sizes.map((s) => (
-                  <option key={s} value={s} disabled={product.sold_out_sizes?.includes(s)}>
+                  <option
+                    key={s}
+                    value={s}
+                    disabled={product.sold_out_sizes?.includes(s) || (color && getAvailableStock(product, s, color) <= 0)}
+                  >
                     {s}
                   </option>
                 ))}

@@ -46,7 +46,9 @@
     "addEnglish": "Add English translation (optional)",
     "stockGrid": "Sizes for each color (stock per size)",
     "stockGridTotal": "Total stock: {{total}}",
-    "stockGridHint": "Enter how many you have of each size in each color. Leave 0 for a size that color doesn't come in — customers won't be able to pick it."
+    "stockGridHint": "Enter how many you have of each size in each color. Leave 0 for a size that color doesn't come in — customers won't be able to pick it.",
+    "soldOutBadge": "Sold out",
+    "partlySoldOut": "Sold out: {{list}}"
   },
   "orders": {
     "title": "Orders",
@@ -130,7 +132,10 @@
     "section_footer": "Footer",
     "section_product": "Product page",
     "section_images": "Logo",
-    "removeImage": "Remove"
+    "removeImage": "Remove",
+    "section_sections": "Home page sections",
+    "section_store": "Store info (footer, WhatsApp, invoices)",
+    "section_catalog": "Sold-out products"
   },
   "preview": {
     "title": "Live preview",
@@ -158,5 +163,29 @@
     "note": "Note (optional)",
     "ringUp": "Ring up sale",
     "recorded": "Sale #{{orderNumber}} recorded — {{total}}"
+  },
+  "invoice": {
+    "title": "Invoice",
+    "print": "Print",
+    "printInvoice": "Print invoice",
+    "number": "Invoice no.",
+    "date": "Date",
+    "customer": "Customer",
+    "phone": "Phone",
+    "channel": "Sale",
+    "inStore": "In store",
+    "online": "Online",
+    "item": "Item",
+    "qty": "Qty",
+    "amount": "Amount",
+    "subtotal": "Subtotal",
+    "delivery": "Delivery",
+    "total": "Total",
+    "payment": "Payment",
+    "method_cod": "Cash on delivery",
+    "method_visa": "Card",
+    "method_reflect": "Reflect transfer",
+    "method_in_store": "Paid in store",
+    "thanks": "Thank you for shopping with ENZO"
   }
 }

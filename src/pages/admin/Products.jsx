@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { useLocalizedField } from "../../context/LanguageContext.jsx";
 import AdminLayout from "../../components/AdminLayout.jsx";
+import { isProductSoldOut } from "../../lib/variantStock.js";
 
 // CHECKPOINT NOTE (admin/Products.jsx):
 // List/delete now go through GET/DELETE /api/admin/products (backend),
@@ -55,7 +56,24 @@ export default function AdminProducts() {
           <tbody>
             {products.map((p) => (
               <tr key={p.id} className="border-t hairline">
-                <td className="px-4 py-3">{localize(p.name)}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {localize(p.name)}
+                    {isProductSoldOut(p) ? (
+                      <span className="rounded-full bg-enzo-error/20 px-2 py-0.5 text-xs font-semibold text-enzo-error">
+                        {t("products.soldOutBadge")}
+                      </span>
+                    ) : (
+                      [...(p.sold_out_sizes || []), ...(p.sold_out_colors || [])].length > 0 && (
+                        <span className="rounded-full border border-enzo-error/40 px-2 py-0.5 text-xs text-enzo-error">
+                          {t("products.partlySoldOut", {
+                            list: [...(p.sold_out_sizes || []), ...(p.sold_out_colors || [])].join(", "),
+                          })}
+                        </span>
+                      )
+                    )}
+                  </div>
+                </td>
                 <td className="px-4 py-3">{p.price}</td>
                 <td className="px-4 py-3">
                   {p.stock}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Printer } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { useLocalizedField } from "../../context/LanguageContext.jsx";
 import { formatPrice } from "../../lib/formatPrice.js";
 import { COLOR_HEX } from "../../lib/colors.js";
 import AdminLayout from "../../components/AdminLayout.jsx";
+import InvoiceModal from "../../components/Invoice.jsx";
 
 const STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
 
@@ -30,6 +31,7 @@ export default function AdminOrders() {
   const [sending, setSending] = useState(null);
   const [savingPayment, setSavingPayment] = useState(null);
   const [refunding, setRefunding] = useState(null);
+  const [invoiceFor, setInvoiceFor] = useState(null); // order whose invoice is open
 
   useEffect(() => {
     load();
@@ -128,7 +130,19 @@ export default function AdminOrders() {
                   {o.customer_email && <> · {o.customer_email}</>}
                 </p>
 
-                <p className="mb-1 font-medium">{t("orders.items")}</p>
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="font-medium">{t("orders.items")}</p>
+                  {itemsByOrder[o.id] && (
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceFor(o)}
+                      className="flex items-center gap-1.5 rounded-md border hairline px-3 py-1 text-xs font-semibold hover:border-enzo-gold"
+                    >
+                      <Printer size={14} />
+                      {t("invoice.printInvoice")}
+                    </button>
+                  )}
+                </div>
                 {!itemsByOrder[o.id] ? (
                   <p className="text-enzo-muted">…</p>
                 ) : (
@@ -220,6 +234,9 @@ export default function AdminOrders() {
           </div>
         ))}
       </div>
+      {invoiceFor && (
+        <InvoiceModal order={invoiceFor} items={itemsByOrder[invoiceFor.id] || []} onClose={() => setInvoiceFor(null)} />
+      )}
     </AdminLayout>
   );
 }

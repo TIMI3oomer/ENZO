@@ -234,3 +234,32 @@ html[dir="ltr"] .font-display {
   z-index: 1;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
+
+/* Printing an invoice (components/Invoice.jsx): only the receipt prints --
+   everything else on the admin page is hidden, and the dark site
+   background is dropped so the paper stays white. */
+@media print {
+  @page {
+    margin: 6mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .invoice-print,
+  .invoice-print * {
+    visibility: visible;
+  }
+  .invoice-print {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 100%;
+    max-width: 80mm;
+    padding: 0 !important;
+    border-radius: 0;
+  }
+}

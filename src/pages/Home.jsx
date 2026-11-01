@@ -7,12 +7,16 @@ import HeroSlider from "../components/HeroSlider.jsx";
 import EditorialBanner from "../components/EditorialBanner.jsx";
 import TrustBadges from "../components/TrustBadges.jsx";
 import { MarqueeStrip, SectionTitle, ProductRail, CategoryTiles } from "../components/storefront.jsx";
+import { isProductSoldOut, soldOutLast } from "../lib/variantStock.js";
 
 // CHECKPOINT NOTE (Home.jsx):
 // Streetwear-store layout: campaign banner slider -> promo strip -> new
 // arrivals rail -> category photo tiles -> editorial banner -> sale rail
 // -> more tiles -> one rail per category -> trust badges. All banner
-// images and strip texts are editable in the CMS (admin/Content.jsx).
+// images and strip texts are editable in the CMS (admin/Content.jsx), and
+// each section can be switched off there (home.sections.*). Sold-out
+// products go to the end of every row, or are hidden when the admin turns
+// off site.catalog.showSoldOut.
 //
 // Products and categories are fetched ONCE and split client-side, so the
 // page makes two requests no matter how many category rails it shows. A
@@ -21,6 +25,8 @@ export default function Home() {
   const { t } = useTranslation("common");
   const localize = useLocalizedField();
   const content = useContent("home");
+  const site = useContent("site");
+  const show = (key) => content.sections?.[key] !== "off";
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
 
@@ -29,51 +35,55 @@ export default function Home() {
     api.get("/categories").then((d) => setCategories(d || [])).catch(() => setCategories([]));
   }, []);
 
-  const newArrivals = products.slice(0, 10);
-  const onSale = products.filter((p) => p.discount_percent > 0).slice(0, 10);
-  const withProducts = categories.filter((c) => products.some((p) => p.category_id === c.id));
+  const catalog =
+    site.catalog?.showSoldOut === "off" ? products.filter((p) => !isProductSoldOut(p)) : soldOutLast(products);
+  const newArrivals = catalog.slice(0, 10);
+  const onSale = catalog.filter((p) => p.discount_percent > 0).slice(0, 10);
+  const withProducts = categories.filter((c) => catalog.some((p) => p.category_id === c.id));
 
   return (
     <div className="pb-6">
       <HeroSlider hero={content.hero} products={products} />
 
       <MarqueeStrip
-        text={content.promo.text}
+        text={show("showPromo") && content.promo.text}
         className="border-y border-enzo-gold/30 bg-enzo-gradient py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-enzo-black"
       />
 
-      {newArrivals.length > 0 && (
+      {show("showNewArrivals") && newArrivals.length > 0 && (
         <>
           <SectionTitle>{t("home.newArrivals")}</SectionTitle>
           <ProductRail products={newArrivals} />
         </>
       )}
 
-      <CategoryTiles categories={withProducts.slice(0, 3)} products={products} />
+      {show("showCategories") && <CategoryTiles categories={withProducts.slice(0, 3)} products={catalog} />}
 
-      <EditorialBanner editorial={content.editorial} />
+      {show("showEditorial") && <EditorialBanner editorial={content.editorial} />}
 
-      {onSale.length > 0 && (
+      {show("showSale") && onSale.length > 0 && (
         <>
           <SectionTitle>{t("product.onSale")}</SectionTitle>
           <ProductRail products={onSale} />
         </>
       )}
 
-      <CategoryTiles categories={withProducts.slice(3, 6)} products={products} />
+      {show("showCategories") && <CategoryTiles categories={withProducts.slice(3, 6)} products={catalog} />}
 
-      {withProducts.slice(0, 4).map((c) => (
+      {show("showCategoryRails") && withProducts.slice(0, 4).map((c) => (
         <section key={c.id}>
           <SectionTitle to={`/shop/${c.slug}`} linkLabel={t("home.viewAll")}>
             {localize(c.name)}
           </SectionTitle>
-          <ProductRail products={products.filter((p) => p.category_id === c.id).slice(0, 10)} />
+          <ProductRail products={catalog.filter((p) => p.category_id === c.id).slice(0, 10)} />
         </section>
       ))}
 
-      <div className="mt-16">
-        <TrustBadges />
-      </div>
+      {show("showTrust") && (
+        <div className="mt-16">
+          <TrustBadges />
+        </div>
+      )}
     </div>
   );
 }

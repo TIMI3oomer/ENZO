@@ -301,7 +301,17 @@ router.post("/in-store-sales", async (req, res, next) => {
       throw err;
     }
     const result = data?.[0];
-    res.status(201).json({ orderNumber: result.order_number, total: result.total });
+
+    // The full order + its items, so the admin screen can print the
+    // invoice (فاتورة) straight away from what was actually recorded.
+    const [{ data: order, error: orderError }, { data: items, error: itemsError }] = await Promise.all([
+      supabaseAdmin.from("orders").select("*").eq("id", result.order_id).single(),
+      supabaseAdmin.from("order_items").select("*").eq("order_id", result.order_id),
+    ]);
+    if (orderError) throw orderError;
+    if (itemsError) throw itemsError;
+
+    res.status(201).json({ orderNumber: result.order_number, total: result.total, order, items });
   } catch (err) {
     next(err);
   }

@@ -31,3 +31,18 @@ export function getAvailableStock(product, size, color) {
   }
   return Number(product.stock) || 0;
 }
+
+// Whole product sold out: nothing left in stock, or every size / every
+// color the admin offers is marked sold out. Drives the "SOLD OUT" label
+// on product cards and the admin product list.
+export function isProductSoldOut(product) {
+  if (!product) return true;
+  if ((Number(product.stock) || 0) <= 0) return true;
+  const allMarked = (list, soldOut) => list?.length > 0 && list.every((v) => soldOut?.includes(v));
+  return allMarked(product.sizes, product.sold_out_sizes) || allMarked(product.colors, product.sold_out_colors);
+}
+
+// Same order as given, but sold-out products moved to the end.
+export function soldOutLast(products) {
+  return [...products].sort((a, b) => Number(isProductSoldOut(a)) - Number(isProductSoldOut(b)));
+}

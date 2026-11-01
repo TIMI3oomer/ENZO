@@ -11,10 +11,67 @@
 // it doesn't translate it).
 //
 // SCALAR_FIELDS: one row per (page, section, key). `type: "text"` renders
-// as a text input/textarea in the dashboard editor; `type: "image"`
+// as a text input/textarea in the dashboard editor; `type: "toggle"`
+// renders as an on/off switch stored as "on" / "off"; `type: "image"`
 // renders as an image upload (content-images bucket) and stores the
 // public URL as the value.
 export const SCALAR_FIELDS = [
+  {
+    page: "home",
+    section: "sections",
+    key: "showPromo",
+    type: "toggle",
+    label: "Show: Promo strip",
+    defaultT: () => "on",
+  },
+  {
+    page: "home",
+    section: "sections",
+    key: "showNewArrivals",
+    type: "toggle",
+    label: "Show: New arrivals",
+    defaultT: () => "on",
+  },
+  {
+    page: "home",
+    section: "sections",
+    key: "showCategories",
+    type: "toggle",
+    label: "Show: Category photo tiles",
+    defaultT: () => "on",
+  },
+  {
+    page: "home",
+    section: "sections",
+    key: "showEditorial",
+    type: "toggle",
+    label: "Show: Campaign banner",
+    defaultT: () => "on",
+  },
+  {
+    page: "home",
+    section: "sections",
+    key: "showSale",
+    type: "toggle",
+    label: "Show: On sale",
+    defaultT: () => "on",
+  },
+  {
+    page: "home",
+    section: "sections",
+    key: "showCategoryRails",
+    type: "toggle",
+    label: "Show: A row for each category",
+    defaultT: () => "on",
+  },
+  {
+    page: "home",
+    section: "sections",
+    key: "showTrust",
+    type: "toggle",
+    label: "Show: Trust badges",
+    defaultT: () => "on",
+  },
   {
     page: "home",
     section: "hero",
@@ -142,6 +199,62 @@ export const SCALAR_FIELDS = [
     type: "text",
     label: "Care instructions (shown on every product page)",
     defaultT: () => "اغسل بماء بارد، لا تستخدم المبيض، جفف بالهواء، كوي على حرارة منخفضة.",
+  },
+  {
+    page: "site",
+    section: "store",
+    key: "name",
+    type: "text",
+    label: "Store name (invoices)",
+    defaultT: () => "ENZO",
+  },
+  {
+    page: "site",
+    section: "store",
+    key: "phone",
+    type: "text",
+    label: "Phone number",
+    defaultT: () => "",
+  },
+  {
+    page: "site",
+    section: "store",
+    key: "whatsapp",
+    type: "text",
+    label: "WhatsApp number (international, digits only, e.g. 970599123456)",
+    defaultT: () => "",
+  },
+  {
+    page: "site",
+    section: "store",
+    key: "instagram",
+    type: "text",
+    label: "Instagram username",
+    defaultT: () => "",
+  },
+  {
+    page: "site",
+    section: "store",
+    key: "address",
+    type: "text",
+    label: "Shop address",
+    defaultT: () => "",
+  },
+  {
+    page: "site",
+    section: "store",
+    key: "invoiceNote",
+    type: "text",
+    label: "Note printed at the bottom of invoices",
+    defaultT: (t) => t("invoice.thanks", { ns: "admin" }),
+  },
+  {
+    page: "site",
+    section: "catalog",
+    key: "showSoldOut",
+    type: "toggle",
+    label: "Show sold-out products (at the end of each list)",
+    defaultT: () => "on",
   },
 ];
 

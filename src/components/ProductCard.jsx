@@ -5,6 +5,7 @@ import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
 import { COLOR_HEX } from "../lib/colors.js";
 import { ShoppingBag } from "lucide-react";
+import { isProductSoldOut } from "../lib/variantStock.js";
 
 // CHECKPOINT NOTE (ProductCard.jsx):
 // `text-start` (not text-left) so captions align correctly in both
@@ -40,6 +41,7 @@ export default function ProductCard({ product }) {
   const hasColorPreviews = (product.colors?.length || 0) > 1 && Object.keys(colorImages).length > 0;
   const displayedImage = (previewColor && colorImages[previewColor]) || product.images?.[0];
   const name = localize(product.name);
+  const soldOut = isProductSoldOut(product);
 
   function handleSwatchClick(e, color) {
     e.preventDefault();
@@ -56,7 +58,9 @@ export default function ProductCard({ product }) {
               src={displayedImage}
               alt={name}
               loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${
+                soldOut ? "opacity-50 grayscale" : ""
+              }`}
             />
           ) : (
             <div className="flex h-full items-center justify-center font-display text-lg tracking-wide text-enzo-muted">
@@ -64,13 +68,15 @@ export default function ProductCard({ product }) {
             </div>
           )}
 
-          {product.stock === 0 && (
-            <span className="absolute top-2 start-2 bg-enzo-black/85 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-enzo-white">
-              {t("product.outOfStock")}
-            </span>
+          {soldOut && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="w-full bg-enzo-black/85 py-2 text-center font-display text-sm uppercase tracking-[0.25em] text-enzo-white">
+                {t("product.soldOut")}
+              </span>
+            </div>
           )}
 
-          {product.discount_percent > 0 && (
+          {product.discount_percent > 0 && !soldOut && (
             <span className="absolute bottom-2 end-2 bg-enzo-error px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-enzo-white">
               -{product.discount_percent}%
             </span>
@@ -109,7 +115,7 @@ export default function ProductCard({ product }) {
           <p className="line-clamp-2 min-h-[2.5em] text-xs font-semibold uppercase leading-tight tracking-wide sm:text-[13px]">
             {name}
           </p>
-          <div className="mt-auto flex items-center justify-between gap-2">
+          <div className={`mt-auto flex items-center justify-between gap-2 ${soldOut ? "opacity-50" : ""}`}>
             {product.discount_percent > 0 ? (
               <p className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold">
                 <span className="text-enzo-goldBright">{formatPrice(getDiscountedPrice(product.price, product.discount_percent))}</span>

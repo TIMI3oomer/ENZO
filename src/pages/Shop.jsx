@@ -5,6 +5,8 @@ import { api } from "../lib/api.js";
 import { useLocalizedField, useLanguage } from "../context/LanguageContext.jsx";
 import ProductCard from "../components/ProductCard.jsx";
 import ErrorBanner from "../components/ErrorBanner.jsx";
+import { useContent } from "../hooks/useContent.js";
+import { isProductSoldOut, soldOutLast } from "../lib/variantStock.js";
 
 const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
@@ -51,6 +53,12 @@ export default function Shop() {
     loadProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorySlug, sort, sizeFilter]);
+
+  // Sold-out products sit at the end of the grid, or are hidden entirely
+  // when the admin turns that off in the CMS (site.catalog.showSoldOut).
+  const site = useContent("site");
+  const visible =
+    site.catalog?.showSoldOut === "off" ? products.filter((p) => !isProductSoldOut(p)) : soldOutLast(products);
 
   const activeCategory = categories.find((c) => c.slug === categorySlug);
   const hasFilters = Boolean(categorySlug || sizeFilter || sort !== "newest");
@@ -150,11 +158,11 @@ export default function Shop() {
             </div>
           ))}
         </div>
-      ) : products.length === 0 ? (
+      ) : visible.length === 0 ? (
         <p className="text-enzo-muted">{t("product.outOfStock")}</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {products.map((p) => (
+          {visible.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>

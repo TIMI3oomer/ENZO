@@ -9,7 +9,8 @@
     "content": "Site content",
     "inStoreSale": "In-store sale",
     "backToStore": "Back to store",
-    "logout": "Log out"
+    "logout": "Log out",
+    "discountCodes": "Discount codes"
   },
   "login": {
     "title": "Admin Login",
@@ -84,7 +85,12 @@
     "refunded": "Refunded",
     "confirmRefund": "Refund this order? For a card payment this returns the money via Stripe; for cash/transfer it just records the refund. Items are put back in stock.",
     "colorLabel": "Color",
-    "sizeLabel": "Size"
+    "sizeLabel": "Size",
+    "searchPlaceholder": "Search: invoice #, name, phone, email, code",
+    "noMatches": "No orders match.",
+    "codeDiscount": "code {{code}}",
+    "pointsUsed": "{{points}} pts",
+    "pointsEarned": "earned {{points}} pts"
   },
   "analytics": {
     "salesLast14Days": "Sales — last 14 days",
@@ -103,7 +109,9 @@
     "memberSince": "Customer since",
     "noOrders": "No orders yet",
     "inStore": "In store",
-    "historyError": "Couldn't load this customer's history."
+    "historyError": "Couldn't load this customer's history.",
+    "searchPlaceholder": "Search: name, email or phone",
+    "points": "Points"
   },
   "categoriesPage": {
     "title": "Categories",
@@ -186,6 +194,54 @@
     "method_visa": "Card",
     "method_reflect": "Reflect transfer",
     "method_in_store": "Paid in store",
-    "thanks": "Thank you for shopping with ENZO"
+    "thanks": "Thank you for shopping with ENZO",
+    "codeDiscount": "Discount",
+    "pointsDiscount": "Points ({{points}})",
+    "policy": "Sold items are non-refundable and non-exchangeable"
+  },
+  "codes": {
+    "title": "Discount codes",
+    "new": "New code",
+    "code": "Code",
+    "generate": "Generate",
+    "value": "Discount",
+    "minOrder": "Minimum order (ILS)",
+    "maxUses": "Max uses",
+    "expires": "Expires",
+    "create": "Create code",
+    "none": "No discount codes yet.",
+    "used": "Used",
+    "status": "Status",
+    "copy": "Copy",
+    "disable": "Turn off",
+    "enable": "Turn on",
+    "delete": "Delete",
+    "confirmDelete": "Delete the code {{code}}?",
+    "status_active": "Active",
+    "status_off": "Off",
+    "status_expired": "Expired",
+    "status_usedUp": "Used up"
+  },
+  "returns": {
+    "refund": "Refund",
+    "exchange": "Exchange",
+    "refundTitle": "Refund",
+    "exchangeTitle": "Exchange",
+    "quantity": "Pieces",
+    "newProduct": "Replace with",
+    "note": "Note (optional)",
+    "estimate": "Price difference",
+    "estimateHint": "final amount comes from the server",
+    "confirmRefund": "Confirm refund",
+    "confirmExchange": "Confirm exchange",
+    "cancel": "Cancel",
+    "giveBack": "Give the customer back {{amount}}",
+    "collect": "Collect {{amount}} more from the customer",
+    "noDiff": "No price difference",
+    "newTotal": "New order total: {{total}}",
+    "pointsChanged": "customer points {{points}}",
+    "history": "Returns & exchanges",
+    "refunded": "Refunded",
+    "exchanged": "Exchanged"
   }
 }

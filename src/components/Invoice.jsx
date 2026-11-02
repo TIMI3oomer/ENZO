@@ -52,6 +52,8 @@ function Receipt({ order, items, store }) {
   const localize = useLocalizedField();
   const date = new Date(order.created_at);
   const delivery = Number(order.delivery_fee) || 0;
+  const codeDiscount = Number(order.code_discount) || 0;
+  const pointsDiscount = Number(order.points_discount) || 0;
   const row = "flex justify-between gap-3";
 
   return (
@@ -121,17 +123,31 @@ function Receipt({ order, items, store }) {
       </table>
 
       <div className="mt-3 flex flex-col gap-1 border-t border-black pt-2">
+        {(delivery > 0 || codeDiscount > 0 || pointsDiscount > 0) && (
+          <div className={row}>
+            <span>{t("invoice.subtotal")}</span>
+            <span>{formatPrice(order.subtotal)}</span>
+          </div>
+        )}
+        {codeDiscount > 0 && (
+          <div className={row}>
+            <span>
+              {t("invoice.codeDiscount")} ({order.discount_code})
+            </span>
+            <span>-{formatPrice(codeDiscount)}</span>
+          </div>
+        )}
+        {pointsDiscount > 0 && (
+          <div className={row}>
+            <span>{t("invoice.pointsDiscount", { points: order.points_redeemed })}</span>
+            <span>-{formatPrice(pointsDiscount)}</span>
+          </div>
+        )}
         {delivery > 0 && (
-          <>
-            <div className={row}>
-              <span>{t("invoice.subtotal")}</span>
-              <span>{formatPrice(order.subtotal)}</span>
-            </div>
-            <div className={row}>
-              <span>{t("invoice.delivery")}</span>
-              <span>{formatPrice(delivery)}</span>
-            </div>
-          </>
+          <div className={row}>
+            <span>{t("invoice.delivery")}</span>
+            <span>{formatPrice(delivery)}</span>
+          </div>
         )}
         <div className={`${row} text-base font-bold`}>
           <span>{t("invoice.total")}</span>
@@ -148,7 +164,13 @@ function Receipt({ order, items, store }) {
 
       {order.notes && <p className="mt-3 text-[12px]">{order.notes}</p>}
 
-      <p className="mt-5 border-t border-dashed border-black pt-3 text-center text-[12px]">
+      {/* Store policy -- printed on the invoice only, never shown on the site.
+          Typing "-" in the CMS hides it (an empty field means "use the default"). */}
+      {store.invoicePolicy && store.invoicePolicy.trim() !== "-" && (
+        <p className="mt-5 border-y border-black py-2 text-center text-[12px] font-bold">{store.invoicePolicy}</p>
+      )}
+
+      <p className="mt-4 border-t border-dashed border-black pt-3 text-center text-[12px]">
         {store.invoiceNote || t("invoice.thanks")}
       </p>
     </div>

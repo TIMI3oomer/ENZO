@@ -90,6 +90,8 @@ router.post("/stripe", express.raw({ type: "application/json" }), async (req, re
         color: i.color ?? null,
         quantity: i.quantity,
       })),
+      p_points_redeem: payload.pointsToRedeem || 0,
+      p_discount_code: payload.discountCode || null,
       p_payment_status: "paid", // Stripe already confirmed the charge succeeded
       p_stripe_session_id: session.id,
     });

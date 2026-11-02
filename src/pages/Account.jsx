@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, LayoutDashboard } from "lucide-react";
+import { ChevronDown, LayoutDashboard, Coins, Truck } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
@@ -24,10 +24,12 @@ export default function Account() {
   const [profile, setProfile] = useState({ full_name: "", phone: "", default_city: "", default_address: "" });
   const [savingProfile, setSavingProfile] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
+  const [points, setPoints] = useState(null);
 
   useEffect(() => {
     if (!session?.user) return;
     api.get("/orders/mine").then((data) => setOrders(data || [])).finally(() => setLoading(false));
+    api.get("/account/points").then((d) => setPoints(d.balance)).catch(() => {});
     api.get("/account/profile").then((data) => {
       setProfile({
         full_name: data.full_name || session.user.user_metadata?.full_name || "",
@@ -121,6 +123,24 @@ export default function Account() {
         </div>
       </form>
 
+      {points != null && (
+        <Link
+          to="/points"
+          className="mb-8 flex items-center justify-between gap-3 rounded-lg border border-enzo-gold/40 bg-enzo-gold/10 p-4 hover:border-enzo-gold"
+        >
+          <span className="flex items-center gap-3">
+            <Coins size={22} className="text-enzo-goldBright" />
+            <span>
+              <span className="block text-sm text-enzo-muted">{t("points.yourBalance")}</span>
+              <span className="font-display text-xl">
+                {points.toLocaleString()} {t("points.pts")} · {formatPrice(Math.max(points, 0) / 100)}
+              </span>
+            </span>
+          </span>
+          <span className="text-xs text-enzo-gold underline">{t("points.howItWorks")}</span>
+        </Link>
+      )}
+
       <h2 className="mb-4 text-lg font-medium">{t("auth.myOrders")}</h2>
       {loading ? (
         <p className="text-enzo-muted">…</p>
@@ -144,7 +164,7 @@ export default function Account() {
                     {!o.delivery_fee_confirmed && (
                       <p className="text-xs text-enzo-muted">{t("auth.deliveryPending")}</p>
                     )}
-                    <p className="text-sm text-enzo-muted">{o.status}</p>
+                    <p className="text-sm text-enzo-muted">{t(`track.status_${o.status}`)}</p>
                   </div>
                   <ChevronDown
                     size={18}
@@ -158,6 +178,13 @@ export default function Account() {
                   {o.admin_note && (
                     <p className="mb-3 rounded bg-enzo-panel p-3 text-sm text-enzo-muted">{o.admin_note}</p>
                   )}
+                  <Link
+                    to={`/track/${o.order_number}`}
+                    className="mb-3 inline-flex items-center gap-2 rounded-md border hairline px-3 py-1.5 text-sm font-semibold hover:border-enzo-gold"
+                  >
+                    <Truck size={15} />
+                    {t("track.title")}
+                  </Link>
                   {!itemsByOrder[o.id] ? (
                     <p className="text-sm text-enzo-muted">…</p>
                   ) : (

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Search, Coins } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { useLocalizedField } from "../../context/LanguageContext.jsx";
 import { formatPrice } from "../../lib/formatPrice.js";
@@ -22,6 +22,7 @@ export default function AdminCustomers() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [history, setHistory] = useState({}); // { [customerId]: orders[] | "error" }
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     api
@@ -41,8 +42,28 @@ export default function AdminCustomers() {
     }
   }
 
+  // Name, email or phone (phone compared on digits only, so 059-... matches).
+  const q = search.trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, "");
+  const visible = !q
+    ? customers
+    : customers.filter(
+        (c) =>
+          [c.fullName, c.email].some((v) => v?.toLowerCase().includes(q)) ||
+          (qDigits.length >= 3 && (c.phone || "").replace(/\D/g, "").includes(qDigits))
+      );
+
   return (
     <AdminLayout title={t("nav.customers")}>
+      <div className="relative mb-5 max-w-md">
+        <Search size={16} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-enzo-muted" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("customersPage.searchPlaceholder")}
+          className="input ps-9"
+        />
+      </div>
       {loading ? (
         <p className="text-enzo-muted">…</p>
       ) : customers.length === 0 ? (
@@ -56,11 +77,12 @@ export default function AdminCustomers() {
                 <th className="px-4 py-3 text-start">{t("customersPage.email")}</th>
                 <th className="px-4 py-3 text-start">{t("customersPage.phone")}</th>
                 <th className="px-4 py-3 text-start">{t("customersPage.orders")}</th>
+                <th className="px-4 py-3 text-start">{t("customersPage.points")}</th>
                 <th className="w-10" />
               </tr>
             </thead>
             <tbody>
-              {customers.map((c) => (
+              {visible.map((c) => (
                 <Fragment key={c.id}>
                   <tr onClick={() => toggle(c)} className="cursor-pointer border-t hairline hover:bg-enzo-panel/60">
                     <td className="px-4 py-3">{c.fullName || "—"}</td>
@@ -68,12 +90,18 @@ export default function AdminCustomers() {
                     <td className="px-4 py-3" dir="ltr">{c.phone || "—"}</td>
                     <td className="px-4 py-3">{c.orderCount}</td>
                     <td className="px-4 py-3">
+                      <span className="flex items-center gap-1.5 text-enzo-goldBright">
+                        <Coins size={14} />
+                        {c.points.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
                       <ChevronDown size={16} className={`transition-transform ${expanded === c.id ? "rotate-180" : ""}`} />
                     </td>
                   </tr>
                   {expanded === c.id && (
                     <tr className="border-t hairline bg-enzo-panel/30">
-                      <td colSpan={5} className="px-4 py-4">
+                      <td colSpan={6} className="px-4 py-4">
                         <CustomerHistory customer={c} orders={history[c.id]} />
                       </td>
                     </tr>

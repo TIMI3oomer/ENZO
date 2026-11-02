@@ -1,6 +1,6 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LayoutGrid, Package, ClipboardList, Users, Tags, FileText, ShoppingBag, Store, LogOut } from "lucide-react";
+import { LayoutGrid, Package, ClipboardList, Users, Tags, FileText, ShoppingBag, Store, LogOut, Ticket } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
 
@@ -22,6 +22,7 @@ export default function AdminLayout({ children, title }) {
     { to: "/admin/categories", label: t("nav.categories"), icon: Tags },
     { to: "/admin/content", label: t("nav.content"), icon: FileText },
     { to: "/admin/in-store-sale", label: t("nav.inStoreSale"), icon: ShoppingBag },
+    { to: "/admin/discount-codes", label: t("nav.discountCodes"), icon: Ticket },
   ];
 
   async function handleLogout() {

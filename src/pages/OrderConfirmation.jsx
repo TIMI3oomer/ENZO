@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 import { usePaymentConfig } from "../lib/usePaymentConfig.js";
+import { Coins, Truck } from "lucide-react";
 
 // CHECKPOINT NOTE (OrderConfirmation.jsx):
 // Items/total are read from router state, passed by Checkout.jsx right
@@ -23,6 +24,9 @@ export default function OrderConfirmation() {
   const total = location.state?.total;
   const subtotal = location.state?.subtotal;
   const deliveryFee = location.state?.deliveryFee;
+  const codeDiscount = location.state?.codeDiscount || 0;
+  const pointsDiscount = location.state?.pointsDiscount || 0;
+  const pointsEarned = location.state?.pointsEarned || 0;
 
   // Reflect orders: show where to send the money, right when the customer
   // needs it. (Only available straight after checkout -- a page refresh
@@ -37,6 +41,13 @@ export default function OrderConfirmation() {
       <p className="text-2xl font-semibold">#{orderNumber}</p>
       <p className="mt-4 text-enzo-muted">{t("confirmation.status")}</p>
       <p className="font-medium">{t("confirmation.pending")}</p>
+
+      {pointsEarned > 0 && (
+        <div className="mt-6 flex items-center justify-center gap-2 rounded-lg border border-enzo-gold/40 bg-enzo-gold/10 px-4 py-3 text-sm text-enzo-goldBright">
+          <Coins size={16} />
+          {t("confirmation.pointsEarned", { points: pointsEarned, value: formatPrice(pointsEarned / 100) })}
+        </div>
+      )}
 
       {showReflect && (
         <div className="mt-8 rounded-lg border hairline p-5 text-start">
@@ -78,6 +89,18 @@ export default function OrderConfirmation() {
               <span>{formatPrice(subtotal)}</span>
             </div>
           )}
+          {codeDiscount > 0 && (
+            <div className="mt-2 flex justify-between text-sm text-enzo-goldBright">
+              <span>{t("codeDiscount")}</span>
+              <span>-{formatPrice(codeDiscount)}</span>
+            </div>
+          )}
+          {pointsDiscount > 0 && (
+            <div className="mt-2 flex justify-between text-sm text-enzo-goldBright">
+              <span>{t("pointsDiscount")}</span>
+              <span>-{formatPrice(pointsDiscount)}</span>
+            </div>
+          )}
           {deliveryFee != null && (
             <div className="mt-2 flex justify-between text-sm">
               <span className="text-enzo-muted">{t("delivery")}</span>
@@ -95,9 +118,18 @@ export default function OrderConfirmation() {
         </p>
       )}
 
-      <Link to="/" className="mt-10 inline-block rounded-md bg-enzo-gradient px-6 py-3 font-semibold text-enzo-black">
-        {t("confirmation.backHome")}
-      </Link>
+      <div className="mt-10 flex flex-wrap justify-center gap-3">
+        <Link
+          to={`/track/${orderNumber}`}
+          className="flex items-center gap-2 rounded-md bg-enzo-gradient px-6 py-3 font-semibold text-enzo-black"
+        >
+          <Truck size={18} />
+          {t("confirmation.trackOrder")}
+        </Link>
+        <Link to="/" className="rounded-md border hairline px-6 py-3 font-semibold">
+          {t("confirmation.backHome")}
+        </Link>
+      </div>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../lib/supabaseAdmin.js";
+import { quoteOrder } from "../lib/pricing.js";
 import { stripe } from "../lib/stripe.js";
 import { attachUser, requireAuth } from "../middleware/auth.js";
-import { createOrderSchema, parseOrThrow } from "../utils/validation.js";
+import { createOrderSchema, quoteSchema, parseOrThrow } from "../utils/validation.js";
 import { cardEnabled, reflectConfig } from "../lib/payments.js";
 
 const router = Router();
@@ -47,6 +48,8 @@ router.post("/", attachUser, async (req, res, next) => {
     }
 
     const { data, error } = await supabaseAdmin.rpc("place_order", {
+      p_points_redeem: body.pointsToRedeem,
+      p_discount_code: body.discountCode || null,
       p_customer_name: body.fullName,
       p_phone: body.phone,
       p_city: body.city,
@@ -80,7 +83,69 @@ router.post("/", attachUser, async (req, res, next) => {
       orderNumber: result.order_number,
       total: result.total,
       deliveryFee: result.delivery_fee,
+      pointsEarned: result.points_earned,
+      pointsDiscount: result.points_discount,
+      codeDiscount: result.code_discount,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Live totals for the checkout page: items, discount code, points,
+// delivery and the points this order will earn. Errors (bad code, not
+// enough points) come back as a 400 with a customer-readable message.
+router.post("/quote", attachUser, async (req, res, next) => {
+  try {
+    const body = parseOrThrow(quoteSchema, req.body);
+    res.json(
+      await quoteOrder({
+        items: body.items,
+        deliveryRegion: body.deliveryRegion,
+        userId: req.user?.id ?? null,
+        pointsToRedeem: body.pointsToRedeem,
+        discountCode: body.discountCode,
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ORDER TRACKING (the site's "Track order" page). Allowed for the signed-in
+// owner of the order, or anyone with the order number AND the phone it was
+// placed with (last 9 digits compared, so 059.../+97059... both match).
+// Never returns the address or full phone.
+router.get("/track/:number", attachUser, async (req, res, next) => {
+  try {
+    const number = Number(req.params.number);
+    if (!Number.isInteger(number) || number <= 0) return res.status(404).json({ error: "Order not found" });
+
+    const { data: order, error } = await supabaseAdmin
+      .from("orders")
+      .select(
+        "id, order_number, status, created_at, user_id, phone, channel, delivery_region, payment_method, payment_status, subtotal, delivery_fee, code_discount, points_discount, points_earned, total"
+      )
+      .eq("order_number", number)
+      .maybeSingle();
+    if (error) throw error;
+
+    const digits = (s) => String(s || "").replace(/\D/g, "").slice(-9);
+    const isOwner = order && req.user && order.user_id === req.user.id;
+    const phoneMatches = order && digits(req.query.phone).length >= 7 && digits(req.query.phone) === digits(order.phone);
+    if (!order || order.channel === "in_store" || !(isOwner || phoneMatches)) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const [{ data: history, error: hError }, { data: items, error: iError }] = await Promise.all([
+      supabaseAdmin.from("order_status_history").select("status, created_at").eq("order_id", order.id).order("created_at"),
+      supabaseAdmin.from("order_items").select("product_name, size, color, quantity, unit_price").eq("order_id", order.id),
+    ]);
+    if (hError) throw hError;
+    if (iError) throw iError;
+
+    const { id, user_id, phone, ...publicOrder } = order;
+    res.json({ ...publicOrder, history, items });
   } catch (err) {
     next(err);
   }
@@ -228,9 +293,32 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
 
     const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").split(",")[0].trim();
 
+    // Discount code + points: same rules as place_order(), applied as a
+    // one-off Stripe coupon so the card is charged the discounted amount.
+    const quote = await quoteOrder({
+      items: body.items,
+      deliveryRegion: body.deliveryRegion,
+      userId: req.user?.id ?? null,
+      pointsToRedeem: body.pointsToRedeem,
+      discountCode: body.discountCode,
+    });
+    const discountTotal = quote.codeDiscount + quote.pointsDiscount;
+    let discounts;
+    if (discountTotal > 0) {
+      const coupon = await stripe.coupons.create({
+        amount_off: Math.round(discountTotal * 100),
+        currency,
+        duration: "once",
+        max_redemptions: 1,
+        name: body.locale === "ar" ? "خصم ENZO" : "ENZO discount",
+      });
+      discounts = [{ coupon: coupon.id }];
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
+      discounts,
       success_url: `${frontendUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontendUrl}/checkout`,
       customer_email: body.email || req.user?.email || undefined,
@@ -252,6 +340,8 @@ router.post("/stripe-session", attachUser, async (req, res, next) => {
           deliveryRegion: body.deliveryRegion,
           userId: req.user?.id ?? null,
           items: body.items,
+          pointsToRedeem: body.pointsToRedeem || 0,
+          discountCode: body.discountCode || null,
         })
       ),
     });

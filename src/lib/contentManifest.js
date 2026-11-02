@@ -67,6 +67,22 @@ export const SCALAR_FIELDS = [
   {
     page: "home",
     section: "sections",
+    key: "showBrandStrip",
+    type: "toggle",
+    label: "Show: Big scrolling ENZO strip",
+    defaultT: () => "on",
+  },
+  {
+    page: "home",
+    section: "sections",
+    key: "showPoints",
+    type: "toggle",
+    label: "Show: Points banner",
+    defaultT: () => "on",
+  },
+  {
+    page: "home",
+    section: "sections",
     key: "showTrust",
     type: "toggle",
     label: "Show: Trust badges",
@@ -247,6 +263,14 @@ export const SCALAR_FIELDS = [
     type: "text",
     label: "Note printed at the bottom of invoices",
     defaultT: (t) => t("invoice.thanks", { ns: "admin" }),
+  },
+  {
+    page: "site",
+    section: "store",
+    key: "invoicePolicy",
+    type: "text",
+    label: "Return policy printed on invoices only (type - to hide it)",
+    defaultT: (t) => t("invoice.policy", { ns: "admin" }),
   },
   {
     page: "site",

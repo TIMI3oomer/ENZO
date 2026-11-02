@@ -36,6 +36,51 @@ export const createOrderSchema = z.object({
   }),
   locale: z.enum(["ar", "en"]).default("ar"),
   items: z.array(orderItemSchema).min(1).max(50),
+  pointsToRedeem: z.number().int().min(0).max(10_000_000).default(0),
+  discountCode: z.string().trim().max(30).optional().nullable(),
+});
+
+// Checkout's live price check (POST /api/orders/quote).
+export const quoteSchema = z.object({
+  items: z.array(orderItemSchema).min(1).max(50),
+  deliveryRegion: z.enum(DELIVERY_REGIONS).optional().nullable(),
+  pointsToRedeem: z.number().int().min(0).max(10_000_000).default(0),
+  discountCode: z.string().trim().max(30).optional().nullable(),
+});
+
+// Admin -> Discount codes.
+export const discountCodeSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9_-]{3,30}$/, "Use 3-30 letters, numbers, - or _")
+    .transform((c) => c.toUpperCase()),
+  kind: z.enum(["percent", "fixed"]),
+  value: z.number().positive(),
+  min_order: z.number().min(0).default(0),
+  max_uses: z.number().int().positive().nullable().optional(),
+  expires_at: z.string().datetime({ offset: true }).nullable().optional(),
+  is_active: z.boolean().default(true),
+}).refine((c) => c.kind !== "percent" || c.value <= 100, { message: "A percent discount can't be more than 100" });
+
+export const discountCodeUpdateSchema = z.object({
+  is_active: z.boolean().optional(),
+  max_uses: z.number().int().positive().nullable().optional(),
+  expires_at: z.string().datetime({ offset: true }).nullable().optional(),
+});
+
+// Admin -> Orders: refund or exchange part of one line.
+export const itemRefundSchema = z.object({
+  quantity: z.number().int().positive().max(50),
+  note: z.string().trim().max(500).optional().nullable(),
+});
+
+export const itemExchangeSchema = z.object({
+  quantity: z.number().int().positive().max(50),
+  product_id: z.string().uuid(),
+  size: z.string().max(20).nullable().optional(),
+  color: z.string().max(30).nullable().optional(),
+  note: z.string().trim().max(500).optional().nullable(),
 });
 
 export const productSchema = z.object({

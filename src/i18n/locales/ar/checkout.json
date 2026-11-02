@@ -21,7 +21,9 @@
     "pending": "قيد المراجعة",
     "backHome": "العودة للرئيسية",
     "detailsSentSeparately": "سيتم التواصل معك قريباً بتفاصيل الطلب.",
-    "deliveryNote": "رسوم التوصيل تعتمد على مدينتك — سنؤكدها ونرسل لك السعر النهائي بالبريد الإلكتروني."
+    "deliveryNote": "رسوم التوصيل تعتمد على مدينتك — سنؤكدها ونرسل لك السعر النهائي بالبريد الإلكتروني.",
+    "pointsEarned": "كسبت {{points}} نقطة ({{value}}) — استعملها في طلبك القادم",
+    "trackOrder": "تتبع طلبك"
   },
   "validation": {
     "required": "هذا الحقل مطلوب",
@@ -43,5 +45,19 @@
   "reflectInstructions": "حوّل مبلغ {{total}} إلى حساب Reflect أدناه واكتب رقم طلبك #{{orderNumber}} في ملاحظة التحويل. سنؤكد طلبك فور وصول التحويل.",
   "reflectPhone": "رقم Reflect",
   "reflectName": "اسم الحساب",
-  "reflectCheckoutHint": "ستظهر لك تفاصيل التحويل مباشرة بعد تأكيد الطلب."
+  "reflectCheckoutHint": "ستظهر لك تفاصيل التحويل مباشرة بعد تأكيد الطلب.",
+  "discountCode": "كود الخصم",
+  "apply": "تطبيق",
+  "removeCode": "إزالة الكود",
+  "pointsBalance": "لديك {{points}} نقطة ({{value}})",
+  "howPointsWork": "كيف تعمل النقاط",
+  "useMaxPoints": "استعمل الحد الأقصى",
+  "signInForPoints": "لجمع واستعمال نقاط ENZO.",
+  "codeDiscount": "كود الخصم",
+  "pointsDiscount": "النقاط",
+  "youWillEarn": "ستكسب {{points}} نقطة ({{value}}) من هذا الطلب",
+  "codeInvalid": "كود الخصم غير صحيح",
+  "codeExpired": "انتهت صلاحية كود الخصم",
+  "codeUsedUp": "تم استنفاد كود الخصم",
+  "codeMinOrder": "هذا الكود يحتاج طلباً بقيمة {{amount}} على الأقل"
 }

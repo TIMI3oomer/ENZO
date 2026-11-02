@@ -46,4 +46,24 @@ router.put("/profile", attachUser, requireAuth, async (req, res, next) => {
   }
 });
 
+// Points balance + the latest 50 movements (earned, spent, taken back).
+router.get("/points", attachUser, requireAuth, async (req, res, next) => {
+  try {
+    const [{ data: profile, error: pError }, { data: ledger, error: lError }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("points").eq("user_id", req.user.id).maybeSingle(),
+      supabaseAdmin
+        .from("points_ledger")
+        .select("delta, reason, created_at, orders(order_number)")
+        .eq("user_id", req.user.id)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
+    if (pError) throw pError;
+    if (lError) throw lError;
+    res.json({ balance: profile?.points ?? 0, history: ledger });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

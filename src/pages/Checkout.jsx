@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Tag, Coins, X } from "lucide-react";
 import { useCart } from "../context/CartContext.jsx";
 import { useLanguage, useLocalizedField } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -9,6 +9,7 @@ import { formatPrice } from "../lib/formatPrice.js";
 import { api } from "../lib/api.js";
 import { DELIVERY_REGIONS, getDeliveryRegion } from "../lib/delivery.js";
 import { usePaymentConfig } from "../lib/usePaymentConfig.js";
+import i18n from "../i18n/index.js";
 
 const initialForm = {
   fullName: "",
@@ -37,6 +38,11 @@ const initialForm = {
 //   the cart is intentionally NOT cleared here for the card path -- see
 //   PaymentSuccess.jsx, which clears it once the order is confirmed.
 // - GUEST CHECKOUT IS STILL FULLY SUPPORTED for all three payment methods.
+// - DISCOUNT CODE + POINTS: the summary asks POST /api/orders/quote for the
+//   real totals whenever the cart, region, code or points change, so a bad
+//   code or too many points shows up here, before ordering. Points can only
+//   be used signed in (100 points = 1 ILS); the database re-checks both
+//   when the order is placed (place_order in migration_v16.sql).
 export default function Checkout() {
   const { t } = useTranslation("checkout");
   const { t: tc } = useTranslation("common");
@@ -50,6 +56,12 @@ export default function Checkout() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [codeInput, setCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState("");
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const [quote, setQuote] = useState(null);
+  const [quoteError, setQuoteError] = useState("");
+  const [codeError, setCodeError] = useState(""); // kept until another code is tried
 
   // Only offer payment methods the backend says are actually available
   // (card is hidden unless a card provider is configured, Reflect unless
@@ -75,7 +87,54 @@ export default function Checkout() {
 
   const region = getDeliveryRegion(form.deliveryRegion);
   const deliveryFee = region?.fee ?? 0;
-  const total = subtotal + deliveryFee;
+
+  const cartLines = items.map((item) => ({
+    product_id: item.productId,
+    size: item.size ?? null,
+    color: item.color ?? null,
+    quantity: item.quantity,
+  }));
+  const cartKey = JSON.stringify(cartLines);
+
+  // Live totals from the server (debounced while typing points).
+  useEffect(() => {
+    if (items.length === 0) return;
+    let cancelled = false;
+    const id = setTimeout(() => {
+      api
+        .post("/orders/quote", {
+          items: cartLines,
+          deliveryRegion: form.deliveryRegion || null,
+          pointsToRedeem: session ? pointsToUse : 0,
+          discountCode: appliedCode || null,
+        })
+        .then((q) => {
+          if (cancelled) return;
+          setQuote(q);
+          setQuoteError("");
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          setQuoteError(err.message);
+          // A bad code is dropped so the rest of the totals still work;
+          // its message stays under the code box.
+          if (appliedCode && /code/i.test(err.message)) {
+            setCodeError(translateCodeError(err.message));
+            setQuoteError("");
+            setAppliedCode("");
+          } else if (pointsToUse > 0) setPointsToUse(0);
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartKey, form.deliveryRegion, appliedCode, pointsToUse, session]);
+
+  const codeDiscount = quote?.codeDiscount ?? 0;
+  const pointsDiscount = quote?.pointsDiscount ?? 0;
+  const total = subtotal - codeDiscount - pointsDiscount + deliveryFee;
 
   function validate() {
     const errs = {};
@@ -112,12 +171,9 @@ export default function Checkout() {
       paymentMethod: form.paymentMethod,
       deliveryRegion: form.deliveryRegion,
       locale: lang,
-      items: items.map((item) => ({
-        product_id: item.productId,
-        size: item.size ?? null,
-        color: item.color ?? null,
-        quantity: item.quantity,
-      })),
+      items: cartLines,
+      pointsToRedeem: session ? pointsToUse : 0,
+      discountCode: appliedCode || null,
     };
 
     try {
@@ -150,6 +206,9 @@ export default function Checkout() {
           items: confirmedItems,
           subtotal,
           deliveryFee: result.deliveryFee,
+          codeDiscount: Number(result.codeDiscount) || 0,
+          pointsDiscount: Number(result.pointsDiscount) || 0,
+          pointsEarned: result.pointsEarned || 0,
           total: result.total,
           paymentMethod: form.paymentMethod,
         },
@@ -266,11 +325,116 @@ export default function Checkout() {
             </li>
           ))}
         </ul>
+        {/* Discount code */}
+        <div className="mt-4">
+          {appliedCode ? (
+            <div className="flex items-center justify-between rounded-md border border-enzo-gold/40 bg-enzo-gold/10 px-3 py-2 text-sm">
+              <span className="flex items-center gap-2">
+                <Tag size={15} className="text-enzo-goldBright" />
+                <span className="font-semibold tracking-wider" dir="ltr">{appliedCode}</span>
+              </span>
+              <button type="button" onClick={() => setAppliedCode("")} aria-label={t("removeCode")} className="text-enzo-muted hover:text-enzo-white">
+                <X size={16} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                value={codeInput}
+                onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (codeInput.trim()) {
+                      setCodeError("");
+                      setAppliedCode(codeInput.trim());
+                    }
+                  }
+                }}
+                placeholder={t("discountCode")}
+                className="input flex-1 uppercase tracking-wider"
+                dir="ltr"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!codeInput.trim()) return;
+                  setCodeError("");
+                  setAppliedCode(codeInput.trim());
+                }}
+                className="rounded-md border hairline px-4 text-sm font-semibold hover:border-enzo-gold"
+              >
+                {t("apply")}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {codeError && <p className="mt-1.5 text-xs text-enzo-error">{codeError}</p>}
+
+        {/* Points */}
+        {session ? (
+          quote && (quote.balance > 0 || pointsToUse > 0) ? (
+            <div className="mt-3 rounded-md border hairline p-3 text-sm">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <Coins size={15} className="text-enzo-goldBright" />
+                  {t("pointsBalance", { points: quote.balance, value: formatPrice(quote.balance / 100) })}
+                </span>
+                <Link to="/points" className="text-xs text-enzo-gold underline">{t("howPointsWork")}</Link>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  max={quote.maxRedeemable}
+                  value={pointsToUse || ""}
+                  placeholder="0"
+                  onChange={(e) => setPointsToUse(Math.max(0, Math.min(quote.maxRedeemable, Math.floor(Number(e.target.value) || 0))))}
+                  className="input w-28 py-1.5"
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPointsToUse(quote.maxRedeemable)}
+                  disabled={quote.maxRedeemable <= 0}
+                  className="rounded-md border hairline px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+                >
+                  {t("useMaxPoints")}
+                </button>
+                {pointsToUse > 0 && <span className="text-xs text-enzo-muted">= {formatPrice(pointsToUse / 100)}</span>}
+              </div>
+            </div>
+          ) : null
+        ) : (
+          <p className="mt-3 text-xs text-enzo-muted">
+            <Link to="/login" state={{ from: "/checkout" }} className="text-enzo-gold underline">
+              {tc("auth.signIn")}
+            </Link>{" "}
+            {t("signInForPoints")}
+          </p>
+        )}
+
+        {quoteError && <p className="mt-2 text-xs text-enzo-error">{quoteError}</p>}
+
         <div className="mt-4 flex flex-col gap-2">
           <div className="flex justify-between text-sm">
             <span className="text-enzo-muted">{t("subtotal")}</span>
             <span>{formatPrice(subtotal)}</span>
           </div>
+          {codeDiscount > 0 && (
+            <div className="flex justify-between text-sm text-enzo-goldBright">
+              <span>{t("codeDiscount")}</span>
+              <span>-{formatPrice(codeDiscount)}</span>
+            </div>
+          )}
+          {pointsDiscount > 0 && (
+            <div className="flex justify-between text-sm text-enzo-goldBright">
+              <span>{t("pointsDiscount")}</span>
+              <span>-{formatPrice(pointsDiscount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-enzo-muted">
               {t("delivery")}
@@ -284,9 +448,26 @@ export default function Checkout() {
           </div>
         </div>
         {!region && <p className="mt-2 text-xs text-enzo-muted">{t("chooseRegionHint")}</p>}
+        {session && quote?.pointsEarned > 0 && (
+          <p className="mt-3 flex items-center gap-2 text-sm text-enzo-goldBright">
+            <Coins size={15} />
+            {t("youWillEarn", { points: quote.pointsEarned, value: formatPrice(quote.pointsEarned / 100) })}
+          </p>
+        )}
       </div>
     </div>
   );
+}
+
+// The server's discount-code messages are English; show them in the
+// customer's language (falls back to the original text).
+function translateCodeError(message) {
+  const min = message.match(/at least ([\d.]+)/);
+  if (min) return i18n.t("codeMinOrder", { ns: "checkout", amount: formatPrice(Number(min[1])) });
+  if (/expired/i.test(message)) return i18n.t("codeExpired", { ns: "checkout" });
+  if (/used up/i.test(message)) return i18n.t("codeUsedUp", { ns: "checkout" });
+  if (/not valid/i.test(message)) return i18n.t("codeInvalid", { ns: "checkout" });
+  return message;
 }
 
 function Field({ label, error, children }) {

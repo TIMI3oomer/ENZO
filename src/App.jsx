@@ -14,6 +14,8 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Account from "./pages/Account.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import TrackOrder from "./pages/TrackOrder.jsx";
+import Points from "./pages/Points.jsx";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute.jsx";
 import PageTransition from "./components/PageTransition.jsx";
 
@@ -29,6 +31,7 @@ const AdminCustomers = lazy(() => import("./pages/admin/Customers.jsx"));
 const AdminCategories = lazy(() => import("./pages/admin/Categories.jsx"));
 const AdminContent = lazy(() => import("./pages/admin/Content.jsx"));
 const AdminInStoreSale = lazy(() => import("./pages/admin/InStoreSale.jsx"));
+const AdminDiscountCodes = lazy(() => import("./pages/admin/DiscountCodes.jsx"));
 
 function Admin({ children }) {
   return (
@@ -67,6 +70,9 @@ export default function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/account" element={<Account />} />
+                  {/* one optional-segment route, so /track -> /track/123 keeps the page mounted */}
+                  <Route path="/track/:number?" element={<TrackOrder />} />
+                  <Route path="/points" element={<Points />} />
                   <Route path="/order-confirmation/:orderNumber" element={<OrderConfirmation />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
@@ -88,6 +94,7 @@ export default function App() {
       <Route path="/admin/categories" element={<Admin><AdminCategories /></Admin>} />
       <Route path="/admin/content" element={<Admin><AdminContent /></Admin>} />
       <Route path="/admin/in-store-sale" element={<Admin><AdminInStoreSale /></Admin>} />
+      <Route path="/admin/discount-codes" element={<Admin><AdminDiscountCodes /></Admin>} />
     </Routes>
   );
 }

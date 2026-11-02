@@ -101,7 +101,9 @@ const orderLimiter = rateLimit({
   max: 20, // 20 order attempts per IP per window
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.method !== "POST", // only throttle order creation, not GET /orders/mine
+  // only throttle order creation -- not GET /orders/mine, and not the
+  // checkout's price quote, which runs while the customer types a code
+  skip: (req) => req.method !== "POST" || req.path === "/quote",
   message: { error: "Too many orders from this device recently, please try again later." },
 });
 
@@ -118,6 +120,16 @@ app.use("/api/config", configRoutes);
 
 app.use("/api/products", productsRoutes);
 app.use("/api/categories", categoriesRoutes);
+// Order tracking takes an order number + phone: limited so nobody can
+// sit there guessing other customers' numbers.
+const trackLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many tracking attempts, please try again later." },
+});
+app.use("/api/orders/track", trackLimiter);
 app.use("/api/orders", orderLimiter, ordersRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/account", accountRoutes);

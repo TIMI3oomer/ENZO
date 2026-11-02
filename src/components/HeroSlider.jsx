@@ -34,7 +34,7 @@ export default function HeroSlider({ hero, products = [] }) {
             src={src}
             alt=""
             className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
-              i === index ? "opacity-100" : "opacity-0"
+              i === index ? "animate-[enzo-kenburns_7s_ease-out_both] opacity-100" : "opacity-0"
             }`}
           />
         ))
@@ -45,10 +45,29 @@ export default function HeroSlider({ hero, products = [] }) {
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" />
 
       <div className="absolute inset-x-0 bottom-0 mx-auto flex max-w-7xl flex-col items-start gap-3 px-5 pb-12 text-start sm:px-8 sm:pb-16">
-        <h1 className="max-w-2xl font-display text-5xl uppercase leading-[0.95] text-enzo-white drop-shadow-lg sm:text-7xl">
-          {hero.title}
+        {/* Re-keyed per slide so the headline rises in again, word by word. */}
+        <h1
+          key={`title-${index}`}
+          className="max-w-2xl font-display text-5xl uppercase leading-[0.95] text-enzo-white drop-shadow-lg sm:text-7xl"
+        >
+          {String(hero.title || "")
+            .split(" ")
+            .map((word, i) => (
+              <span
+                key={i}
+                className="me-[0.25em] inline-block animate-[enzo-rise_0.7s_cubic-bezier(.2,.7,.2,1)_both]"
+                style={{ animationDelay: `${0.12 + i * 0.09}s` }}
+              >
+                {word}
+              </span>
+            ))}
         </h1>
-        <p className="max-w-md text-sm text-enzo-white/80 sm:text-base">{hero.subtitle}</p>
+        <p
+          className="max-w-md animate-[enzo-rise_0.7s_ease-out_both] text-sm text-enzo-white/80 sm:text-base"
+          style={{ animationDelay: "0.45s" }}
+        >
+          {hero.subtitle}
+        </p>
         <Link
           to="/shop"
           className="mt-2 rounded-sm bg-enzo-white px-7 py-3 text-sm font-semibold uppercase tracking-wider text-enzo-black transition-colors hover:bg-enzo-goldBright"

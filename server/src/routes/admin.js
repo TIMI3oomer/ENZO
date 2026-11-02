@@ -7,6 +7,10 @@ import {
   orderStatusSchema,
   categorySchema,
   paymentStatusSchema,
+  discountCodeSchema,
+  discountCodeUpdateSchema,
+  itemRefundSchema,
+  itemExchangeSchema,
   contentPageSchema,
   inStoreSaleSchema,
   refundSchema,
@@ -277,6 +281,119 @@ router.patch("/orders/:id/refund", async (req, res, next) => {
   }
 });
 
+// ---------- Item refund / exchange ----------
+// Change part of one line of an order: refund it, or swap it for another
+// product/size/color. The database moves the stock (if the order had
+// already taken it), re-prices the order, re-calculates the customer's
+// points and logs it (refund_order_item / exchange_order_item in
+// migration_v16.sql). moneyDiff < 0 means the store owes the customer
+// that much; > 0 means the customer pays the difference. Money itself is
+// settled by hand (cash / Reflect / Stripe dashboard).
+function rpcError(error) {
+  const err = new Error(error.message);
+  err.status = error.code === "P0001" ? 400 : 500;
+  return err;
+}
+
+router.post("/order-items/:id/refund", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(itemRefundSchema, req.body);
+    const { data, error } = await supabaseAdmin.rpc("refund_order_item", {
+      p_item_id: req.params.id,
+      p_quantity: body.quantity,
+      p_note: body.note ?? null,
+    });
+    if (error) throw rpcError(error);
+    const r = data?.[0];
+    res.json({ moneyDiff: Number(r.money_diff), pointsDelta: r.points_delta, total: Number(r.order_total) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/order-items/:id/exchange", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(itemExchangeSchema, req.body);
+    const { data, error } = await supabaseAdmin.rpc("exchange_order_item", {
+      p_item_id: req.params.id,
+      p_quantity: body.quantity,
+      p_new_product_id: body.product_id,
+      p_new_size: body.size ?? null,
+      p_new_color: body.color ?? null,
+      p_note: body.note ?? null,
+    });
+    if (error) throw rpcError(error);
+    const r = data?.[0];
+    res.json({ moneyDiff: Number(r.money_diff), pointsDelta: r.points_delta, total: Number(r.order_total) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/orders/:id/returns", async (req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("order_returns")
+      .select("*")
+      .eq("order_id", req.params.id)
+      .order("created_at");
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------- Discount codes ----------
+router.get("/discount-codes", async (_req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin.from("discount_codes").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/discount-codes", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(discountCodeSchema, req.body);
+    const { data, error } = await supabaseAdmin.from("discount_codes").insert(body).select().single();
+    if (error) {
+      if (error.code === "23505") {
+        const err = new Error("That code already exists");
+        err.status = 400;
+        throw err;
+      }
+      throw error;
+    }
+    res.status(201).json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/discount-codes/:id", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(discountCodeUpdateSchema, req.body);
+    const { data, error } = await supabaseAdmin.from("discount_codes").update(body).eq("id", req.params.id).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/discount-codes/:id", async (req, res, next) => {
+  try {
+    const { error } = await supabaseAdmin.from("discount_codes").delete().eq("id", req.params.id);
+    if (error) throw error;
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ---------- In-store sales (real shop, not just the website) ----------
 // Records a walk-in sale the admin rings up in person: same products/
 // stock pool as the site, taken immediately (see record_in_store_sale()
@@ -457,6 +574,7 @@ router.get("/customers", async (_req, res, next) => {
       city: profileMap[u.id]?.default_city || "",
       address: profileMap[u.id]?.default_address || "",
       orderCount: orderCounts[u.id] || 0,
+      points: profileMap[u.id]?.points ?? 0,
     }));
 
     res.json(customers);

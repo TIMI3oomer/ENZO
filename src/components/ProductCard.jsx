@@ -68,6 +68,16 @@ export default function ProductCard({ product }) {
             </div>
           )}
 
+          {!soldOut && !previewColor && product.images?.[1] && (
+            <img
+              src={product.images[1]}
+              alt=""
+              loading="lazy"
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+            />
+          )}
+
           {soldOut && (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="w-full bg-enzo-black/85 py-2 text-center font-display text-sm uppercase tracking-[0.25em] text-enzo-white">

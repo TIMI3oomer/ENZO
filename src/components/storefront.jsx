@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Coins, ArrowRight } from "lucide-react";
 import { useLanguage, useLocalizedField } from "../context/LanguageContext.jsx";
 import ProductCard from "./ProductCard.jsx";
 import Reveal from "./Reveal.jsx";
@@ -125,5 +125,62 @@ export function CategoryTiles({ categories, products }) {
         );
       })}
     </div>
+  );
+}
+
+// Giant outlined words drifting across the page -- a loud brand moment
+// between sections. Forced LTR for the same loop reason as MarqueeStrip.
+export function BrandMarquee({ words }) {
+  const line = words.filter(Boolean);
+  if (!line.length) return null;
+  return (
+    <div className="mt-16 overflow-hidden whitespace-nowrap py-2" dir="ltr" aria-hidden="true">
+      <div className="flex w-max animate-[enzo-marquee_55s_linear_infinite] motion-reduce:animate-none">
+        {[0, 1].map((copy) => (
+          <div key={copy} className="flex shrink-0 items-center">
+            {line.concat(line).map((w, i) => (
+              <span key={i} className="flex items-center">
+                <span className={`px-6 font-display text-6xl uppercase leading-none sm:text-8xl ${i % 2 ? "enzo-outline-text" : "text-enzo-white/90"}`}>
+                  {w}
+                </span>
+                <span className="h-3 w-3 rotate-45 bg-enzo-gradient" />
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// "Earn points" call-out linking to /points (rules: migration_v16.sql).
+export function PointsBanner({ title, text, cta }) {
+  return (
+    <section className="mx-auto mt-14 max-w-7xl px-4 sm:px-6">
+      <Link
+        to="/points"
+        className="group relative flex flex-col items-start gap-5 overflow-hidden rounded-sm bg-enzo-gradient p-7 text-enzo-black sm:flex-row sm:items-center sm:justify-between sm:p-10"
+      >
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -end-6 -top-10 select-none font-display text-[10rem] leading-none text-black/10"
+        >
+          500
+        </span>
+        <div className="relative flex items-center gap-5">
+          <span className="flex h-16 w-16 flex-none animate-[enzo-coin_3s_ease-in-out_infinite] items-center justify-center rounded-full border-4 border-black/80 bg-enzo-black text-enzo-goldBright shadow-xl">
+            <Coins size={30} />
+          </span>
+          <div className="text-start">
+            <p className="font-display text-3xl uppercase leading-none sm:text-4xl">{title}</p>
+            <p className="mt-2 max-w-md text-sm font-medium text-black/75">{text}</p>
+          </div>
+        </div>
+        <span className="relative flex items-center gap-2 rounded-sm bg-enzo-black px-6 py-3 text-sm font-semibold uppercase tracking-wider text-enzo-white transition-transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1">
+          {cta}
+          <ArrowRight size={16} className="rtl:rotate-180" />
+        </span>
+      </Link>
+    </section>
   );
 }

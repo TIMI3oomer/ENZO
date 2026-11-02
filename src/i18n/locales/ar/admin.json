@@ -9,7 +9,8 @@
     "content": "محتوى الموقع",
     "inStoreSale": "بيع من المحل",
     "backToStore": "العودة للمتجر",
-    "logout": "تسجيل الخروج"
+    "logout": "تسجيل الخروج",
+    "discountCodes": "أكواد الخصم"
   },
   "login": {
     "title": "دخول لوحة التحكم",
@@ -84,7 +85,12 @@
     "refunded": "تم استرجاع المبلغ",
     "confirmRefund": "استرجاع المبلغ لهذا الطلب؟ إذا كان الدفع بالبطاقة سيُعاد المبلغ عبر Stripe، وإذا كان نقداً أو تحويلاً سيتم تسجيل الاسترجاع فقط. سيتم إرجاع الكمية إلى المخزون.",
     "colorLabel": "اللون",
-    "sizeLabel": "المقاس"
+    "sizeLabel": "المقاس",
+    "searchPlaceholder": "ابحث: رقم الفاتورة، الاسم، الهاتف، الإيميل، الكود",
+    "noMatches": "لا توجد طلبات مطابقة.",
+    "codeDiscount": "كود {{code}}",
+    "pointsUsed": "{{points}} نقطة",
+    "pointsEarned": "كسب {{points}} نقطة"
   },
   "analytics": {
     "salesLast14Days": "المبيعات آخر ١٤ يوم",
@@ -103,7 +109,9 @@
     "memberSince": "عميل منذ",
     "noOrders": "لا توجد طلبات بعد",
     "inStore": "من المحل",
-    "historyError": "تعذر تحميل سجل هذا العميل."
+    "historyError": "تعذر تحميل سجل هذا العميل.",
+    "searchPlaceholder": "ابحث: الاسم، الإيميل أو الهاتف",
+    "points": "النقاط"
   },
   "categoriesPage": {
     "title": "التصنيفات",
@@ -166,7 +174,10 @@
       "store.instagram": "اسم حساب إنستغرام",
       "store.address": "عنوان المحل",
       "store.invoiceNote": "ملاحظة أسفل الفاتورة",
-      "catalog.showSoldOut": "إظهار المنتجات المنتهية (في آخر القائمة)"
+      "catalog.showSoldOut": "إظهار المنتجات المنتهية (في آخر القائمة)",
+      "store.invoicePolicy": "سياسة الإرجاع (تُطبع على الفاتورة فقط — اكتب - لإخفائها)",
+      "sections.showBrandStrip": "إظهار: شريط ENZO الكبير المتحرك",
+      "sections.showPoints": "إظهار: بانر النقاط"
     }
   },
   "preview": {
@@ -218,6 +229,54 @@
     "method_visa": "بطاقة",
     "method_reflect": "تحويل Reflect",
     "method_in_store": "مدفوع في المحل",
-    "thanks": "شكراً لتسوقكم من ENZO"
+    "thanks": "شكراً لتسوقكم من ENZO",
+    "codeDiscount": "خصم",
+    "pointsDiscount": "نقاط ({{points}})",
+    "policy": "البضاعة المباعة لا ترد ولا تستبدل"
+  },
+  "codes": {
+    "title": "أكواد الخصم",
+    "new": "كود جديد",
+    "code": "الكود",
+    "generate": "توليد",
+    "value": "الخصم",
+    "minOrder": "أقل قيمة للطلب (₪)",
+    "maxUses": "عدد مرات الاستعمال",
+    "expires": "ينتهي في",
+    "create": "إنشاء الكود",
+    "none": "لا توجد أكواد خصم بعد.",
+    "used": "استُعمل",
+    "status": "الحالة",
+    "copy": "نسخ",
+    "disable": "إيقاف",
+    "enable": "تفعيل",
+    "delete": "حذف",
+    "confirmDelete": "حذف الكود {{code}}؟",
+    "status_active": "فعّال",
+    "status_off": "موقوف",
+    "status_expired": "منتهي",
+    "status_usedUp": "استُنفد"
+  },
+  "returns": {
+    "refund": "إرجاع",
+    "exchange": "استبدال",
+    "refundTitle": "إرجاع",
+    "exchangeTitle": "استبدال",
+    "quantity": "عدد القطع",
+    "newProduct": "استبدالها بـ",
+    "note": "ملاحظة (اختياري)",
+    "estimate": "فرق السعر",
+    "estimateHint": "المبلغ النهائي يحسبه السيرفر",
+    "confirmRefund": "تأكيد الإرجاع",
+    "confirmExchange": "تأكيد الاستبدال",
+    "cancel": "إلغاء",
+    "giveBack": "أرجع للعميل {{amount}}",
+    "collect": "اقبض من العميل {{amount}} إضافية",
+    "noDiff": "لا يوجد فرق في السعر",
+    "newTotal": "إجمالي الطلب الجديد: {{total}}",
+    "pointsChanged": "نقاط العميل {{points}}",
+    "history": "المرتجعات والاستبدالات",
+    "refunded": "إرجاع",
+    "exchanged": "استبدال"
   }
 }

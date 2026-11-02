@@ -138,7 +138,12 @@ export default function Navbar() {
           </button>
         </div>
         <nav className="flex flex-1 flex-col overflow-y-auto px-5 py-4">
-          {[...links, ...categories.map((c) => ({ to: `/shop/${c.slug}`, label: localize(c.name) }))].map((link) => (
+          {[
+            ...links,
+            ...categories.map((c) => ({ to: `/shop/${c.slug}`, label: localize(c.name) })),
+            { to: "/track", label: t("track.title") },
+            { to: "/points", label: t("points.title") },
+          ].map((link) => (
             <NavLink
               key={link.to}
               to={link.to}

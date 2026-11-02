@@ -6,7 +6,7 @@ import { useLocalizedField } from "../context/LanguageContext.jsx";
 import HeroSlider from "../components/HeroSlider.jsx";
 import EditorialBanner from "../components/EditorialBanner.jsx";
 import TrustBadges from "../components/TrustBadges.jsx";
-import { MarqueeStrip, SectionTitle, ProductRail, CategoryTiles } from "../components/storefront.jsx";
+import { MarqueeStrip, SectionTitle, ProductRail, CategoryTiles, BrandMarquee, PointsBanner } from "../components/storefront.jsx";
 import { isProductSoldOut, soldOutLast } from "../lib/variantStock.js";
 
 // CHECKPOINT NOTE (Home.jsx):
@@ -61,11 +61,17 @@ export default function Home() {
 
       {show("showEditorial") && <EditorialBanner editorial={content.editorial} />}
 
+      {show("showBrandStrip") && <BrandMarquee words={["ENZO", t("home.brandWord1"), "ENZO", t("home.brandWord2")]} />}
+
       {show("showSale") && onSale.length > 0 && (
         <>
           <SectionTitle>{t("product.onSale")}</SectionTitle>
           <ProductRail products={onSale} />
         </>
+      )}
+
+      {show("showPoints") && (
+        <PointsBanner title={t("home.pointsTitle")} text={t("home.pointsText")} cta={t("home.pointsCta")} />
       )}
 
       {show("showCategories") && <CategoryTiles categories={withProducts.slice(3, 6)} products={catalog} />}

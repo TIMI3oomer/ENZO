@@ -6,9 +6,28 @@ import { useLocalizedField, useLanguage } from "../context/LanguageContext.jsx";
 import ProductCard from "../components/ProductCard.jsx";
 import ErrorBanner from "../components/ErrorBanner.jsx";
 import { useContent } from "../hooks/useContent.js";
-import { isProductSoldOut, soldOutLast } from "../lib/variantStock.js";
+import { isProductSoldOut, soldOutLast, getAvailableStock, usesVariantStock } from "../lib/variantStock.js";
+import { Check } from "lucide-react";
 
-const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+
+// Is this size actually buyable right now (in any color)? Same rules as
+// the product page: not marked sold out, and -- for products tracked per
+// color+size -- at least one color has it in stock.
+function sizeInStock(product, size) {
+  if (!product.sizes?.includes(size) || product.sold_out_sizes?.includes(size)) return false;
+  if (usesVariantStock(product)) return (product.colors || []).some((c) => getAvailableStock(product, size, c) > 0);
+  return (Number(product.stock) || 0) > 0;
+}
+
+function sortSizes(sizes) {
+  return [...sizes].sort((a, b) => {
+    const ia = SIZE_ORDER.indexOf(a);
+    const ib = SIZE_ORDER.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b, undefined, { numeric: true }); // 30, 32, 42...
+  });
+}
 
 // CHECKPOINT NOTE (Shop.jsx):
 // Category tabs come from GET /api/categories (backend), so the Pants +
@@ -17,6 +36,11 @@ const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 // Filtering/sorting is now done server-side too (GET /api/products?category=
 // &size=&sort=), which is both correct (no joined-table filtering bug)
 // and faster (the database does the filtering, not the browser).
+//
+// SIZE FILTER is done here instead: pick several sizes at once, only sizes
+// that exist in the current list are offered (with how many products have
+// each), and "in stock only" hides products whose chosen size is sold out
+// in every color.
 export default function Shop() {
   const { t } = useTranslation("common");
   const { lang } = useLanguage();
@@ -27,7 +51,8 @@ export default function Shop() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState("newest");
-  const [sizeFilter, setSizeFilter] = useState(null);
+  const [selectedSizes, setSelectedSizes] = useState([]);
+  const [inStockOnly, setInStockOnly] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -39,7 +64,6 @@ export default function Shop() {
     setError(null);
     const params = new URLSearchParams();
     if (categorySlug) params.set("category", categorySlug);
-    if (sizeFilter) params.set("size", sizeFilter);
     if (sort !== "newest") params.set("sort", sort);
 
     api
@@ -52,16 +76,25 @@ export default function Shop() {
   useEffect(() => {
     loadProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categorySlug, sort, sizeFilter]);
+  }, [categorySlug, sort]);
 
   // Sold-out products sit at the end of the grid, or are hidden entirely
   // when the admin turns that off in the CMS (site.catalog.showSoldOut).
   const site = useContent("site");
-  const visible =
+  const catalog =
     site.catalog?.showSoldOut === "off" ? products.filter((p) => !isProductSoldOut(p)) : soldOutLast(products);
 
+  const hasSize = (p, size) => (inStockOnly ? sizeInStock(p, size) : p.sizes?.includes(size));
+  const sizeOptions = sortSizes([...new Set(catalog.flatMap((p) => p.sizes || []))]).map((size) => ({
+    size,
+    count: catalog.filter((p) => hasSize(p, size)).length,
+  }));
+  const visible = selectedSizes.length ? catalog.filter((p) => selectedSizes.some((size) => hasSize(p, size))) : catalog;
+  const toggleSize = (size) =>
+    setSelectedSizes((cur) => (cur.includes(size) ? cur.filter((s) => s !== size) : [...cur, size]));
+
   const activeCategory = categories.find((c) => c.slug === categorySlug);
-  const hasFilters = Boolean(categorySlug || sizeFilter || sort !== "newest");
+  const hasFilters = Boolean(categorySlug || selectedSizes.length || sort !== "newest");
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -105,37 +138,51 @@ export default function Shop() {
           </select>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-enzo-muted">{t("filters.size")}</span>
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              onClick={() => setSizeFilter(null)}
-              className={`rounded border px-2.5 py-1 text-xs ${
-                !sizeFilter ? "border-enzo-white text-enzo-white" : "border-enzo-line text-enzo-muted"
-              }`}
-            >
-              {t("filters.allSizes")}
-            </button>
-            {ALL_SIZES.map((s) => (
-              <button
-                key={s}
-                onClick={() => setSizeFilter(s)}
-                className={`rounded border px-2.5 py-1 text-xs ${
-                  sizeFilter === s ? "border-enzo-white text-enzo-white" : "border-enzo-line text-enzo-muted"
+        {sizeOptions.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-enzo-muted">{t("filters.size")}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {sizeOptions.map(({ size, count }) => {
+                const on = selectedSizes.includes(size);
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleSize(size)}
+                    disabled={count === 0 && !on}
+                    aria-pressed={on}
+                    className={`flex min-w-[2.75rem] items-center justify-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
+                      on
+                        ? "border-enzo-goldBright bg-enzo-goldBright text-enzo-black"
+                        : "border-enzo-line text-enzo-white hover:border-enzo-white"
+                    }`}
+                  >
+                    {size}
+                    <span className={`text-[10px] font-normal ${on ? "text-enzo-black/70" : "text-enzo-muted"}`}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <label className="ms-1 flex cursor-pointer items-center gap-1.5 text-xs text-enzo-muted">
+              <span
+                className={`flex h-4 w-4 items-center justify-center rounded border ${
+                  inStockOnly ? "border-enzo-goldBright bg-enzo-goldBright text-enzo-black" : "border-enzo-line"
                 }`}
               >
-                {s}
-              </button>
-            ))}
+                {inStockOnly && <Check size={11} strokeWidth={3} />}
+              </span>
+              <input type="checkbox" className="sr-only" checked={inStockOnly} onChange={(e) => setInStockOnly(e.target.checked)} />
+              {t("filters.inStockOnly")}
+            </label>
           </div>
-        </div>
+        )}
 
         {hasFilters && (
           <Link
             to="/shop"
             onClick={() => {
               setSort("newest");
-              setSizeFilter(null);
+              setSelectedSizes([]);
             }}
             className="ms-auto text-sm text-enzo-muted underline"
           >

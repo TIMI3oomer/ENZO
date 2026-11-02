@@ -19,7 +19,9 @@
     "pending": "Pending",
     "backHome": "Back to home",
     "detailsSentSeparately": "We'll follow up with your order details shortly.",
-    "deliveryNote": "Delivery fee depends on your city — we'll confirm it and email you the final total."
+    "deliveryNote": "Delivery fee depends on your city — we'll confirm it and email you the final total.",
+    "pointsEarned": "You earned {{points}} points ({{value}}) — use them on your next order",
+    "trackOrder": "Track your order"
   },
   "validation": {
     "required": "This field is required",
@@ -43,5 +45,19 @@
   "reflectInstructions": "Send {{total}} to the Reflect account below and write your order number #{{orderNumber}} in the transfer note. We'll confirm your order as soon as the transfer arrives.",
   "reflectPhone": "Reflect number",
   "reflectName": "Account name",
-  "reflectCheckoutHint": "You'll see the transfer details right after placing your order."
+  "reflectCheckoutHint": "You'll see the transfer details right after placing your order.",
+  "discountCode": "Discount code",
+  "apply": "Apply",
+  "removeCode": "Remove code",
+  "pointsBalance": "You have {{points}} points ({{value}})",
+  "howPointsWork": "How points work",
+  "useMaxPoints": "Use max",
+  "signInForPoints": "to collect and use ENZO points.",
+  "codeDiscount": "Discount code",
+  "pointsDiscount": "Points",
+  "youWillEarn": "You'll earn {{points}} points ({{value}}) with this order",
+  "codeInvalid": "This discount code isn't valid",
+  "codeExpired": "This discount code has expired",
+  "codeUsedUp": "This discount code has been used up",
+  "codeMinOrder": "This code needs an order of at least {{amount}}"
 }

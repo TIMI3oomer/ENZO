@@ -136,6 +136,14 @@ export const refundSchema = z.object({
   note: z.string().trim().max(1000).optional().nullable(),
 });
 
+// Admin -> Admins: give an account admin access by its email. `invite`
+// creates the account and emails the person a link when there isn't one.
+export const addAdminSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  full_name: z.string().trim().max(100).optional().nullable(),
+  invite: z.boolean().default(false),
+});
+
 export const categorySchema = z.object({
   slug: z
     .string()

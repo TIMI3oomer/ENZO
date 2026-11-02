@@ -10,7 +10,8 @@
     "inStoreSale": "In-store sale",
     "backToStore": "Back to store",
     "logout": "Log out",
-    "discountCodes": "Discount codes"
+    "discountCodes": "Discount codes",
+    "admins": "Admins"
   },
   "login": {
     "title": "Admin Login",
@@ -253,5 +254,24 @@
     "history": "Returns & exchanges",
     "refunded": "Refunded",
     "exchanged": "Exchanged"
+  },
+  "admins": {
+    "title": "Admins",
+    "intro": "Admins can open this control panel: products, orders, in-store sales, codes and site content.",
+    "add": "Add an admin",
+    "email": "Their email",
+    "name": "Name (optional)",
+    "addButton": "Make admin",
+    "noAccount": "No account uses {{email}} yet.",
+    "noAccountHint": "Ask them to sign up on the site with this email, or send them an invite to set a password.",
+    "sendInvite": "Send invite email",
+    "added": "{{email}} is now an admin.",
+    "invited": "Invite sent to {{email}} — they're an admin once they set a password.",
+    "you": "You",
+    "pending": "Invite not accepted yet",
+    "since": "Admin since",
+    "remove": "Remove",
+    "confirmRemove": "Remove admin access for {{email}}? Their customer account stays.",
+    "lastAdmin": "The last admin can't be removed."
   }
 }

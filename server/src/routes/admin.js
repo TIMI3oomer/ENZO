@@ -11,6 +11,7 @@ import {
   discountCodeUpdateSchema,
   itemRefundSchema,
   itemExchangeSchema,
+  addAdminSchema,
   contentPageSchema,
   inStoreSaleSchema,
   refundSchema,
@@ -339,6 +340,104 @@ router.get("/orders/:id/returns", async (req, res, next) => {
       .order("created_at");
     if (error) throw error;
     res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------- Admins (store owners) ----------
+// Everyone in admin_users can open /admin. Any admin can add another by
+// email; two guards keep the store from locking itself out: you can't
+// remove yourself, and the last admin can't be removed. requireAdmin
+// checks admin_users on every request, so removal takes effect at once.
+async function findUserByEmail(email) {
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    const user = data.users.find((u) => u.email?.toLowerCase() === email);
+    if (user) return user;
+    if (data.users.length < 1000) return null;
+  }
+  return null;
+}
+
+router.get("/admins", async (req, res, next) => {
+  try {
+    const { data: admins, error } = await supabaseAdmin
+      .from("admin_users")
+      .select("user_id, full_name, created_at")
+      .order("created_at");
+    if (error) throw error;
+
+    const withEmails = await Promise.all(
+      admins.map(async (a) => {
+        const { data } = await supabaseAdmin.auth.admin.getUserById(a.user_id);
+        const u = data?.user;
+        return {
+          ...a,
+          email: u?.email ?? null,
+          // invited but hasn't set a password / signed in yet
+          pending: Boolean(u && !u.last_sign_in_at),
+          isYou: a.user_id === req.user.id,
+        };
+      })
+    );
+    res.json(withEmails);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/admins", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(addAdminSchema, req.body);
+    let user = await findUserByEmail(body.email);
+    let invited = false;
+
+    if (!user) {
+      if (!body.invite) {
+        return res.status(404).json({ error: "No account uses that email yet", code: "no_account" });
+      }
+      const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").split(",")[0].trim();
+      const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(body.email, {
+        redirectTo: `${frontendUrl}/account`,
+        data: body.full_name ? { full_name: body.full_name } : undefined,
+      });
+      if (error) {
+        const err = new Error(`Couldn't send the invite: ${error.message}`);
+        err.status = 400;
+        throw err;
+      }
+      user = data.user;
+      invited = true;
+    }
+
+    const { error } = await supabaseAdmin
+      .from("admin_users")
+      .upsert({ user_id: user.id, full_name: body.full_name || user.user_metadata?.full_name || null });
+    if (error) throw error;
+
+    res.status(201).json({ user_id: user.id, email: user.email, invited });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/admins/:userId", async (req, res, next) => {
+  try {
+    if (req.params.userId === req.user.id) {
+      return res.status(400).json({ error: "You can't remove your own admin access" });
+    }
+    const { count, error: countError } = await supabaseAdmin
+      .from("admin_users")
+      .select("user_id", { count: "exact", head: true });
+    if (countError) throw countError;
+    if (count <= 1) return res.status(400).json({ error: "The store needs at least one admin" });
+
+    // Only takes away admin access -- their customer account and orders stay.
+    const { error } = await supabaseAdmin.from("admin_users").delete().eq("user_id", req.params.userId);
+    if (error) throw error;
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

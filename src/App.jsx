@@ -32,6 +32,7 @@ const AdminCategories = lazy(() => import("./pages/admin/Categories.jsx"));
 const AdminContent = lazy(() => import("./pages/admin/Content.jsx"));
 const AdminInStoreSale = lazy(() => import("./pages/admin/InStoreSale.jsx"));
 const AdminDiscountCodes = lazy(() => import("./pages/admin/DiscountCodes.jsx"));
+const AdminAdmins = lazy(() => import("./pages/admin/Admins.jsx"));
 
 function Admin({ children }) {
   return (
@@ -95,6 +96,7 @@ export default function App() {
       <Route path="/admin/content" element={<Admin><AdminContent /></Admin>} />
       <Route path="/admin/in-store-sale" element={<Admin><AdminInStoreSale /></Admin>} />
       <Route path="/admin/discount-codes" element={<Admin><AdminDiscountCodes /></Admin>} />
+      <Route path="/admin/admins" element={<Admin><AdminAdmins /></Admin>} />
     </Routes>
   );
 }

@@ -112,6 +112,51 @@ router.post("/quote", attachUser, async (req, res, next) => {
   }
 });
 
+// ORDER TRACKING BY PHONE (the site's "Track order" page): every online
+// order placed with this phone number, newest first (up to 10). Phones are
+// matched on their last 9 digits, so 0599..., +970599... and 972599... all
+// find the same orders. Only status, timeline, items and totals come back
+// -- never the name, address or full phone -- and /api/orders/track is
+// rate limited in app.js.
+const TRACK_FIELDS =
+  "id, order_number, status, created_at, phone, channel, delivery_region, payment_method, payment_status, subtotal, delivery_fee, code_discount, points_discount, points_earned, total";
+const last9 = (s) => String(s || "").replace(/\D/g, "").slice(-9);
+
+router.get("/track", async (req, res, next) => {
+  try {
+    const wanted = last9(req.query.phone);
+    if (wanted.length < 9) return res.status(400).json({ error: "Enter the full phone number you ordered with" });
+
+    const { data: candidates, error } = await supabaseAdmin
+      .from("orders")
+      .select(TRACK_FIELDS)
+      .eq("channel", "online")
+      .order("created_at", { ascending: false })
+      .limit(2000);
+    if (error) throw error;
+    const orders = candidates.filter((o) => last9(o.phone) === wanted).slice(0, 10);
+    if (orders.length === 0) return res.json([]);
+
+    const ids = orders.map((o) => o.id);
+    const [{ data: history, error: hError }, { data: items, error: iError }] = await Promise.all([
+      supabaseAdmin.from("order_status_history").select("order_id, status, created_at").in("order_id", ids).order("created_at"),
+      supabaseAdmin.from("order_items").select("order_id, product_name, size, color, quantity, unit_price").in("order_id", ids),
+    ]);
+    if (hError) throw hError;
+    if (iError) throw iError;
+
+    res.json(
+      orders.map(({ id, phone, channel, ...o }) => ({
+        ...o,
+        history: history.filter((h) => h.order_id === id).map(({ order_id, ...h }) => h),
+        items: items.filter((i) => i.order_id === id).map(({ order_id, ...i }) => i),
+      }))
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ORDER TRACKING (the site's "Track order" page). Allowed for the signed-in
 // owner of the order, or anyone with the order number AND the phone it was
 // placed with (last 9 digits compared, so 059.../+97059... both match).

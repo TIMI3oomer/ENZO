@@ -123,6 +123,7 @@ export default function OrderConfirmation() {
       <div className="mt-10 flex flex-wrap justify-center gap-3">
         <Link
           to={`/track/${orderNumber}`}
+          state={location.state?.phone ? { phone: location.state.phone } : undefined}
           className="flex items-center gap-2 rounded-md bg-enzo-gradient px-6 py-3 font-semibold text-enzo-black"
         >
           <Truck size={18} />

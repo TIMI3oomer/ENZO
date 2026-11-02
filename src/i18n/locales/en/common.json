@@ -132,7 +132,7 @@
   },
   "track": {
     "title": "Track order",
-    "intro": "Enter your order number and the phone number you ordered with.",
+    "intro": "Enter the phone number you ordered with to see all your orders and where each one is.",
     "orderNumber": "Order number",
     "phone": "Phone number",
     "find": "Track",
@@ -149,7 +149,13 @@
     "codeDiscount": "Discount code",
     "pointsDiscount": "Points",
     "delivery": "Delivery",
-    "total": "Total"
+    "total": "Total",
+    "phonePlaceholder": "Your phone number, e.g. 0599123456",
+    "noneForPhone": "No orders found for this phone number. Check it's the one you used at checkout.",
+    "foundCount_one": "1 order found",
+    "foundCount_other": "{{count}} orders found",
+    "done": "Done ✓",
+    "fullPhone": "Enter the full phone number you ordered with."
   },
   "points": {
     "title": "ENZO Points",
@@ -209,7 +215,7 @@
     "pointsTitle": "Use your ENZO points",
     "pointsText": "Every 100 ₪ you spend earns 500 points (5 ₪). Use them here — 100 points = 1 ₪ off.",
     "trackTitle": "Track your order",
-    "trackText": "Enter your order number and phone to see where it is: received, confirmed, on the way, delivered.",
+    "trackText": "Enter the phone number you ordered with to see where each order is: received, confirmed, on the way, delivered.",
     "helpTitle": "Need help?",
     "helpText": "Tap WhatsApp on any page to message us about sizes or an order."
   },

@@ -204,6 +204,7 @@ export default function Checkout() {
       clearCart();
       navigate(`/order-confirmation/${result.orderNumber}`, {
         state: {
+          phone: form.phone.trim(), // lets "Track your order" open it without typing
           items: confirmedItems,
           subtotal,
           deliveryFee: result.deliveryFee,

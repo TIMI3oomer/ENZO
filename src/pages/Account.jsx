@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, LayoutDashboard, Coins, Truck, Sparkles } from "lucide-react";
+import { ChevronDown, LayoutDashboard, Coins, Truck, Sparkles, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
@@ -79,7 +79,11 @@ export default function Account() {
     <div className="mx-auto max-w-2xl px-4 py-12 text-start">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="font-display text-2xl">{t("auth.myAccount")}</h1>
-        <button onClick={handleLogout} className="text-sm text-enzo-muted underline">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 rounded-md border border-enzo-error/60 px-4 py-2 text-sm font-semibold text-enzo-error transition-colors hover:bg-enzo-error hover:text-enzo-white"
+        >
+          <LogOut size={16} />
           {t("auth.logout")}
         </button>
       </div>

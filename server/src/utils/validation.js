@@ -144,6 +144,13 @@ export const addAdminSchema = z.object({
   invite: z.boolean().default(false),
 });
 
+// Swap a product's photos only (Admin -> Products -> Optimize photos).
+// Never touches price/stock/etc., unlike a full product save.
+export const productImagesSchema = z.object({
+  images: z.array(z.string().url()).max(30),
+  color_images: z.record(z.string().url()).default({}),
+});
+
 export const categorySchema = z.object({
   slug: z
     .string()

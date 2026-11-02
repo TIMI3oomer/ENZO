@@ -2,7 +2,6 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { X, Minus, Plus, Trash2 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "../context/CartContext.jsx";
 import { useLanguage, useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
@@ -10,8 +9,8 @@ import { formatPrice } from "../lib/formatPrice.js";
 // CHECKPOINT NOTE (CartDrawer.jsx):
 // Slides in from the "end" edge (inset-inline-end), which is the right side
 // in LTR and the LEFT side in RTL automatically — this is the kind of thing
-// that breaks silently if you hardcode `right-0`. framer-motion (external
-// animation library) drives the slide + fade.
+// that breaks silently if you hardcode `right-0`. The slide + fade are
+// plain CSS transitions (always mounted, moved off-screen when closed).
 //
 // PORTAL: rendered into document.body via createPortal, not inline where
 // Navbar.jsx invokes it. Navbar's <header> has `backdrop-blur`
@@ -33,24 +32,18 @@ export default function CartDrawer({ open, onClose }) {
   const closedX = isRtl ? "-100%" : "100%";
 
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            className="fixed inset-0 z-50 bg-black/60"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-          <motion.aside
-            className="fixed inset-block-0 inset-inline-end-0 z-50 flex h-full w-full max-w-sm flex-col bg-enzo-panel"
-            style={{ insetBlock: 0, insetInlineEnd: 0 }}
-            initial={{ x: closedX }}
-            animate={{ x: 0 }}
-            exit={{ x: closedX }}
-            transition={{ type: "tween", duration: 0.25 }}
-          >
+    <>
+      <div
+        className={`fixed inset-0 z-50 bg-black/60 transition-opacity duration-200 ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside
+        className="fixed z-50 flex h-full w-full max-w-sm flex-col bg-enzo-panel transition-transform duration-300 ease-out"
+        style={{ insetBlock: 0, insetInlineEnd: 0, transform: open ? "translateX(0)" : `translateX(${closedX})` }}
+        aria-hidden={!open}
+        inert={open ? undefined : ""}
+      >
             <div className="flex items-center justify-between border-b hairline px-5 py-4">
               <h2 className="font-display text-lg">{t("cart.title")}</h2>
               <button onClick={onClose} aria-label="close">
@@ -121,10 +114,8 @@ export default function CartDrawer({ open, onClose }) {
                 </Link>
               </div>
             )}
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>,
+      </aside>
+    </>,
     document.body
   );
 }

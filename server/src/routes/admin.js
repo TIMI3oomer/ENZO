@@ -12,6 +12,7 @@ import {
   itemRefundSchema,
   itemExchangeSchema,
   addAdminSchema,
+  productImagesSchema,
   contentPageSchema,
   inStoreSaleSchema,
   refundSchema,
@@ -71,6 +72,23 @@ router.post("/products", async (req, res, next) => {
     const { data, error } = await supabaseAdmin.from("products").insert(body).select().single();
     if (error) throw error;
     res.status(201).json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Replace only the photo lists of a product (used by "Optimize photos").
+router.patch("/products/:id/images", async (req, res, next) => {
+  try {
+    const body = parseOrThrow(productImagesSchema, req.body);
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .update({ images: body.images, color_images: body.color_images })
+      .eq("id", req.params.id)
+      .select("id, images, color_images")
+      .single();
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     next(err);
   }

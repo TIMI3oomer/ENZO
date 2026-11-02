@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { Component, Suspense } from "react";
+import { lazyWithReload } from "./lib/lazyWithReload.js";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
@@ -24,23 +25,53 @@ import PageTransition from "./components/PageTransition.jsx";
 // dashboard) are only ever used by the store owner, but used to be bundled
 // into the file EVERY customer downloads first -- the main bundle was
 // ~1.1 MB. They are now loaded on demand, only when /admin is opened.
-const AdminDashboard = lazy(() => import("./pages/admin/Dashboard.jsx"));
-const AdminProducts = lazy(() => import("./pages/admin/Products.jsx"));
-const AdminProductForm = lazy(() => import("./pages/admin/ProductForm.jsx"));
-const AdminOrders = lazy(() => import("./pages/admin/Orders.jsx"));
-const AdminCustomers = lazy(() => import("./pages/admin/Customers.jsx"));
-const AdminCategories = lazy(() => import("./pages/admin/Categories.jsx"));
-const AdminContent = lazy(() => import("./pages/admin/Content.jsx"));
-const AdminInStoreSale = lazy(() => import("./pages/admin/InStoreSale.jsx"));
-const AdminDiscountCodes = lazy(() => import("./pages/admin/DiscountCodes.jsx"));
-const AdminAdmins = lazy(() => import("./pages/admin/Admins.jsx"));
+const AdminDashboard = lazyWithReload(() => import("./pages/admin/Dashboard.jsx"));
+const AdminProducts = lazyWithReload(() => import("./pages/admin/Products.jsx"));
+const AdminProductForm = lazyWithReload(() => import("./pages/admin/ProductForm.jsx"));
+const AdminOrders = lazyWithReload(() => import("./pages/admin/Orders.jsx"));
+const AdminCustomers = lazyWithReload(() => import("./pages/admin/Customers.jsx"));
+const AdminCategories = lazyWithReload(() => import("./pages/admin/Categories.jsx"));
+const AdminContent = lazyWithReload(() => import("./pages/admin/Content.jsx"));
+const AdminInStoreSale = lazyWithReload(() => import("./pages/admin/InStoreSale.jsx"));
+const AdminDiscountCodes = lazyWithReload(() => import("./pages/admin/DiscountCodes.jsx"));
+const AdminAdmins = lazyWithReload(() => import("./pages/admin/Admins.jsx"));
 
 function Admin({ children }) {
   return (
     <ProtectedAdminRoute>
-      <Suspense fallback={null}>{children}</Suspense>
+      <AdminErrorBoundary>
+        <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><span className="h-8 w-8 animate-spin rounded-full border-2 border-enzo-line border-t-enzo-goldBright" /></div>}>
+          {children}
+        </Suspense>
+      </AdminErrorBoundary>
     </ProtectedAdminRoute>
   );
+}
+
+// If an admin page crashes, show a way out instead of a blank screen.
+class AdminErrorBoundary extends Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error) {
+    console.error("[ENZO admin]", error);
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-10 text-center">
+        <p className="text-enzo-muted">Something went wrong loading this page. · حدث خطأ أثناء تحميل الصفحة.</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-md bg-enzo-gradient px-5 py-2 text-sm font-semibold text-enzo-black"
+        >
+          Reload · إعادة التحميل
+        </button>
+      </div>
+    );
+  }
 }
 
 // CHECKPOINT NOTE (App.jsx):

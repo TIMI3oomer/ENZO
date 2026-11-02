@@ -1,24 +1,39 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
-// CHECKPOINT NOTE (components/Reveal.jsx):
-// Small shared "fade + rise into place" wrapper for section intros
-// (TrustBadges, Home.jsx's section headings) -- one tasteful, consistent
-// entrance instead of each section inventing its own. Fires once per
-// element (viewport.once) so it never replays while scrolling back up.
-// useReducedMotion() drops straight to the final state for anyone with
-// that OS preference, same pattern as AnimatedHero.jsx/ScrollShowcase.jsx.
+// Fades + lifts its children in the first time they scroll into view.
+// Plain IntersectionObserver + a CSS transition (no animation library in
+// the bundle every visitor downloads). Reduced-motion users get the
+// content immediately -- see the prefers-reduced-motion rule in index.css.
 export default function Reveal({ children, delay = 0, className = "" }) {
-  const reduceMotion = useReducedMotion();
+  const ref = useRef(null);
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setShown(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShown(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "0px 0px -60px 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   return (
-    <motion.div
-      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.5, delay, ease: "easeOut" }}
-      className={className}
+    <div
+      ref={ref}
+      className={`transition-all duration-500 ease-out ${shown ? "translate-y-0 opacity-100" : "translate-y-[18px] opacity-0"} ${className}`}
+      style={{ transitionDelay: shown ? `${delay}s` : "0s" }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

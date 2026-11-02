@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { api } from "../lib/api.js";
 
 const AuthContext = createContext(null);
 
@@ -21,9 +22,15 @@ export function AuthProvider({ children }) {
       checkAdmin(data.session);
     });
 
+    // FIX (admin page stuck on "..."): Supabase documents that calling
+    // other Supabase methods INSIDE onAuthStateChange can deadlock its
+    // internal auth lock -- it happened after the hourly token refresh or
+    // with two tabs open, and the admin check never finished. The callback
+    // now only stores the session; the admin check runs right after, on
+    // its own turn of the event loop.
     const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => {
       setSession(sess);
-      checkAdmin(sess);
+      setTimeout(() => checkAdmin(sess), 0);
     });
 
     return () => listener.subscription.unsubscribe();
@@ -35,13 +42,26 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    const { data, error } = await supabase
-      .from("admin_users")
-      .select("user_id")
-      .eq("user_id", sess.user.id)
-      .maybeSingle();
-    setIsAdmin(!!data && !error);
-    setLoading(false);
+    // Ask our own server first (service role -- unaffected by RLS policy
+    // changes); fall back to reading admin_users directly if the server
+    // can't be reached. Either way `loading` always ends.
+    try {
+      const { isAdmin: admin } = await api.get("/account/admin-status");
+      setIsAdmin(!!admin);
+    } catch (err) {
+      if (err.status === 401) {
+        setIsAdmin(false);
+      } else {
+        const { data, error } = await supabase
+          .from("admin_users")
+          .select("user_id")
+          .eq("user_id", sess.user.id)
+          .maybeSingle();
+        setIsAdmin(!!data && !error);
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function login(email, password) {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Menu, X, ShoppingBag, Search, User, LayoutDashboard } from "lucide-react";
+import { Menu, X, ShoppingBag, Search, User, LayoutDashboard, LogOut } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
 import CartDrawer from "./CartDrawer.jsx";
 import { useCart } from "../context/CartContext.jsx";
@@ -34,7 +34,7 @@ export default function Navbar() {
   const [cartOpen, setCartOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const { count } = useCart();
-  const { session, isAdmin } = useAuth();
+  const { session, isAdmin, logout } = useAuth();
   const content = useContent("site");
 
   useEffect(() => {
@@ -177,8 +177,21 @@ export default function Navbar() {
             </Link>
           )}
         </nav>
-        <div className="border-t hairline px-5 py-4">
+        <div className="flex flex-col gap-4 border-t hairline px-5 py-4">
           <LanguageSwitcher />
+          {session && (
+            <button
+              type="button"
+              onClick={async () => {
+                setMenuOpen(false);
+                await logout();
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-enzo-error/60 py-2.5 text-sm font-semibold text-enzo-error"
+            >
+              <LogOut size={16} />
+              {t("auth.logout")}
+            </button>
+          )}
         </div>
       </aside>
         </>,

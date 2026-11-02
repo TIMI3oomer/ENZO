@@ -4,9 +4,8 @@ import { ReactLenis } from "lenis/react";
 // Lenis smooths out mouse-wheel/trackpad scrolling site-wide (that
 // slightly "gliding" feel instead of the browser's default stepped
 // scroll). It wraps the browser's REAL scroll rather than faking it with
-// a virtual scrollbar, which is exactly why it needed no changes to
-// AnimatedHero.jsx or ScrollShowcase.jsx — framer-motion's useScroll
-// listens to native scroll position either way.
+// a virtual scrollbar, so anything else that listens to the native scroll
+// position keeps working unchanged.
 // `root` mounts it on the whole document rather than a specific container.
 // Anyone with "reduce motion" turned on gets `lerp: 1`, which is
 // effectively instant/native scrolling — no smoothing applied, consistent

@@ -37,7 +37,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <ChartCard title={t("analytics.salesLast14Days")}>
             <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={analytics.salesByDay}>
+              <LineChart data={analytics.salesByDay || []}>
                 <CartesianGrid stroke="#333333" strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fill: "#A8A89F", fontSize: 11 }} tickFormatter={(d) => d.slice(5)} />
                 <YAxis tick={{ fill: "#A8A89F", fontSize: 11 }} />
@@ -51,8 +51,8 @@ export default function AdminDashboard() {
           <ChartCard title={t("analytics.ordersByStatus")}>
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
-                <Pie data={analytics.statusBreakdown} dataKey="count" nameKey="status" innerRadius={60} outerRadius={90}>
-                  {analytics.statusBreakdown.map((entry) => (
+                <Pie data={analytics.statusBreakdown || []} dataKey="count" nameKey="status" innerRadius={60} outerRadius={90}>
+                  {(analytics.statusBreakdown || []).map((entry) => (
                     <Cell key={entry.status} fill={STATUS_COLORS[entry.status] || "#A8A89F"} />
                   ))}
                 </Pie>
@@ -63,7 +63,7 @@ export default function AdminDashboard() {
 
           <ChartCard title={t("analytics.topProducts")} className="lg:col-span-2">
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={analytics.topProducts} layout="vertical" margin={{ left: 24 }}>
+              <BarChart data={analytics.topProducts || []} layout="vertical" margin={{ left: 24 }}>
                 <CartesianGrid stroke="#333333" strokeDasharray="3 3" />
                 <XAxis type="number" tick={{ fill: "#A8A89F", fontSize: 11 }} />
                 <YAxis type="category" dataKey="name" tick={{ fill: "#A8A89F", fontSize: 11 }} width={140} />

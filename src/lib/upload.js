@@ -96,28 +96,63 @@ async function convertHeicToJpeg(file) {
   return new File([blob], newName, { type: "image/jpeg" });
 }
 
+// Phone photos come in at ~4000px and 4-5 MB, which made every page slow
+// to load. Before uploading, photos are scaled down to at most 1600px on
+// the long side and re-encoded as WebP (JPEG where the browser can't make
+// WebP, e.g. older Safari) -- usually 150-300 KB with no visible loss.
+// GIFs are left alone (re-encoding would drop the animation).
+const MAX_DIMENSION = 1600;
+const QUALITY = 0.82;
+
+export async function shrinkImage(file) {
+  if (file.type === "image/gif") return file;
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file; // browser can't decode it here -- upload as-is
+  }
+  const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close?.();
+
+  const toBlob = (type) => new Promise((resolve) => canvas.toBlob(resolve, type, QUALITY));
+  let blob = await toBlob("image/webp");
+  if (!blob || blob.type !== "image/webp") blob = await toBlob("image/jpeg");
+  if (!blob || blob.size >= file.size) return file; // already small -- keep the original
+  const ext = blob.type === "image/webp" ? "webp" : "jpg";
+  return new File([blob], file.name.replace(/\.[^.]+$/, "") + "." + ext, { type: blob.type });
+}
+
 async function uploadImageTo(bucket, originalFile) {
   const file = isHeic(originalFile) ? await convertHeicToJpeg(originalFile) : originalFile;
 
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
     throw new Error(`"${file.name}" isn't a supported image type — use JPG, PNG, WEBP, or GIF.`);
   }
-  if (file.size > MAX_SIZE_BYTES) {
-    throw new Error(`"${file.name}" is larger than 5MB.`);
-  }
-
   const genuine = await isGenuineImage(file);
   if (!genuine) {
     throw new Error(`"${file.name}" doesn't look like a real image file and was rejected.`);
   }
 
-  const ext = file.name.split(".").pop();
+  // Shrink first, so big phone photos aren't rejected by the size limit.
+  const small = await shrinkImage(file);
+  if (small.size > MAX_SIZE_BYTES) {
+    throw new Error(`"${file.name}" is larger than 5MB.`);
+  }
+
+  const ext = small.name.split(".").pop();
   const path = `${crypto.randomUUID()}.${ext}`;
 
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    cacheControl: "3600",
+  const { error } = await supabase.storage.from(bucket).upload(path, small, {
+    // Every upload gets a new random name, so the file at a URL never
+    // changes -- browsers can safely cache it for a year.
+    cacheControl: "31536000",
     upsert: false,
-    contentType: file.type,
+    contentType: small.type,
   });
   if (error) throw error;
 

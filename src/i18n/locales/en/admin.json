@@ -50,7 +50,13 @@
     "stockGridTotal": "Total stock: {{total}}",
     "stockGridHint": "Enter how many you have of each size in each color. Leave 0 for a size that color doesn't come in — customers won't be able to pick it.",
     "soldOutBadge": "Sold out",
-    "partlySoldOut": "Sold out: {{list}}"
+    "partlySoldOut": "Sold out: {{list}}",
+    "optimize": "Optimize photos",
+    "optimizing": "Optimizing {{done}} / {{total}}…",
+    "optimizeHint": "Shrinks big photos so the site loads faster",
+    "optimizeConfirm": "Shrink all photos over 500 KB so the site loads faster? This keeps how they look and can take a minute.",
+    "optimizeDone": "{{count}} photos optimized — {{saved}} MB lighter.",
+    "optimizeFailed": "{{count}} couldn't be processed."
   },
   "orders": {
     "title": "Orders",
@@ -419,5 +425,9 @@
         "You can't remove yourself or the last admin, so the store can never be locked out."
       ]
     }
+  },
+  "loading": {
+    "slow": "This is taking longer than usual.",
+    "reload": "Reload"
   }
 }

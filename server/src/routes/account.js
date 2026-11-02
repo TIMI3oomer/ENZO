@@ -46,6 +46,24 @@ router.put("/profile", attachUser, requireAuth, async (req, res, next) => {
   }
 });
 
+// Is the signed-in user an admin? Checked with the service role, so it
+// keeps working whatever Row Level Security policies admin_users has. The
+// site uses this to decide whether to open /admin (AuthContext.jsx); the
+// admin API itself is still protected by requireAdmin on every request.
+router.get("/admin-status", attachUser, requireAuth, async (req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("admin_users")
+      .select("user_id")
+      .eq("user_id", req.user.id)
+      .maybeSingle();
+    if (error) throw error;
+    res.json({ isAdmin: !!data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Points balance + the latest 50 movements (earned, spent, taken back).
 router.get("/points", attachUser, requireAuth, async (req, res, next) => {
   try {

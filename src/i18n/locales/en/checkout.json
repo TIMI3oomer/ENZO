@@ -59,5 +59,6 @@
   "codeInvalid": "This discount code isn't valid",
   "codeExpired": "This discount code has expired",
   "codeUsedUp": "This discount code has been used up",
-  "codeMinOrder": "This code needs an order of at least {{amount}}"
+  "codeMinOrder": "This code needs an order of at least {{amount}}",
+  "saleNoPoints": "Items already on sale don't earn points."
 }

@@ -107,6 +107,7 @@ export default function AdminInStoreSale() {
         color: color || null,
         quantity,
         price: getDiscountedPrice(product.price, product.discount_percent),
+        onSale: Number(product.discount_percent) > 0, // sale items don't earn points
       },
     ]);
     setSize("");
@@ -119,8 +120,10 @@ export default function AdminInStoreSale() {
   }
 
   const total = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
-  // Same rule as online orders: 500 points per full 100 ILS, from 100 ILS.
-  const pointsPreview = total >= 100 ? Math.floor(total / 100) * 500 : 0;
+  // Same rule as online orders: 500 points per full 100 ILS, from 100 ILS,
+  // counted only on items that aren't on sale.
+  const fullPriceTotal = lines.filter((l) => !l.onSale).reduce((sum, l) => sum + l.price * l.quantity, 0);
+  const pointsPreview = fullPriceTotal >= 100 ? Math.floor(fullPriceTotal / 100) * 500 : 0;
 
   async function findCustomer() {
     setLookupError("");
@@ -437,6 +440,7 @@ export default function AdminInStoreSale() {
                   {pointsPreview > 0
                     ? t("inStoreSale.willEarn", { points: pointsPreview.toLocaleString(), name: member.name || "" })
                     : t("inStoreSale.under100")}
+                  {lines.some((l) => l.onSale) && <span className="block text-xs text-enzo-muted">{t("inStoreSale.saleNoPoints")}</span>}
                 </p>
               )}
               {member && <p className="text-xs text-enzo-muted">{t("inStoreSale.confirmName")}</p>}

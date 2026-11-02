@@ -202,7 +202,8 @@
     "willEarn": "This sale will add {{points}} points to {{name}}.",
     "under100": "Sales under 100 ₪ don't earn points.",
     "confirmName": "Check the name with the customer before ringing up.",
-    "pointsAdded": "+{{points}} points added"
+    "pointsAdded": "+{{points}} points added",
+    "saleNoPoints": "Items on sale aren't counted for points."
   },
   "invoice": {
     "title": "Invoice",

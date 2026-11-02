@@ -464,6 +464,7 @@ export default function Checkout() {
             {t("youWillEarn", { points: quote.pointsEarned, value: formatPrice(quote.pointsEarned / 100) })}
           </p>
         )}
+        {session && quote?.hasSaleItems && <p className="mt-1 text-xs text-enzo-muted">{t("saleNoPoints")}</p>}
       </div>
     </div>
   );

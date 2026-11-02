@@ -28,6 +28,7 @@ export default function Points() {
     { icon: Store, title: t("points.inStoreTitle"), text: t("points.inStore") },
   ];
 
+  // examples are for full-price items (sale items don't earn points)
   const examples = [100, 250, 480].map((amount) => {
     const points = amount >= 100 ? Math.floor(amount / 100) * 500 : 0;
     return { amount, points };

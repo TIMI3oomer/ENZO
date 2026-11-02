@@ -17,6 +17,14 @@ export function pointsForAmount(amount) {
   return amount >= 100 ? Math.floor(amount / 100) * 500 : 0;
 }
 
+// What points are counted on (same as points_base() in migration_v19.sql):
+// only items NOT on sale, minus their share of any code/points discount
+// (those discounts are spread over all items by value).
+export function pointsBase(subtotal, fullPriceSubtotal, discounts) {
+  if (subtotal <= 0) return 0;
+  return Math.max(0, fullPriceSubtotal - (discounts * fullPriceSubtotal) / subtotal);
+}
+
 const round2 = (n) => Math.round(n * 100) / 100;
 
 function fail(message) {
@@ -34,10 +42,12 @@ export async function quoteOrder({ items, deliveryRegion, userId, pointsToRedeem
   if (error) throw error;
 
   let subtotal = 0;
+  let fullPriceSubtotal = 0; // items not on sale -- the only ones that earn points
   for (const item of items) {
     const p = products.find((x) => x.id === item.product_id);
     if (!p || !p.is_active) throw fail("One of the items in your cart is no longer available");
     subtotal += round2(p.price * (1 - (p.discount_percent || 0) / 100)) * item.quantity;
+    if (!Number(p.discount_percent)) fullPriceSubtotal += Number(p.price) * item.quantity;
   }
   subtotal = round2(subtotal);
 
@@ -90,7 +100,9 @@ export async function quoteOrder({ items, deliveryRegion, userId, pointsToRedeem
     pointsDiscount,
     deliveryFee,
     total: round2(itemsAfterDiscounts + deliveryFee),
-    pointsEarned: userId ? pointsForAmount(itemsAfterDiscounts) : 0,
+    pointsEarned: userId ? pointsForAmount(pointsBase(subtotal, fullPriceSubtotal, codeDiscount + pointsDiscount)) : 0,
+    // so the checkout can say why fewer points than the total suggests
+    hasSaleItems: fullPriceSubtotal < subtotal,
     balance,
     // Most points this order can take (whole points, never past the items).
     maxRedeemable: userId ? Math.max(0, Math.min(balance, Math.floor((subtotal - codeDiscount) * POINTS_PER_ILS))) : 0,

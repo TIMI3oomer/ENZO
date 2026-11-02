@@ -632,7 +632,10 @@ router.post("/in-store-sales", async (req, res, next) => {
           .select("full_name")
           .eq("user_id", body.customerUserId)
           .maybeSingle();
-        const earned = pointsForAmount(Number(result.total));
+        // Sale items don't earn points (order_points_base, migration_v19.sql).
+        // Before that migration is run, fall back to the whole total.
+        const { data: base, error: baseError } = await supabaseAdmin.rpc("order_points_base", { p_order_id: result.order_id });
+        const earned = pointsForAmount(baseError ? Number(result.total) : Number(base));
         const { data: attached, error: attachError } = await supabaseAdmin
           .from("orders")
           .update({

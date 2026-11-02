@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { api } from "../lib/api.js";
 
@@ -15,6 +15,10 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Supabase reports the same login several times on page load (initial
+  // session, sign-in, token refresh); check admin once per user, not once
+  // per event -- it was running 3 times and slowing the admin page down.
+  const checkedFor = useRef({ userId: null, promise: null });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -38,10 +42,20 @@ export function AuthProvider({ children }) {
 
   async function checkAdmin(sess) {
     if (!sess?.user) {
+      checkedFor.current = { userId: null, promise: null };
       setIsAdmin(false);
       setLoading(false);
       return;
     }
+    if (checkedFor.current.userId === sess.user.id && checkedFor.current.promise) {
+      return checkedFor.current.promise;
+    }
+    const promise = runAdminCheck(sess);
+    checkedFor.current = { userId: sess.user.id, promise };
+    return promise;
+  }
+
+  async function runAdminCheck(sess) {
     // Ask our own server first (service role -- unaffected by RLS policy
     // changes); fall back to reading admin_users directly if the server
     // can't be reached. Either way `loading` always ends.
@@ -49,6 +63,8 @@ export function AuthProvider({ children }) {
       const { isAdmin: admin } = await api.get("/account/admin-status");
       setIsAdmin(!!admin);
     } catch (err) {
+      // don't remember a failed check -- the next auth event retries it
+      checkedFor.current = { userId: null, promise: null };
       if (err.status === 401) {
         setIsAdmin(false);
       } else {

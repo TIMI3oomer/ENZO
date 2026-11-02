@@ -14,9 +14,10 @@
 // - On the device (localStorage): cart, language, sign-in session, the
 //   "tour seen" flag; sessionStorage: a reload-once flag. No analytics,
 //   advertising or tracking cookies/pixels anywhere in the code.
+// - In-store sales: optional phone lookup to give an account points.
 // - Not automated (so not promised): account deletion is done on request,
 //   and there is no fixed automatic deletion schedule.
-export const PRIVACY_UPDATED = "2026-11-02";
+export const PRIVACY_UPDATED = "2026-11-03";
 
 export const PRIVACY = {
   ar: {
@@ -33,7 +34,7 @@ export const PRIVACY = {
           "عند الطلب: الاسم، رقم الهاتف، البريد الإلكتروني (اختياري إلا للدفع بالبطاقة)، منطقة التوصيل، المدينة، العنوان، الملاحظات، القطع المطلوبة (اللون والمقاس والكمية)، المبالغ، طريقة الدفع وحالته، كود الخصم والنقاط إن استُخدمت، ولغة الموقع.",
           "حالة الطلب وتاريخ كل تغيير عليها (لصفحة تتبع الطلب)، وأي إرجاع أو استبدال يتم.",
           "نقاط ENZO: رصيدك وسجل النقاط المكتسبة والمستعملة.",
-          "في البيع من المحل: اسم الزبون إن أُعطي (اختياري) واسم البائع.",
+          "في البيع من المحل: اسم الزبون إن أُعطي (اختياري) واسم البائع، وإذا أردت كسب النقاط: رقم هاتفك لإيجاد حسابك، ويُضاف هذا البيع إلى حسابك.",
           "عند الدفع بالبطاقة: تُدخل بيانات البطاقة في صفحة Stripe الآمنة مباشرة — بيانات بطاقتك لا تمر عبر خوادمنا ولا نحتفظ بها.",
         ],
       },
@@ -126,7 +127,7 @@ export const PRIVACY = {
           "When you order: name, phone, email (optional, except for card payments), delivery area, city, address, notes, the items ordered (color, size, quantity), amounts, payment method and status, any discount code or points used, and the site language.",
           "Your order's status and when it changed (for the Track order page), and any returns or exchanges.",
           "ENZO points: your balance and the history of points earned and spent.",
-          "In-store sales: the customer's name if given (optional) and the seller's name.",
+          "In-store sales: the customer's name if given (optional) and the seller's name, and — if you want points — your phone number, used to find your account; the sale is then added to your account.",
           "Card payments: you enter your card details on Stripe's secure page — your card details never pass through our servers and we don't keep them.",
         ],
       },

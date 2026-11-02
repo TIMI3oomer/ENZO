@@ -106,7 +106,10 @@ export default function Account() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input className="input" placeholder={t("auth.fullName")} value={profile.full_name} onChange={update("full_name")} />
           <input className="input" placeholder={t("auth.email")} value={session.user.email} disabled dir="ltr" />
-          <input className="input" dir="ltr" placeholder="Phone" value={profile.phone} onChange={update("phone")} />
+          <div>
+            <input className="input" dir="ltr" placeholder={t("auth.phone")} value={profile.phone} onChange={update("phone")} inputMode="tel" />
+            <p className="mt-1 text-xs text-enzo-gold">{t("auth.phoneForPoints")}</p>
+          </div>
           <input className="input" placeholder="City" value={profile.default_city} onChange={update("default_city")} />
           <input
             className="input sm:col-span-2"

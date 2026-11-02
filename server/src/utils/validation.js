@@ -127,6 +127,10 @@ export const paymentStatusSchema = z.object({
 // POST /api/admin/in-store-sales / record_in_store_sale() in schema.sql).
 export const inStoreSaleSchema = z.object({
   customerName: z.string().trim().max(200).optional(),
+  // The walk-in customer's ENZO account (found by phone at the till) --
+  // the sale then earns them points like an online order.
+  customerUserId: z.string().uuid().optional().nullable(),
+  customerPhone: z.string().trim().max(20).optional().nullable(),
   seller: z.string().trim().min(1).max(60).optional().nullable(),
   note: z.string().trim().max(1000).optional().nullable(),
   items: z.array(orderItemSchema).min(1).max(50),

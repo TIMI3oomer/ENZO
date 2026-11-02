@@ -98,7 +98,9 @@
     "confirmationResent": "Sent — check your inbox and spam.",
     "checkEmailTitle": "Check your email",
     "checkEmailText": "We sent a confirmation link to {{email}}. Open it to finish creating your account, then sign in.",
-    "privacyNote": "How we handle your information:"
+    "privacyNote": "How we handle your information:",
+    "phone": "Phone",
+    "phoneForPoints": "Add your phone so in-shop purchases earn you ENZO points too."
   },
   "filters": {
     "sortBy": "Sort by",
@@ -182,7 +184,9 @@
     "reason_order_reopened": "Order re-opened",
     "reason_item_refunded": "Item returned",
     "reason_item_exchanged": "Item exchanged",
-    "reason_admin": "Adjusted by the store"
+    "reason_admin": "Adjusted by the store",
+    "inStoreTitle": "In the shop too",
+    "inStore": "Buying in the shop? Tell the seller the phone number on your ENZO account (add it under My account) and the purchase earns points the same way."
   },
   "tour": {
     "stepOf": "Step {{step}} of {{total}}",

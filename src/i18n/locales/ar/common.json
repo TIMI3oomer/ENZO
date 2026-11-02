@@ -98,7 +98,9 @@
     "confirmationResent": "تم الإرسال — تحقق من بريدك والبريد المزعج.",
     "checkEmailTitle": "تحقق من بريدك",
     "checkEmailText": "أرسلنا رابط تأكيد إلى {{email}}. افتحه لإكمال إنشاء حسابك ثم سجّل الدخول.",
-    "privacyNote": "كيف نتعامل مع معلوماتك:"
+    "privacyNote": "كيف نتعامل مع معلوماتك:",
+    "phone": "رقم الهاتف",
+    "phoneForPoints": "أضف رقم هاتفك لتكسب نقاط ENZO على مشترياتك من المحل أيضاً."
   },
   "filters": {
     "sortBy": "ترتيب حسب",
@@ -186,7 +188,9 @@
     "reason_order_reopened": "إعادة فتح طلب",
     "reason_item_refunded": "إرجاع قطعة",
     "reason_item_exchanged": "استبدال قطعة",
-    "reason_admin": "تعديل من المتجر"
+    "reason_admin": "تعديل من المتجر",
+    "inStoreTitle": "في المحل أيضاً",
+    "inStore": "تشتري من المحل؟ أعطِ البائع رقم الهاتف المسجل في حسابك (أضفه في «حسابي») وتكسب النقاط بنفس الطريقة."
   },
   "tour": {
     "stepOf": "الخطوة {{step}} من {{total}}",

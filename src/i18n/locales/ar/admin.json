@@ -231,7 +231,19 @@
     "salesCount_two": "عمليتان",
     "salesCount_few": "{{count}} عمليات",
     "salesCount_many": "{{count}} عملية",
-    "salesCount_other": "{{count}} عملية"
+    "salesCount_other": "{{count}} عملية",
+    "pointsTitle": "نقاط ENZO — رقم هاتف الزبون (اختياري)",
+    "phonePlaceholder": "هاتف الزبون، مثل 0599123456",
+    "find": "بحث",
+    "clearCustomer": "إزالة الزبون",
+    "fullPhone": "أدخل رقم الهاتف كاملاً.",
+    "noAccount": "لا يوجد حساب ENZO بهذا الرقم. يستطيع الزبون إنشاء حساب في الموقع (الأسرع عبر Google) وإضافة هذا الرقم في «حسابي» — وسيظهر في المرة القادمة.",
+    "pickAccount": "أكثر من حساب يستعمل هذا الرقم — اختر الشخص الصحيح:",
+    "hasPoints": "{{points}} نقطة",
+    "willEarn": "هذا البيع سيضيف {{points}} نقطة إلى {{name}}.",
+    "under100": "المشتريات أقل من 100 ₪ لا تكسب نقاطاً.",
+    "confirmName": "تأكد من الاسم مع الزبون قبل تسجيل البيع.",
+    "pointsAdded": "+{{points}} نقطة أضيفت"
   },
   "invoice": {
     "title": "فاتورة",
@@ -259,7 +271,8 @@
     "codeDiscount": "خصم",
     "pointsDiscount": "نقاط ({{points}})",
     "policy": "البضاعة المباعة لا ترد ولا تستبدل",
-    "seller": "البائع"
+    "seller": "البائع",
+    "pointsEarned": "كسبت {{points}} نقطة ENZO من هذه المشتريات"
   },
   "codes": {
     "title": "أكواد الخصم",

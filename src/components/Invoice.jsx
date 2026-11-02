@@ -168,6 +168,10 @@ function Receipt({ order, items, store }) {
         </div>
       </div>
 
+      {order.points_earned > 0 && (
+        <p className="mt-3 text-center text-[12px] font-semibold">{t("invoice.pointsEarned", { points: order.points_earned })}</p>
+      )}
+
       {order.notes && <p className="mt-3 text-[12px]">{order.notes}</p>}
 
       {/* Store policy -- printed on the invoice only, never shown on the site.

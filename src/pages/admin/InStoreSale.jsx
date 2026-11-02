@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Trash2, Printer, UserRound } from "lucide-react";
+import { Trash2, Printer, UserRound, Coins, Search, X } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { useLocalizedField } from "../../context/LanguageContext.jsx";
 import { formatPrice, getDiscountedPrice } from "../../lib/formatPrice.js";
@@ -21,6 +21,14 @@ import InvoiceModal from "../../components/Invoice.jsx";
 // (orders.seller) and printed on the invoice. "Today" at the top totals
 // today's in-store sales per seller.
 //
+// POINTS FOR WALK-INS: type the customer's phone and press Find. If an ENZO
+// account uses that number (profile or an online order), its name, a
+// partly hidden email and points show -- the seller checks the name with
+// the customer, taps it, and the sale earns them points like an online
+// order (server/src/routes/admin.js -> /customers/lookup, /in-store-sales).
+// No account: they can sign up on the site (Google works) and add this
+// phone under My account, then be found next time.
+//
 // INVOICE: ringing up opens the printable invoice (فاتورة) for that sale
 // right away (components/Invoice.jsx); "Print invoice" reopens it.
 // The two regular sellers; anyone else types their name under "Other".
@@ -37,6 +45,11 @@ export default function AdminInStoreSale() {
   const [quantity, setQuantity] = useState(1);
   const [lines, setLines] = useState([]);
   const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [matches, setMatches] = useState(null); // null = not searched yet
+  const [member, setMember] = useState(null); // the account the sale goes to
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupError, setLookupError] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -106,6 +119,31 @@ export default function AdminInStoreSale() {
   }
 
   const total = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
+  // Same rule as online orders: 500 points per full 100 ILS, from 100 ILS.
+  const pointsPreview = total >= 100 ? Math.floor(total / 100) * 500 : 0;
+
+  async function findCustomer() {
+    setLookupError("");
+    setMember(null);
+    setLookingUp(true);
+    try {
+      const found = await api.get(`/admin/customers/lookup?phone=${encodeURIComponent(customerPhone.trim())}`);
+      setMatches(found);
+      if (found.length === 1) setMember(found[0]);
+    } catch (err) {
+      setMatches(null);
+      setLookupError(err.status === 400 ? t("inStoreSale.fullPhone") : err.message);
+    } finally {
+      setLookingUp(false);
+    }
+  }
+
+  function clearCustomer() {
+    setCustomerPhone("");
+    setMatches(null);
+    setMember(null);
+    setLookupError("");
+  }
 
   async function handleSubmit() {
     setError("");
@@ -114,6 +152,8 @@ export default function AdminInStoreSale() {
       const result = await api.post("/admin/in-store-sales", {
         seller: sellerName,
         customerName: customerName || undefined,
+        customerUserId: member?.userId || undefined,
+        customerPhone: member ? customerPhone.trim() : undefined,
         note: note || undefined,
         items: lines.map((l) => ({
           product_id: l.productId,
@@ -127,6 +167,7 @@ export default function AdminInStoreSale() {
       loadSummary();
       setLines([]);
       setCustomerName("");
+      clearCustomer();
       setNote("");
     } catch (err) {
       setError(err.message);
@@ -142,7 +183,14 @@ export default function AdminInStoreSale() {
       <div className="max-w-2xl">
         {done && (
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-enzo-gold/40 bg-enzo-gold/10 p-4 text-sm">
-            <span>{t("inStoreSale.recorded", { orderNumber: done.orderNumber, total: formatPrice(done.total) })}</span>
+            <span>
+              {t("inStoreSale.recorded", { orderNumber: done.orderNumber, total: formatPrice(done.total) })}
+              {done.pointsEarned > 0 && (
+                <span className="ms-2 font-semibold text-enzo-goldBright">
+                  · {t("inStoreSale.pointsAdded", { points: done.pointsEarned.toLocaleString() })}
+                </span>
+              )}
+            </span>
             {done.order && (
               <button
                 type="button"
@@ -318,6 +366,83 @@ export default function AdminInStoreSale() {
             </div>
           </div>
         )}
+
+        {/* Points: find the customer's account by phone */}
+        <div className="mt-6 rounded-lg border border-enzo-gold/30 bg-enzo-gold/5 p-4">
+          <label className="mb-2 flex items-center gap-2 text-sm font-medium">
+            <Coins size={16} className="text-enzo-goldBright" />
+            {t("inStoreSale.pointsTitle")}
+          </label>
+          <div className="flex gap-2">
+            <input
+              className="input flex-1"
+              dir="ltr"
+              inputMode="tel"
+              placeholder={t("inStoreSale.phonePlaceholder")}
+              value={customerPhone}
+              onChange={(e) => {
+                setCustomerPhone(e.target.value);
+                setMatches(null);
+                setMember(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (customerPhone.trim()) findCustomer();
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={findCustomer}
+              disabled={!customerPhone.trim() || lookingUp}
+              className="flex items-center gap-1.5 rounded-md border border-enzo-gold px-4 text-sm font-semibold text-enzo-goldBright disabled:opacity-40"
+            >
+              <Search size={15} />
+              {t("inStoreSale.find")}
+            </button>
+            {(matches || member) && (
+              <button type="button" onClick={clearCustomer} aria-label={t("inStoreSale.clearCustomer")} className="px-2 text-enzo-muted hover:text-enzo-white">
+                <X size={18} />
+              </button>
+            )}
+          </div>
+          {lookupError && <p className="mt-2 text-sm text-enzo-error">{lookupError}</p>}
+
+          {matches && matches.length === 0 && (
+            <p className="mt-3 text-sm text-enzo-muted">{t("inStoreSale.noAccount")}</p>
+          )}
+
+          {matches && matches.length > 0 && (
+            <div className="mt-3 flex flex-col gap-2">
+              {matches.length > 1 && <p className="text-xs text-enzo-muted">{t("inStoreSale.pickAccount")}</p>}
+              {matches.map((m) => (
+                <button
+                  key={m.userId}
+                  type="button"
+                  onClick={() => setMember(m)}
+                  className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-start text-sm ${
+                    member?.userId === m.userId ? "border-enzo-goldBright bg-enzo-gold/15" : "border-enzo-line"
+                  }`}
+                >
+                  <span>
+                    <span className="block font-semibold">{m.name || "—"}</span>
+                    <span className="block text-xs text-enzo-muted" dir="ltr">{m.email}</span>
+                  </span>
+                  <span className="text-xs text-enzo-goldBright">{t("inStoreSale.hasPoints", { points: m.points.toLocaleString() })}</span>
+                </button>
+              ))}
+              {member && (
+                <p className="text-sm">
+                  {pointsPreview > 0
+                    ? t("inStoreSale.willEarn", { points: pointsPreview.toLocaleString(), name: member.name || "" })
+                    : t("inStoreSale.under100")}
+                </p>
+              )}
+              {member && <p className="text-xs text-enzo-muted">{t("inStoreSale.confirmName")}</p>}
+            </div>
+          )}
+        </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>

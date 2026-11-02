@@ -190,7 +190,19 @@
     "today": "Today in store",
     "noSeller": "No seller",
     "salesCount_one": "{{count}} sale",
-    "salesCount_other": "{{count}} sales"
+    "salesCount_other": "{{count}} sales",
+    "pointsTitle": "ENZO points — customer's phone (optional)",
+    "phonePlaceholder": "Customer's phone, e.g. 0599123456",
+    "find": "Find",
+    "clearCustomer": "Remove customer",
+    "fullPhone": "Enter the full phone number.",
+    "noAccount": "No ENZO account uses this number. They can sign up on the site (Google is quickest) and add this phone under My account — then they'll be found next time.",
+    "pickAccount": "More than one account uses this number — pick the right person:",
+    "hasPoints": "{{points}} pts",
+    "willEarn": "This sale will add {{points}} points to {{name}}.",
+    "under100": "Sales under 100 ₪ don't earn points.",
+    "confirmName": "Check the name with the customer before ringing up.",
+    "pointsAdded": "+{{points}} points added"
   },
   "invoice": {
     "title": "Invoice",
@@ -218,7 +230,8 @@
     "codeDiscount": "Discount",
     "pointsDiscount": "Points ({{points}})",
     "policy": "Sold items are non-refundable and non-exchangeable",
-    "seller": "Seller"
+    "seller": "Seller",
+    "pointsEarned": "You earned {{points}} ENZO points with this purchase"
   },
   "codes": {
     "title": "Discount codes",

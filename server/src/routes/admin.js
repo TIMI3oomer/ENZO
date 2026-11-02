@@ -19,6 +19,7 @@ import {
   parseOrThrow,
 } from "../utils/validation.js";
 import { sendOrderStatusEmail, sendOrderTotalEmail } from "../lib/email.js";
+import { pointsForAmount } from "../lib/pricing.js";
 
 const router = Router();
 
@@ -537,6 +538,59 @@ router.get("/in-store-sales/summary", async (req, res, next) => {
   }
 });
 
+// Find a walk-in customer's ENZO account by phone (In-store sale page).
+// Matches the phone saved in their profile or used on their online
+// orders (last 9 digits). Returns name, a partly hidden email and points
+// so the seller can confirm it's really them -- phones aren't verified,
+// so the seller checking the name is what stops points going to the wrong
+// person.
+const lastNine = (s) => String(s || "").replace(/\D/g, "").slice(-9);
+const maskEmail = (e) => {
+  if (!e) return null;
+  const [name, domain] = e.split("@");
+  return `${name.slice(0, 2)}${"*".repeat(Math.max(1, name.length - 2))}@${domain}`;
+};
+
+router.get("/customers/lookup", async (req, res, next) => {
+  try {
+    const wanted = lastNine(req.query.phone);
+    if (wanted.length < 9) return res.status(400).json({ error: "Enter the full phone number" });
+
+    const [{ data: profiles, error: pError }, { data: orders, error: oError }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("user_id, full_name, phone, points").not("phone", "is", null),
+      supabaseAdmin.from("orders").select("user_id, phone").not("user_id", "is", null).eq("channel", "online"),
+    ]);
+    if (pError) throw pError;
+    if (oError) throw oError;
+
+    const ids = new Set([
+      ...profiles.filter((p) => lastNine(p.phone) === wanted).map((p) => p.user_id),
+      ...orders.filter((o) => lastNine(o.phone) === wanted).map((o) => o.user_id),
+    ]);
+
+    const matches = await Promise.all(
+      [...ids].slice(0, 5).map(async (userId) => {
+        const { data: u } = await supabaseAdmin.auth.admin.getUserById(userId);
+        if (!u?.user) return null;
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("full_name, points")
+          .eq("user_id", userId)
+          .maybeSingle();
+        return {
+          userId,
+          name: profile?.full_name || u.user.user_metadata?.full_name || null,
+          email: maskEmail(u.user.email),
+          points: profile?.points ?? 0,
+        };
+      })
+    );
+    res.json(matches.filter(Boolean));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ---------- In-store sales (real shop, not just the website) ----------
 // Records a walk-in sale the admin rings up in person: same products/
 // stock pool as the site, taken immediately (see record_in_store_sale()
@@ -562,6 +616,52 @@ router.post("/in-store-sales", async (req, res, next) => {
     }
     const result = data?.[0];
 
+    // Walk-in customer with an ENZO account: attach the sale to them and
+    // give the points (same rule as online: 500 per full 100 ILS). The
+    // order's points_earned + user_id mean cancelling or refunding it later
+    // takes the points back automatically (orders trigger / reprice_order,
+    // migration_v16.sql).
+    let pointsEarned = 0;
+    if (body.customerUserId) {
+      const { data: u, error: uError } = await supabaseAdmin.auth.admin.getUserById(body.customerUserId);
+      if (uError || !u?.user) {
+        console.warn("[ENZO server] in-store customer not found:", body.customerUserId);
+      } else {
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", body.customerUserId)
+          .maybeSingle();
+        const earned = pointsForAmount(Number(result.total));
+        const { data: attached, error: attachError } = await supabaseAdmin
+          .from("orders")
+          .update({
+            user_id: body.customerUserId,
+            points_earned: earned,
+            phone: body.customerPhone || "-",
+            customer_name: body.customerName || profile?.full_name || u.user.user_metadata?.full_name || "Walk-in customer",
+          })
+          .eq("id", result.order_id)
+          .is("user_id", null)
+          .select("id");
+        if (attachError) throw attachError;
+        if (attached?.length && earned > 0) {
+          const { error: pointsError } = await supabaseAdmin.rpc("add_points", {
+            p_user_id: body.customerUserId,
+            p_order_id: result.order_id,
+            p_delta: earned,
+            p_reason: "earned",
+          });
+          if (pointsError) {
+            // keep the order consistent with the balance: no points recorded either
+            await supabaseAdmin.from("orders").update({ points_earned: 0 }).eq("id", result.order_id);
+            throw pointsError;
+          }
+          pointsEarned = earned;
+        }
+      }
+    }
+
     // Who rang it up (orders.seller, migration_v17.sql). If that migration
     // hasn't been run yet the sale is still recorded -- only the seller
     // name is skipped -- so the shop never gets stuck at the till.
@@ -583,7 +683,7 @@ router.post("/in-store-sales", async (req, res, next) => {
     if (orderError) throw orderError;
     if (itemsError) throw itemsError;
 
-    res.status(201).json({ orderNumber: result.order_number, total: result.total, order, items, sellerSaved });
+    res.status(201).json({ orderNumber: result.order_number, total: result.total, order, items, sellerSaved, pointsEarned });
   } catch (err) {
     next(err);
   }

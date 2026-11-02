@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Coins, ShoppingBag, Gift, RotateCcw } from "lucide-react";
+import { Coins, ShoppingBag, Gift, RotateCcw, Store } from "lucide-react";
 import { api } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
@@ -25,6 +25,7 @@ export default function Points() {
     { icon: ShoppingBag, title: t("points.howEarnTitle"), text: t("points.howEarn") },
     { icon: Gift, title: t("points.howUseTitle"), text: t("points.howUse") },
     { icon: RotateCcw, title: t("points.cancelTitle"), text: t("points.cancel") },
+    { icon: Store, title: t("points.inStoreTitle"), text: t("points.inStore") },
   ];
 
   const examples = [100, 250, 480].map((amount) => {
@@ -62,7 +63,7 @@ export default function Points() {
         </p>
       )}
 
-      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {steps.map(({ icon: Icon, title, text }) => (
           <div key={title} className="rounded-lg border hairline bg-enzo-panel/50 p-5">
             <Icon size={22} className="text-enzo-goldBright" />

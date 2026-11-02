@@ -95,7 +95,7 @@ export default function AdminOrders() {
   const visibleOrders = !q
     ? orders
     : orders.filter((o) =>
-        [o.order_number, o.customer_name, o.phone, o.customer_email, o.discount_code]
+        [o.order_number, o.customer_name, o.phone, o.customer_email, o.discount_code, o.seller]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(q))
       );
@@ -169,7 +169,10 @@ export default function AdminOrders() {
                 </span>
               )}
               {o.channel === "in_store" && (
-                <span className="rounded-full bg-enzo-gold/10 px-2 py-0.5 text-xs text-enzo-goldBright">{t("invoice.inStore")}</span>
+                <span className="rounded-full bg-enzo-gold/10 px-2 py-0.5 text-xs text-enzo-goldBright">
+                  {t("invoice.inStore")}
+                  {o.seller && ` · ${o.seller}`}
+                </span>
               )}
               <span className="rounded-full border hairline px-3 py-1 text-xs text-enzo-muted">
                 {t(`orders.status${o.status[0].toUpperCase()}${o.status.slice(1)}`)}

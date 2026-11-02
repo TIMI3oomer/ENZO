@@ -394,6 +394,32 @@ router.delete("/discount-codes/:id", async (req, res, next) => {
   }
 });
 
+// In-store sales since `since` (the till page sends the start of today,
+// in the shop's own timezone), totalled per seller.
+router.get("/in-store-sales/summary", async (req, res, next) => {
+  try {
+    const since = new Date(String(req.query.since || ""));
+    if (Number.isNaN(since.getTime())) return res.status(400).json({ error: "since must be a date" });
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .select("seller, total, status")
+      .eq("channel", "in_store")
+      .gte("created_at", since.toISOString());
+    if (error) throw error;
+    const bySeller = {};
+    for (const o of data) {
+      if (o.status === "cancelled") continue;
+      const key = o.seller || "";
+      bySeller[key] = bySeller[key] || { seller: o.seller || null, count: 0, total: 0 };
+      bySeller[key].count += 1;
+      bySeller[key].total += Number(o.total);
+    }
+    res.json(Object.values(bySeller).sort((a, b) => b.total - a.total));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ---------- In-store sales (real shop, not just the website) ----------
 // Records a walk-in sale the admin rings up in person: same products/
 // stock pool as the site, taken immediately (see record_in_store_sale()
@@ -419,6 +445,18 @@ router.post("/in-store-sales", async (req, res, next) => {
     }
     const result = data?.[0];
 
+    // Who rang it up (orders.seller, migration_v17.sql). If that migration
+    // hasn't been run yet the sale is still recorded -- only the seller
+    // name is skipped -- so the shop never gets stuck at the till.
+    let sellerSaved = true;
+    if (body.seller) {
+      const { error: sellerError } = await supabaseAdmin.from("orders").update({ seller: body.seller }).eq("id", result.order_id);
+      if (sellerError) {
+        sellerSaved = false;
+        console.warn("[ENZO server] seller not saved (run migration_v17.sql):", sellerError.message);
+      }
+    }
+
     // The full order + its items, so the admin screen can print the
     // invoice (فاتورة) straight away from what was actually recorded.
     const [{ data: order, error: orderError }, { data: items, error: itemsError }] = await Promise.all([
@@ -428,7 +466,7 @@ router.post("/in-store-sales", async (req, res, next) => {
     if (orderError) throw orderError;
     if (itemsError) throw itemsError;
 
-    res.status(201).json({ orderNumber: result.order_number, total: result.total, order, items });
+    res.status(201).json({ orderNumber: result.order_number, total: result.total, order, items, sellerSaved });
   } catch (err) {
     next(err);
   }

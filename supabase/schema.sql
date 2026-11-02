@@ -1425,3 +1425,8 @@ grant execute on function reprice_order(uuid, text) to service_role;
 grant execute on function refund_order_item(uuid, int, text) to service_role;
 grant execute on function exchange_order_item(uuid, int, uuid, text, text, text) to service_role;
 
+-- =====================================================================
+-- SELLER ON IN-STORE SALES (identical to migration_v17.sql)
+-- =====================================================================
+alter table orders add column if not exists seller text check (seller is null or length(seller) between 1 and 60);
+create index if not exists idx_orders_in_store_seller on orders(created_at, seller) where channel = 'in_store';

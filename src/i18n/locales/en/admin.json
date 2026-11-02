@@ -170,7 +170,16 @@
     "customerName": "Customer name (optional)",
     "note": "Note (optional)",
     "ringUp": "Ring up sale",
-    "recorded": "Sale #{{orderNumber}} recorded — {{total}}"
+    "recorded": "Sale #{{orderNumber}} recorded — {{total}}",
+    "seller": "Seller",
+    "otherSeller": "Other",
+    "sellerName": "Seller's name",
+    "pickSeller": "Choose who's selling before ringing up.",
+    "sellerNotSaved": "Sale saved, but the seller name wasn't — run migration_v17.sql in Supabase.",
+    "today": "Today in store",
+    "noSeller": "No seller",
+    "salesCount_one": "{{count}} sale",
+    "salesCount_other": "{{count}} sales"
   },
   "invoice": {
     "title": "Invoice",
@@ -197,7 +206,8 @@
     "thanks": "Thank you for shopping with ENZO",
     "codeDiscount": "Discount",
     "pointsDiscount": "Points ({{points}})",
-    "policy": "Sold items are non-refundable and non-exchangeable"
+    "policy": "Sold items are non-refundable and non-exchangeable",
+    "seller": "Seller"
   },
   "codes": {
     "title": "Discount codes",

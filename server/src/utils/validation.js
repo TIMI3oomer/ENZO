@@ -127,6 +127,7 @@ export const paymentStatusSchema = z.object({
 // POST /api/admin/in-store-sales / record_in_store_sale() in schema.sql).
 export const inStoreSaleSchema = z.object({
   customerName: z.string().trim().max(200).optional(),
+  seller: z.string().trim().min(1).max(60).optional().nullable(),
   note: z.string().trim().max(1000).optional().nullable(),
   items: z.array(orderItemSchema).min(1).max(50),
 });

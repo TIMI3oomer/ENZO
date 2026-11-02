@@ -95,10 +95,24 @@ export default function Footer() {
       </div>
 
       <div className="border-t hairline">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-5 sm:flex-row sm:px-6">
-          <p className="text-xs text-enzo-muted">
-            © {new Date().getFullYear()} ENZO — {t("footer.rights")}
-          </p>
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 pb-24 pt-5 sm:flex-row sm:pb-5 sm:pe-24 sm:ps-6">
+          <div className="flex flex-col items-center gap-1 sm:items-start">
+            <p className="text-xs text-enzo-muted">
+              © {new Date().getFullYear()} ENZO — {t("footer.rights")}
+            </p>
+            {/* Who built the site. */}
+            <p className="text-[11px] text-enzo-muted/80">
+              {t("footer.madeBy")}{" "}
+              <a
+                href="https://github.com/TIMI3oomer"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-enzo-gold transition-colors hover:text-enzo-goldBright"
+              >
+                Omar Almuhtaseb
+              </a>
+            </p>
+          </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
             {["VISA", "Mastercard", t("trust.cashOnDelivery")].map((m) => (
               <span key={m} className="rounded-sm border border-enzo-line px-2.5 py-1 text-[11px] font-semibold tracking-wide text-enzo-muted">

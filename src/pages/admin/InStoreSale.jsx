@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Trash2, Printer } from "lucide-react";
+import { Trash2, Printer, UserRound } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { useLocalizedField } from "../../context/LanguageContext.jsx";
 import { formatPrice, getDiscountedPrice } from "../../lib/formatPrice.js";
@@ -16,8 +16,17 @@ import InvoiceModal from "../../components/Invoice.jsx";
 // schema.sql) -- there's no "pending" step like online orders, since the
 // item has already left the shelf by the time this is entered.
 //
+// SELLER: who's at the till (عبدالله / عمير / another name). Remembered
+// on this device, required before ringing up, saved on the order
+// (orders.seller) and printed on the invoice. "Today" at the top totals
+// today's in-store sales per seller.
+//
 // INVOICE: ringing up opens the printable invoice (فاتورة) for that sale
 // right away (components/Invoice.jsx); "Print invoice" reopens it.
+// The two regular sellers; anyone else types their name under "Other".
+const SELLERS = ["عبدالله", "عمير"];
+const OTHER = "__other__";
+
 export default function AdminInStoreSale() {
   const { t } = useTranslation("admin");
   const localize = useLocalizedField();
@@ -33,6 +42,37 @@ export default function AdminInStoreSale() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
   const [showInvoice, setShowInvoice] = useState(false);
+  const [seller, setSeller] = useState(() => {
+    try {
+      return localStorage.getItem("enzo_till_seller") || "";
+    } catch {
+      return "";
+    }
+  });
+  const [otherName, setOtherName] = useState(() => (SELLERS.includes(seller) || seller === OTHER ? "" : seller));
+  const [summary, setSummary] = useState([]);
+
+  const sellerName = SELLERS.includes(seller) ? seller : otherName.trim();
+
+  function chooseSeller(value) {
+    setSeller(value);
+    try {
+      localStorage.setItem("enzo_till_seller", value === OTHER ? otherName.trim() : value);
+    } catch {
+      /* private mode -- just not remembered */
+    }
+  }
+
+  function loadSummary() {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    api
+      .get(`/admin/in-store-sales/summary?since=${encodeURIComponent(start.toISOString())}`)
+      .then((d) => setSummary(d || []))
+      .catch(() => setSummary([]));
+  }
+
+  useEffect(loadSummary, []);
 
   useEffect(() => {
     api.get("/admin/products").then((data) => setProducts((data || []).filter((p) => p.is_active))).catch(() => {});
@@ -72,6 +112,7 @@ export default function AdminInStoreSale() {
     setSaving(true);
     try {
       const result = await api.post("/admin/in-store-sales", {
+        seller: sellerName,
         customerName: customerName || undefined,
         note: note || undefined,
         items: lines.map((l) => ({
@@ -83,6 +124,7 @@ export default function AdminInStoreSale() {
       });
       setDone(result);
       setShowInvoice(true);
+      loadSummary();
       setLines([]);
       setCustomerName("");
       setNote("");
@@ -116,6 +158,63 @@ export default function AdminInStoreSale() {
         {showInvoice && done?.order && (
           <InvoiceModal order={done.order} items={done.items} onClose={() => setShowInvoice(false)} />
         )}
+
+        {summary.length > 0 && (
+          <div className="mb-6 rounded-lg border hairline p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-enzo-gold">{t("inStoreSale.today")}</p>
+            <div className="flex flex-wrap gap-3">
+              {summary.map((s) => (
+                <div key={s.seller || "-"} className="rounded-md bg-enzo-panel px-3 py-2 text-sm">
+                  <p className="font-semibold">{s.seller || t("inStoreSale.noSeller")}</p>
+                  <p className="text-xs text-enzo-muted">
+                    {t("inStoreSale.salesCount", { count: s.count })} · {formatPrice(s.total)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Seller */}
+        <div className="mb-6">
+          <label className="mb-2 flex items-center gap-2 text-sm font-medium text-enzo-muted">
+            <UserRound size={16} />
+            {t("inStoreSale.seller")}
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {[...SELLERS, OTHER].map((s) => {
+              const active = s === OTHER ? !SELLERS.includes(seller) && seller !== "" : seller === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => chooseSeller(s)}
+                  className={`rounded-md border px-4 py-2 text-sm font-semibold ${
+                    active ? "border-enzo-goldBright bg-enzo-goldBright text-enzo-black" : "border-enzo-line text-enzo-white hover:border-enzo-white"
+                  }`}
+                >
+                  {s === OTHER ? t("inStoreSale.otherSeller") : s}
+                </button>
+              );
+            })}
+          </div>
+          {seller !== "" && !SELLERS.includes(seller) && (
+            <input
+              className="input mt-2 max-w-xs"
+              value={otherName}
+              onChange={(e) => {
+                setOtherName(e.target.value);
+                try {
+                  localStorage.setItem("enzo_till_seller", e.target.value.trim() || OTHER);
+                } catch {
+                  /* ignore */
+                }
+              }}
+              placeholder={t("inStoreSale.sellerName")}
+              autoFocus
+            />
+          )}
+        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -231,11 +330,15 @@ export default function AdminInStoreSale() {
           </div>
         </div>
 
+        {!sellerName && lines.length > 0 && <p className="mt-4 text-sm text-enzo-goldBright">{t("inStoreSale.pickSeller")}</p>}
+        {done && done.sellerSaved === false && (
+          <p className="mt-4 text-sm text-enzo-error">{t("inStoreSale.sellerNotSaved")}</p>
+        )}
         {error && <p className="mt-4 text-sm text-enzo-error">{error}</p>}
 
         <button
           onClick={handleSubmit}
-          disabled={lines.length === 0 || saving}
+          disabled={lines.length === 0 || saving || !sellerName}
           className="mt-6 rounded-md bg-enzo-gradient px-6 py-3 font-semibold text-enzo-black disabled:opacity-40"
         >
           {t("inStoreSale.ringUp")}

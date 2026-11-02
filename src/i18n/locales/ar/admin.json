@@ -205,7 +205,20 @@
     "customerName": "اسم العميل (اختياري)",
     "note": "ملاحظة (اختياري)",
     "ringUp": "تسجيل البيع",
-    "recorded": "تم تسجيل البيع رقم {{orderNumber}} — {{total}}"
+    "recorded": "تم تسجيل البيع رقم {{orderNumber}} — {{total}}",
+    "seller": "البائع",
+    "otherSeller": "أخرى",
+    "sellerName": "اسم البائع",
+    "pickSeller": "اختر البائع قبل تسجيل البيع.",
+    "sellerNotSaved": "تم حفظ البيع لكن بدون اسم البائع — شغّل migration_v17.sql في Supabase.",
+    "today": "مبيعات المحل اليوم",
+    "noSeller": "بدون بائع",
+    "salesCount_zero": "{{count}} عملية",
+    "salesCount_one": "عملية واحدة",
+    "salesCount_two": "عمليتان",
+    "salesCount_few": "{{count}} عمليات",
+    "salesCount_many": "{{count}} عملية",
+    "salesCount_other": "{{count}} عملية"
   },
   "invoice": {
     "title": "فاتورة",
@@ -232,7 +245,8 @@
     "thanks": "شكراً لتسوقكم من ENZO",
     "codeDiscount": "خصم",
     "pointsDiscount": "نقاط ({{points}})",
-    "policy": "البضاعة المباعة لا ترد ولا تستبدل"
+    "policy": "البضاعة المباعة لا ترد ولا تستبدل",
+    "seller": "البائع"
   },
   "codes": {
     "title": "أكواد الخصم",

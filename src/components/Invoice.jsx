@@ -90,6 +90,12 @@ function Receipt({ order, items, store }) {
             <span dir="ltr">{order.phone}</span>
           </div>
         )}
+        {order.seller && (
+          <div className={row}>
+            <span>{t("invoice.seller")}</span>
+            <span>{order.seller}</span>
+          </div>
+        )}
         <div className={row}>
           <span>{t("invoice.channel")}</span>
           <span>{order.channel === "in_store" ? t("invoice.inStore") : t("invoice.online")}</span>

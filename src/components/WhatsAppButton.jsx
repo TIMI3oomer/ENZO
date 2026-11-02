@@ -27,6 +27,7 @@ export default function WhatsAppButton() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label={t("footer.whatsapp")}
+      data-tour="whatsapp"
       className="fixed bottom-5 end-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-enzo-gradient text-enzo-black shadow-lg transition-transform hover:scale-105"
     >
       <svg viewBox="0 0 32 32" width="26" height="26" fill="currentColor" aria-hidden="true">

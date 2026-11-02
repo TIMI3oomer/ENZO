@@ -59,7 +59,7 @@ export default function Navbar() {
         <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 py-3 sm:px-6">
           {/* Start: menu + desktop links */}
           <div className="flex items-center gap-6">
-            <button className="text-enzo-white" onClick={() => setMenuOpen(true)} aria-label="menu">
+            <button className="text-enzo-white" onClick={() => setMenuOpen(true)} aria-label="menu" data-tour="menu">
               <Menu size={24} />
             </button>
             <nav className="hidden items-center gap-6 md:flex">
@@ -105,7 +105,7 @@ export default function Navbar() {
                 <LayoutDashboard size={20} />
               </Link>
             )}
-            <button aria-label={t("nav.cart")} onClick={() => setCartOpen(true)} className="relative text-enzo-white">
+            <button aria-label={t("nav.cart")} onClick={() => setCartOpen(true)} className="relative text-enzo-white" data-tour="cart">
               <ShoppingBag size={22} />
               {count > 0 && (
                 <span className="absolute -top-2 -end-2 flex h-5 w-5 items-center justify-center rounded-full bg-enzo-gold text-[11px] font-semibold text-enzo-black">

@@ -85,6 +85,11 @@ export default function Footer() {
         <div>
           <h3 className={heading}>{t("footer.help")}</h3>
           <ul className="flex flex-col gap-2.5">
+            <li>
+              <button type="button" onClick={() => window.dispatchEvent(new Event("enzo:tour"))} className={`${link} text-start`}>
+                {t("tour.howToShop")}
+              </button>
+            </li>
             <li><Link to="/track" className={link}>{t("track.title")}</Link></li>
             <li><Link to="/points" className={link}>{t("points.title")}</Link></li>
             <li><Link to="/privacy" className={link}>{t("footer.privacy")}</Link></li>

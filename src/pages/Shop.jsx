@@ -139,7 +139,7 @@ export default function Shop() {
         </div>
 
         {sizeOptions.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2" data-tour="size-filter">
             <span className="text-sm text-enzo-muted">{t("filters.size")}</span>
             <div className="flex flex-wrap gap-1.5">
               {sizeOptions.map(({ size, count }) => {

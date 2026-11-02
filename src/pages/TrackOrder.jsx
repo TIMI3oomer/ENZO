@@ -72,7 +72,7 @@ export default function TrackOrder() {
       <h1 className="font-display text-3xl uppercase">{t("track.title")}</h1>
       <p className="mt-2 text-sm text-enzo-muted">{t("track.intro")}</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
+      <form onSubmit={handleSubmit} data-tour="track-form" className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
         <input
           value={number}
           onChange={(e) => setNumber(e.target.value)}

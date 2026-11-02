@@ -179,6 +179,18 @@ export default function AdminContent() {
                                 </button>
                               )}
                             </div>
+                          ) : field.type === "select" ? (
+                            <select
+                              className="input"
+                              value={value}
+                              onChange={(e) => setFieldValue(page, section, field.key, e.target.value)}
+                            >
+                              {field.options.map((o) => (
+                                <option key={o} value={o}>
+                                  {t(`content.option_${o}`, o)}
+                                </option>
+                              ))}
+                            </select>
                           ) : field.type === "toggle" ? (
                             <button
                               type="button"

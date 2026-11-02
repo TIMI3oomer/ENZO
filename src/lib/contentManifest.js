@@ -12,7 +12,9 @@
 //
 // SCALAR_FIELDS: one row per (page, section, key). `type: "text"` renders
 // as a text input/textarea in the dashboard editor; `type: "toggle"`
-// renders as an on/off switch stored as "on" / "off"; `type: "image"`
+// renders as an on/off switch stored as "on" / "off"; `type: "select"`
+// renders a dropdown of `options` (stored as the option's value);
+// `type: "image"`
 // renders as an image upload (content-images bucket) and stores the
 // public URL as the value.
 export const SCALAR_FIELDS = [
@@ -279,6 +281,15 @@ export const SCALAR_FIELDS = [
     type: "text",
     label: "Return policy printed on invoices only (type - to hide it)",
     defaultT: (t) => t("invoice.policy", { ns: "admin" }),
+  },
+  {
+    page: "site",
+    section: "tour",
+    key: "focus",
+    type: "select",
+    options: ["auto", "new", "discount"],
+    label: "Guided tour highlights",
+    defaultT: () => "auto",
   },
   {
     page: "site",

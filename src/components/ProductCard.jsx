@@ -50,7 +50,7 @@ export default function ProductCard({ product }) {
   }
 
   return (
-    <Link to={`/product/${product.slug}`} className="group block h-full">
+    <Link to={`/product/${product.slug}`} className="group block h-full" data-tour-product={product.id}>
       <div className="flex h-full flex-col transition-transform duration-300 ease-out group-active:scale-[0.98]">
         <div className="relative aspect-[3/4] overflow-hidden bg-enzo-panel">
           {displayedImage ? (

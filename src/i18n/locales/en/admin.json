@@ -150,7 +150,11 @@
     "removeImage": "Remove",
     "section_sections": "Home page sections",
     "section_store": "Store info (footer, WhatsApp, invoices)",
-    "section_catalog": "Sold-out products"
+    "section_catalog": "Sold-out products",
+    "section_tour": "Guided tour",
+    "option_auto": "Automatic — newest item or latest discount, whichever is more recent",
+    "option_new": "Always the newest item",
+    "option_discount": "Always the latest discount"
   },
   "preview": {
     "title": "Live preview",

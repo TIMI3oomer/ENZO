@@ -334,7 +334,7 @@ export default function Checkout() {
           ))}
         </ul>
         {/* Discount code */}
-        <div className="mt-4">
+        <div className="mt-4" data-tour="discount-code">
           {appliedCode ? (
             <div className="flex items-center justify-between rounded-md border border-enzo-gold/40 bg-enzo-gold/10 px-3 py-2 text-sm">
               <span className="flex items-center gap-2">
@@ -383,7 +383,7 @@ export default function Checkout() {
         {/* Points */}
         {session ? (
           quote && (quote.balance > 0 || pointsToUse > 0) ? (
-            <div className="mt-3 rounded-md border hairline p-3 text-sm">
+            <div className="mt-3 rounded-md border hairline p-3 text-sm" data-tour="points">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2">
                   <Coins size={15} className="text-enzo-goldBright" />

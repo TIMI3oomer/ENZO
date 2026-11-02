@@ -122,7 +122,7 @@ export default function ProductDetail() {
         <p className="mt-6 leading-relaxed text-enzo-muted">{localize(product.description)}</p>
 
         {product.colors?.length > 0 && (
-          <div className="mt-6">
+          <div className="mt-6" data-tour="colors">
             <p className="mb-2 text-sm font-medium">{t("product.color")}</p>
             <div className="flex flex-wrap gap-3">
               {product.colors.map((c) => {
@@ -159,7 +159,7 @@ export default function ProductDetail() {
         )}
 
         {product.sizes?.length > 0 && (
-          <div className="mt-6">
+          <div className="mt-6" data-tour="sizes">
             <p className="mb-2 text-sm font-medium">
               {t("product.size")}
               {color && usesVariantStock(product) && (
@@ -201,6 +201,7 @@ export default function ProductDetail() {
           return (
             <>
               <button
+                data-tour="add-to-cart"
                 onClick={handleAdd}
                 disabled={unavailable}
                 className="mt-8 w-full rounded-md bg-enzo-gradient py-3 font-semibold text-enzo-black disabled:opacity-40"

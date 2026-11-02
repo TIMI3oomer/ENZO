@@ -2,3 +2,6 @@ node_modules
 dist
 .env
 .DS_Store
+
+# Google OAuth client secret downloads -- never commit
+client_secret_*.json

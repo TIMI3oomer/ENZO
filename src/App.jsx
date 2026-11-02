@@ -18,6 +18,7 @@ import Account from "./pages/Account.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import TrackOrder from "./pages/TrackOrder.jsx";
 import Points from "./pages/Points.jsx";
+import Privacy from "./pages/Privacy.jsx";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute.jsx";
 import PageTransition from "./components/PageTransition.jsx";
 
@@ -106,6 +107,7 @@ export default function App() {
                   {/* one optional-segment route, so /track -> /track/123 keeps the page mounted */}
                   <Route path="/track/:number?" element={<TrackOrder />} />
                   <Route path="/points" element={<Points />} />
+                  <Route path="/privacy" element={<Privacy />} />
                   <Route path="/order-confirmation/:orderNumber" element={<OrderConfirmation />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

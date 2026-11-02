@@ -6,6 +6,7 @@ import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useContent } from "../hooks/useContent.js";
 import { formatPrice, getDiscountedPrice } from "../lib/formatPrice.js";
+import DeliveryEstimate from "../components/DeliveryEstimate.jsx";
 import { getAvailableStock, usesVariantStock } from "../lib/variantStock.js";
 import ErrorBanner from "../components/ErrorBanner.jsx";
 import { COLOR_HEX } from "../lib/colors.js";
@@ -209,6 +210,7 @@ export default function ProductDetail() {
               {!unavailable && available <= 5 && (
                 <p className="mt-2 text-xs text-enzo-error">{t("product.lowStock", { count: available })}</p>
               )}
+              <DeliveryEstimate className="mt-4" />
             </>
           );
         })()}

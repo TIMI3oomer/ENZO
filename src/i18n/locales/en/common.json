@@ -51,7 +51,8 @@
     "help": "Help",
     "allProducts": "All products",
     "tagline": "Streetwear with real quality. Limited pieces, your identity your way.",
-    "madeBy": "Website by"
+    "madeBy": "Website by",
+    "privacy": "Privacy policy"
   },
   "language": {
     "ar": "العربية",
@@ -96,7 +97,8 @@
     "resendConfirmation": "Send the confirmation email again",
     "confirmationResent": "Sent — check your inbox and spam.",
     "checkEmailTitle": "Check your email",
-    "checkEmailText": "We sent a confirmation link to {{email}}. Open it to finish creating your account, then sign in."
+    "checkEmailText": "We sent a confirmation link to {{email}}. Open it to finish creating your account, then sign in.",
+    "privacyNote": "How we handle your information:"
   },
   "filters": {
     "sortBy": "Sort by",
@@ -115,7 +117,7 @@
     "qualityChecked": "Quality checked"
   },
   "home": {
-    "announcement": "Cash on delivery available · Fast delivery",
+    "announcement": "Delivery in 1-3 days · Cash on delivery",
     "promo": "Limited pieces · Real quality",
     "newArrivals": "New arrivals",
     "viewAll": "View all",
@@ -200,5 +202,9 @@
     "trackLink": "Open Track order",
     "helpTitle": "We're here",
     "helpText": "Questions about sizes or an order? Tap the WhatsApp button at the bottom of any page and we'll answer."
+  },
+  "delivery": {
+    "estimate": "Delivery in",
+    "days": "days"
   }
 }

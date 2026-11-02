@@ -4,6 +4,7 @@ import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
 import { usePaymentConfig } from "../lib/usePaymentConfig.js";
 import { Coins, Truck } from "lucide-react";
+import DeliveryEstimate from "../components/DeliveryEstimate.jsx";
 
 // CHECKPOINT NOTE (OrderConfirmation.jsx):
 // Items/total are read from router state, passed by Checkout.jsx right
@@ -41,6 +42,7 @@ export default function OrderConfirmation() {
       <p className="text-2xl font-semibold">#{orderNumber}</p>
       <p className="mt-4 text-enzo-muted">{t("confirmation.status")}</p>
       <p className="font-medium">{t("confirmation.pending")}</p>
+      <DeliveryEstimate className="mt-4 justify-center" />
 
       {pointsEarned > 0 && (
         <div className="mt-6 flex items-center justify-center gap-2 rounded-lg border border-enzo-gold/40 bg-enzo-gold/10 px-4 py-3 text-sm text-enzo-goldBright">

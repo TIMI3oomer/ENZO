@@ -9,6 +9,7 @@ import { formatPrice } from "../lib/formatPrice.js";
 import { api } from "../lib/api.js";
 import { DELIVERY_REGIONS, getDeliveryRegion } from "../lib/delivery.js";
 import { usePaymentConfig } from "../lib/usePaymentConfig.js";
+import DeliveryEstimate from "../components/DeliveryEstimate.jsx";
 import i18n from "../i18n/index.js";
 
 const initialForm = {
@@ -303,6 +304,13 @@ export default function Checkout() {
 
         {submitError && <p className="mt-4 text-sm text-enzo-error">{submitError}</p>}
 
+        <p className="mt-6 text-xs text-enzo-muted">
+          {tc("auth.privacyNote")}{" "}
+          <Link to="/privacy" className="text-enzo-gold underline">
+            {tc("footer.privacy")}
+          </Link>
+        </p>
+
         <button
           type="submit"
           disabled={submitting || items.length === 0}
@@ -448,6 +456,7 @@ export default function Checkout() {
           </div>
         </div>
         {!region && <p className="mt-2 text-xs text-enzo-muted">{t("chooseRegionHint")}</p>}
+        <DeliveryEstimate className="mt-3" />
         {session && quote?.pointsEarned > 0 && (
           <p className="mt-3 flex items-center gap-2 text-sm text-enzo-goldBright">
             <Coins size={15} />

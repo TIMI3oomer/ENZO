@@ -267,6 +267,14 @@ export const SCALAR_FIELDS = [
   {
     page: "site",
     section: "store",
+    key: "deliveryDays",
+    type: "text",
+    label: "Delivery time in days, shown to customers (e.g. 1-3)",
+    defaultT: () => "1-3",
+  },
+  {
+    page: "site",
+    section: "store",
     key: "invoicePolicy",
     type: "text",
     label: "Return policy printed on invoices only (type - to hide it)",

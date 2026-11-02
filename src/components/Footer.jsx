@@ -87,6 +87,7 @@ export default function Footer() {
           <ul className="flex flex-col gap-2.5">
             <li><Link to="/track" className={link}>{t("track.title")}</Link></li>
             <li><Link to="/points" className={link}>{t("points.title")}</Link></li>
+            <li><Link to="/privacy" className={link}>{t("footer.privacy")}</Link></li>
             <li><Link to="/account" className={link}>{t("auth.myAccount")}</Link></li>
             <li><Link to="/cart" className={link}>{t("nav.cart")}</Link></li>
             <li><Link to="/login" className={link}>{t("auth.login")}</Link></li>

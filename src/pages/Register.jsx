@@ -125,6 +125,12 @@ export default function Register() {
           {t("auth.register")}
         </button>
       </form>
+      <p className="mt-4 text-center text-xs text-enzo-muted">
+        {t("auth.privacyNote")}{" "}
+        <Link to="/privacy" className="text-enzo-gold underline">
+          {t("footer.privacy")}
+        </Link>
+      </p>
       <p className="mt-6 text-center text-sm text-enzo-muted">
         {t("auth.haveAccount")}{" "}
         <Link to="/login" state={{ from: returnTo }} className="text-enzo-white underline">

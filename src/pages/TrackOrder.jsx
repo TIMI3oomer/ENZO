@@ -6,6 +6,7 @@ import { api } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
+import DeliveryEstimate from "../components/DeliveryEstimate.jsx";
 
 // CHECKPOINT NOTE (TrackOrder.jsx):
 // "Where's my order?" -- /track (form) and /track/:number. Data comes from
@@ -105,6 +106,7 @@ export default function TrackOrder() {
             <p className="font-display text-2xl">#{order.order_number}</p>
             <p className="text-sm text-enzo-muted">{new Date(order.created_at).toLocaleString()}</p>
           </div>
+          {!cancelled && order.status !== "delivered" && <DeliveryEstimate className="mt-2" />}
 
           {cancelled ? (
             <div className="mt-6 flex items-center gap-3 rounded-lg border border-enzo-error/50 bg-enzo-error/10 p-4 text-enzo-error">

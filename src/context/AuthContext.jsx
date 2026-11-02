@@ -49,16 +49,47 @@ export function AuthProvider({ children }) {
     return { error };
   }
 
+  // Google sign-in (also signs new customers up). Checks first that the
+  // Google provider is switched on in Supabase -- otherwise Supabase shows
+  // the customer a raw JSON error page. Comes back to `returnTo`; that
+  // address must be allowed under Supabase -> Authentication -> URL
+  // Configuration -> Redirect URLs.
+  async function loginWithGoogle(returnTo = "/") {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`, {
+        headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+      });
+      const settings = await res.json();
+      if (!settings?.external?.google) {
+        return { error: { code: "google_disabled", message: "Google sign-in is not enabled" } };
+      }
+    } catch {
+      /* can't tell -- let Supabase handle it */
+    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}${returnTo}` },
+    });
+    return { error };
+  }
+
+  // Sends the "confirm your email" message again (Login/Register pages).
+  async function resendConfirmation(email) {
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    return { error };
+  }
+
   // Used by the CUSTOMER-facing register page (src/pages/Register.jsx).
   // full_name is stored in Supabase Auth's user_metadata so Checkout.jsx
   // can prefill it later without a separate "customers" table.
   async function register(email, password, fullName) {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } },
     });
-    return { error };
+    // No session back = Supabase wants the email confirmed first.
+    return { error, needsConfirmation: !error && !data.session };
   }
 
   async function logout() {
@@ -66,7 +97,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, isAdmin, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ session, isAdmin, loading, login, logout, register, loginWithGoogle, resendConfirmation }}>
       {children}
     </AuthContext.Provider>
   );

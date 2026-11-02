@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext.jsx";
+import GoogleButton from "../components/GoogleButton.jsx";
 
 // CHECKPOINT NOTE (pages/Login.jsx):
 // This is the CUSTOMER-facing login (different from pages/admin/Login.jsx).
@@ -11,13 +12,15 @@ import { useAuth } from "../context/AuthContext.jsx";
 // returns to wherever the customer came from (e.g. back to /checkout).
 export default function Login() {
   const { t } = useTranslation("common");
-  const { login } = useAuth();
+  const { login, resendConfirmation } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const returnTo = location.state?.from || "/";
 
@@ -25,10 +28,15 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setUnconfirmed(false);
     const { error } = await login(email, password);
     setLoading(false);
     if (error) {
-      setError(error.message);
+      if (/not confirmed/i.test(error.message)) {
+        setUnconfirmed(true);
+      } else {
+        setError(/invalid login/i.test(error.message) ? t("auth.wrongPassword") : error.message);
+      }
       return;
     }
     navigate(returnTo);
@@ -37,6 +45,7 @@ export default function Login() {
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-sm flex-col justify-center px-4 py-16 text-start">
       <h1 className="mb-6 text-center font-display text-2xl">{t("auth.welcomeBack")}</h1>
+      <GoogleButton returnTo={returnTo} />
       <form onSubmit={handleSubmit}>
         <label className="mb-1 block text-sm font-medium">{t("auth.email")}</label>
         <input
@@ -57,6 +66,22 @@ export default function Login() {
           required
         />
         {error && <p className="mb-4 text-sm text-enzo-error">{error}</p>}
+        {unconfirmed && (
+          <div className="mb-4 rounded-md border border-enzo-gold/40 bg-enzo-gold/10 p-3 text-sm">
+            <p>{t("auth.notConfirmed")}</p>
+            <button
+              type="button"
+              disabled={resent}
+              onClick={async () => {
+                await resendConfirmation(email);
+                setResent(true);
+              }}
+              className="mt-2 text-enzo-gold underline disabled:no-underline disabled:opacity-60"
+            >
+              {resent ? t("auth.confirmationResent") : t("auth.resendConfirmation")}
+            </button>
+          </div>
+        )}
         <button
           type="submit"
           disabled={loading}

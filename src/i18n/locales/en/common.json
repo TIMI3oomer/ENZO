@@ -87,7 +87,16 @@
     "passwordMismatch": "Passwords don't match",
     "welcomeBack": "Welcome back",
     "controlPanel": "Control Panel",
-    "controlPanelHint": "Go to admin dashboard →"
+    "controlPanelHint": "Go to admin dashboard →",
+    "continueWithGoogle": "Continue with Google",
+    "orWithEmail": "or with email",
+    "googleDisabled": "Google sign-in isn't switched on yet — please use email for now.",
+    "wrongPassword": "Wrong email or password.",
+    "notConfirmed": "This email hasn't been confirmed yet. Open the confirmation email we sent you (check spam too).",
+    "resendConfirmation": "Send the confirmation email again",
+    "confirmationResent": "Sent — check your inbox and spam.",
+    "checkEmailTitle": "Check your email",
+    "checkEmailText": "We sent a confirmation link to {{email}}. Open it to finish creating your account, then sign in."
   },
   "filters": {
     "sortBy": "Sort by",
@@ -166,5 +175,30 @@
     "reason_item_refunded": "Item returned",
     "reason_item_exchanged": "Item exchanged",
     "reason_admin": "Adjusted by the store"
+  },
+  "tour": {
+    "stepOf": "Step {{step}} of {{total}}",
+    "skip": "Skip tour",
+    "back": "Back",
+    "next": "Next",
+    "start": "Start shopping",
+    "replay": "Take the quick tour again",
+    "welcomeTitle": "Welcome to ENZO {{name}}",
+    "welcomeText": "You're signed in and you'll stay signed in on this device. Here's a 30-second look at how the shop works.",
+    "browseTitle": "Find your piece",
+    "browseText": "Open Shop from the menu. Pick a category at the top, then tap the sizes you wear — tick \"In stock only\" to see just what's available now.",
+    "browseLink": "Open the shop",
+    "colorsTitle": "Color first, then size",
+    "colorsText": "On a product, choose the color first: the sizes update to what's actually in stock in that color. Sizes marked \"Sold out\" can't be picked.",
+    "checkoutTitle": "Easy checkout",
+    "checkoutText": "Add to cart, choose your delivery area (West Bank 20 ₪, Jerusalem 30 ₪, Inside 70 ₪) and pay cash on delivery. Have a discount code? Enter it in the order summary.",
+    "pointsTitle": "Earn ENZO points",
+    "pointsText": "Orders of 100 ₪ or more earn 500 points for every 100 ₪ — that's 5 ₪ off your next order. Use them at checkout (100 points = 1 ₪).",
+    "pointsLink": "How points work",
+    "trackTitle": "Track your order",
+    "trackText": "After ordering, follow it step by step: received, confirmed, on the way, delivered. Find it under My account or Track order in the menu.",
+    "trackLink": "Open Track order",
+    "helpTitle": "We're here",
+    "helpText": "Questions about sizes or an order? Tap the WhatsApp button at the bottom of any page and we'll answer."
   }
 }

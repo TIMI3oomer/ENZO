@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { LayoutGrid, Package, ClipboardList, Users, Tags, FileText, ShoppingBag, Store, LogOut, Ticket, ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
+import AdminHelp from "./AdminHelp.jsx";
 
 // CHECKPOINT NOTE (AdminLayout.jsx):
 // Shared shell for every admin screen: sidebar nav + logout + language
@@ -67,7 +68,10 @@ export default function AdminLayout({ children, title }) {
       </aside>
 
       <main className="flex-1 p-6 sm:p-10">
-        <h1 className="mb-8 font-display text-2xl">{title}</h1>
+        <div className="mb-8 flex items-center gap-3">
+          <h1 className="font-display text-2xl">{title}</h1>
+          <AdminHelp />
+        </div>
         {children}
       </main>
     </div>

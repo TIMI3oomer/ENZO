@@ -273,5 +273,151 @@
     "remove": "Remove",
     "confirmRemove": "Remove admin access for {{email}}? Their customer account stays.",
     "lastAdmin": "The last admin can't be removed."
+  },
+  "help": {
+    "open": "How to use this page",
+    "howTo": "How to use",
+    "stepsTitle": "Step by step",
+    "tipsTitle": "Tips",
+    "dashboard": {
+      "title": "Dashboard",
+      "intro": "A quick look at how the store is doing: sales, number of orders and the latest orders.",
+      "steps": [
+        "Check the numbers at the top for today's and recent sales.",
+        "Scroll to the chart to see sales over time.",
+        "Use the side menu to open any section."
+      ],
+      "tips": [
+        "Open it every morning to see new orders waiting to be confirmed."
+      ]
+    },
+    "products": {
+      "title": "Products",
+      "intro": "Every product in the store: add, edit, delete, and see what's left.",
+      "steps": [
+        "Click \"Add product\" for a new one.",
+        "Click \"Edit\" next to a product to change its price, photos or stock.",
+        "A red \"Sold out\" badge means it's completely gone; \"Sold out: M, Black\" means some sizes or colors are.",
+        "The numbers next to the stock show how many of each color and size."
+      ],
+      "tips": [
+        "Instead of deleting a sold-out product, keep it — customers see it marked sold out at the end of the list (or hide sold-out items in Site content)."
+      ]
+    },
+    "productForm": {
+      "title": "Add / edit product",
+      "intro": "Everything about one product: name, price, photos, colors, sizes and stock.",
+      "steps": [
+        "Write the Arabic name and description (English is optional).",
+        "Set the price, and a discount % if it's on sale (20 = 20% off).",
+        "Pick the category.",
+        "Choose the sizes and colors it comes in.",
+        "In the \"Sizes for each color\" grid, enter how many you have of each — leave 0 for a size that color doesn't come in.",
+        "Upload photos; you can link a photo to each color.",
+        "Save."
+      ],
+      "tips": [
+        "\"Mark sizes/colors as sold out\" stops selling them right away, even if stock says otherwise.",
+        "The first photo is the main one; the second shows when a shopper hovers the product."
+      ]
+    },
+    "orders": {
+      "title": "Orders",
+      "intro": "Every order from the site and the shop. Confirm, update the status, print invoices, and refund or exchange items here.",
+      "steps": [
+        "Search by invoice number, name, phone, email, discount code or seller.",
+        "Click an order to open it.",
+        "Set the status to \"Confirmed\" and press \"Update & send\" — stock is taken on confirm and the customer is emailed.",
+        "Once shipped, move it to \"Shipped\" then \"Delivered\" — the customer sees this on the Track order page.",
+        "To return or swap an item: press \"Refund\" or \"Exchange\" on that line, choose how many (and the new product), confirm — it tells you how much to give back or collect.",
+        "\"Print invoice\" opens a ready-to-print invoice."
+      ],
+      "tips": [
+        "Cancelling an order puts the items back in stock and takes back the customer's points automatically.",
+        "Cash on delivery: press \"Mark paid\" when the money arrives."
+      ]
+    },
+    "customers": {
+      "title": "Customers",
+      "intro": "Everyone with an account, with their order count and points.",
+      "steps": [
+        "Search by name, email or phone.",
+        "Click a customer to see all their orders, how much they've spent and how many pieces.",
+        "Each order shows its items with color and size."
+      ],
+      "tips": [
+        "Orders they placed as a guest with the same email show up in their history too."
+      ]
+    },
+    "categories": {
+      "title": "Categories",
+      "intro": "The store's sections — T-shirts, pants, jackets — shown in the menu, the shop and the home page.",
+      "steps": [
+        "Type the Arabic and English name and add it.",
+        "Edit or delete any category from the list.",
+        "When adding a product, choose its category so it shows in the right section."
+      ],
+      "tips": [
+        "A category's photo on the home page is taken automatically from its first product."
+      ]
+    },
+    "content": {
+      "title": "Site content",
+      "intro": "Change the site's text and images without code, and see each change live in the preview before saving.",
+      "steps": [
+        "Edit any text or upload an image — the preview updates right away.",
+        "Use the phone/tablet/desktop and AR/EN buttons to see it as customers will.",
+        "Switch home page sections on or off under \"Home page sections\".",
+        "Fill in the store info (phone, WhatsApp, Instagram, address) for the footer and invoices.",
+        "Press \"Save\" under each page — nothing changes for customers until you do."
+      ],
+      "tips": [
+        "Banner photos work best wide (about 1920×900).",
+        "The return policy prints on invoices only — type - to hide it."
+      ]
+    },
+    "inStoreSale": {
+      "title": "In-store sale",
+      "intro": "Ring up a sale for a customer in the shop — taken from the same stock as the site right away, with a printed invoice.",
+      "steps": [
+        "Choose the seller (عبدالله, عمير, or type another name).",
+        "Pick the product, then color and size, the quantity, and press \"Add to ticket\".",
+        "Repeat for every piece they're buying.",
+        "Optionally add the customer's name, then press \"Ring up sale\".",
+        "The invoice opens straight away — press Print."
+      ],
+      "tips": [
+        "\"Today in store\" shows each seller's sales today.",
+        "Made a mistake? Open the sale in Orders and refund or exchange it."
+      ]
+    },
+    "codes": {
+      "title": "Discount codes",
+      "intro": "Create codes customers type at checkout to get a discount.",
+      "steps": [
+        "Press \"Generate\" for a random code, or type your own (like ENZO10).",
+        "Enter the discount and choose % or ₪.",
+        "Optional: minimum order, how many uses, and an expiry date.",
+        "Press \"Create code\", copy it and share it.",
+        "Turn any code off or delete it at any time."
+      ],
+      "tips": [
+        "The discount is on items only, not delivery.",
+        "If an order that used a code is cancelled, that use is given back automatically."
+      ]
+    },
+    "admins": {
+      "title": "Admins",
+      "intro": "Who can open this control panel.",
+      "steps": [
+        "Type the person's email and press \"Make admin\".",
+        "If they have an account, they're an admin right away.",
+        "If not, press \"Send invite email\", or ask them to sign up and add them again.",
+        "Press \"Remove\" to take access away — their customer account stays."
+      ],
+      "tips": [
+        "You can't remove yourself or the last admin, so the store can never be locked out."
+      ]
+    }
   }
 }

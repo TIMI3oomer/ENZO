@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, LayoutDashboard, Coins, Truck } from "lucide-react";
+import { ChevronDown, LayoutDashboard, Coins, Truck, Sparkles } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLocalizedField } from "../context/LanguageContext.jsx";
 import { formatPrice } from "../lib/formatPrice.js";
@@ -140,6 +140,15 @@ export default function Account() {
           <span className="text-xs text-enzo-gold underline">{t("points.howItWorks")}</span>
         </Link>
       )}
+
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new Event("enzo:tour"))}
+        className="mb-8 flex items-center gap-2 text-sm text-enzo-gold underline"
+      >
+        <Sparkles size={15} />
+        {t("tour.replay")}
+      </button>
 
       <h2 className="mb-4 text-lg font-medium">{t("auth.myOrders")}</h2>
       {loading ? (

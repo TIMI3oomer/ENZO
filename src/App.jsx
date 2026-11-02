@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
 import WhatsAppButton from "./components/WhatsAppButton.jsx";
+import WelcomeTour from "./components/WelcomeTour.jsx";
 import Home from "./pages/Home.jsx";
 import Shop from "./pages/Shop.jsx";
 import ProductDetail from "./pages/ProductDetail.jsx";
@@ -81,6 +82,7 @@ export default function App() {
             </main>
             <Footer />
             <WhatsAppButton />
+            <WelcomeTour />
           </div>
         }
       />
